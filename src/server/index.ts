@@ -29,7 +29,7 @@ import {
 } from "./auth";
 
 const PORT = Number(process.env.PORT ?? 3741);
-const HOST = process.env.HOST ?? "127.0.0.1";
+const HOST = process.env.HOST ?? "0.0.0.0";
 const IDLE_TIMEOUT_SECONDS = positiveInt(
   process.env.SERVER_IDLE_TIMEOUT_SECONDS,
   60
