@@ -17,6 +17,16 @@ export const pool = await mysql.createPool({
   charset: "utf8mb4",
 });
 
+async function createIndexIfNotExists(indexName: string, table: string, columns: string) {
+  const [rows] = await pool.query<any[]>(
+    `SELECT COUNT(*) AS cnt FROM information_schema.statistics
+     WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?`,
+    [table, indexName]
+  );
+  if (rows[0]?.cnt > 0) return;
+  await pool.query(`CREATE INDEX ${indexName} ON ${table}(${columns})`);
+}
+
 export async function ensureSchema() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -47,9 +57,7 @@ export async function ensureSchema() {
       updated_at DATETIME NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
-  await pool.query(
-    "CREATE INDEX IF NOT EXISTS idx_investments_isin ON investments(isin)"
-  );
+  await createIndexIfNotExists("idx_investments_isin", "investments", "isin");
   await pool.query(`
     CREATE TABLE IF NOT EXISTS fund_history (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -59,12 +67,8 @@ export async function ensureSchema() {
       FOREIGN KEY (fund_id) REFERENCES investments(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
-  await pool.query(
-    "CREATE INDEX IF NOT EXISTS idx_fund_history_fund ON fund_history(fund_id)"
-  );
-  await pool.query(
-    "CREATE INDEX IF NOT EXISTS idx_fund_history_date ON fund_history(recorded_at DESC)"
-  );
+  await createIndexIfNotExists("idx_fund_history_fund", "fund_history", "fund_id");
+  await createIndexIfNotExists("idx_fund_history_date", "fund_history", "recorded_at DESC");
   await pool.query(`
     CREATE TABLE IF NOT EXISTS settings (
       setting_key VARCHAR(255) PRIMARY KEY,
