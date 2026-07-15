@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth"><head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>FondTracker - Control Total de tus Inversiones</title>
+  <link rel="stylesheet" href="/styles.css">
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com" rel="preconnect">
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+  <link href="https://fonts.googleapis.com/css2?family=Forum&amp;family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&amp;display=swap" rel="stylesheet">
+<style type="text/tailwindcss">@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply m-0 p-0;
+  }
+  
+  /* Advanced Scroll Reveal Classes */
+  [data-animation-on-scroll] { 
+    opacity: 0; 
+    transition: all 1s cubic-bezier(0.16, 1, 0.3, 1); 
+  }
+  
+  .animate-fade-up { transform: translateY(40px); }
+  .animate-fade-in { transform: scale(0.95); }
+  .animate-slide-left { transform: translateX(-40px); }
+  .animate-slide-right { transform: translateX(40px); }
+  
+  .animate-on-scroll-visible { 
+    opacity: 1 !important; 
+    transform: translate(0, 0) scale(1) !important; 
+  }
+
+  /* Staggered children container */
+  [data-stagger-container] > * {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  
+  .stagger-visible > * {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  /* Text Reveal Masking */
+  .reveal-mask {
+    overflow: hidden;
+    display: block;
+  }
+  .reveal-mask > span {
+    display: block;
+    transform: translateY(110%);
+    transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .animate-on-scroll-visible .reveal-mask > span {
+    transform: translateY(0);
+  }
+}
+
+::selection { 
+  background-color: rgb(200, 248, 169); 
+  color: rgb(15, 61, 58); 
+}</style><script src="https://cdn.tailwindcss.com"></script><script>tailwind.config = {
+  important: '#app-root',
+  theme: {
+    extend: {
+      colors: {
+        'brand-green': 'rgb(200, 248, 169)',
+        'brand-dark': 'rgb(15, 61, 58)',
+        'neutral-background': 'rgb(0, 0, 0)',
+        'text-primary': 'rgb(255, 255, 255)',
+        'text-secondary': 'rgba(255, 255, 255, 0.7)',
+      },
+      fontFamily: {
+        'primary': ['Forum', 'serif'],
+        'secondary': ['DM Sans', 'sans-serif'],
+      },
+      spacing: {
+        's': '16px',
+        'm': '24px',
+        'l': '32px',
+        'xl': '48px',
+      },
+      borderRadius: {
+        'sm': '5px',
+        'md': '10px',
+        'lg': '40px',
+      },
+      animation: {
+        'float': 'float 8s ease-in-out infinite',
+      },
+      keyframes: {
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-20px)' },
+        }
+      }
+    }
+  }
+}</script></head>
+
+<body id="app-root">
+  <!-- Master Wrapper -->
+  <div class="font-secondary bg-neutral-background text-text-primary overflow-x-hidden min-h-screen flex flex-col w-full relative">
+    
+    <!-- Navbar -->
+    <header class="fixed top-0 left-0 right-0 z-50 transition-all duration-300" id="main-nav">
+      <nav class="max-w-[1200px] mx-auto px-6 py-5 flex items-center justify-between border-b border-white/10">
+        <div class="flex items-center gap-10" data-pixel-id="49d0h" data-pixel-kind="text">
+          <a href="#" class="block" data-pixel-id="u6n34" data-pixel-kind="link">
+            <span class="font-primary text-2xl text-white tracking-widest uppercase">FondTracker</span>
+          </a>
+        </div>
+
+        <div class="hidden md:flex items-center gap-2" data-editable-list="header.navLinks" data-pixel-id="2d1fu" data-pixel-kind="text">
+          <a href="#features" class="px-3 py-1 text-sm font-medium hover:bg-white/10 rounded-full transition-colors" data-pixel-id="w8jlo" data-pixel-kind="link">Funciones</a>
+          <a href="#stats" class="px-3 py-1 text-sm font-medium hover:bg-white/10 rounded-full transition-colors" data-pixel-id="fbeie" data-pixel-kind="link">Inteligencia</a>
+          <a href="#pricing" class="px-3 py-1 text-sm font-medium hover:bg-white/10 rounded-full transition-colors" data-pixel-id="icrxp" data-pixel-kind="link">Planes</a>
+          <a href="#faq" class="px-3 py-1 text-sm font-medium hover:bg-white/10 rounded-full transition-colors" data-pixel-id="gp8p1" data-pixel-kind="link">FAQ</a>
+        </div>
+
+        <div class="flex items-center gap-3" data-pixel-id="qwwmm" data-pixel-kind="text">
+          <a href="/login" class="hidden sm:flex bg-white/5 border border-white/10 text-white px-4 py-2 rounded-[5px] text-sm font-medium hover:bg-white/10 transition-colors" data-pixel-id="j0tjv" data-pixel-kind="link">
+            Acceder
+          </a>
+          <a href="/login" class="bg-brand-green text-brand-dark px-4 py-2 rounded-[5px] text-sm font-medium hover:opacity-90 transition-colors shadow-[0_0_20px_rgba(200,248,169,0.3)]" data-pixel-id="90u3c" data-pixel-kind="link">
+            Empezar gratis
+          </a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="flex-grow"><section id="hero" class="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-black">
+  <div class="absolute inset-0 z-0">
+    <img src="https://images.pexels.com/photos/7135013/pexels-photo-7135013.jpeg?w=1920&amp;h=1080&amp;fit=crop" alt="Background" class="hero-bg-zoom w-full h-full object-cover grayscale opacity-40" data-pixel-verified="true" data-pixel-id="m9jke" data-pixel-kind="image">
+    <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black"></div>
+  </div>
+
+  <div class="absolute top-1/4 -left-20 w-96 h-96 bg-brand-green/10 rounded-full blur-[120px] animate-float opacity-50"></div>
+
+  <div class="relative z-10 w-full max-w-[1200px] px-6 mt-20">
+    <div class="flex flex-col items-start gap-12">
+      <div class="max-w-[850px] space-y-6" data-animation-on-scroll="">
+        <div class="flex items-center gap-3 overflow-hidden">
+          <div class="bg-white/10 border border-white/20 px-3 py-1 rounded-[5px]" data-pixel-id="d38ld" data-pixel-kind="text">
+            <span class="text-brand-green text-sm font-medium tracking-widest uppercase">Inteligencia de Fondos</span>
+          </div>
+          <p class="text-white/60 text-sm font-normal" data-pixel-id="ce7y1" data-pixel-kind="text">Domina tu cartera de inversión en un solo lugar</p>
+        </div>
+
+        <h1 class="font-primary text-[56px] lg:text-[90px] xl:text-[110px] leading-[0.9] text-white tracking-tighter" data-pixel-id="5mds9" data-pixel-kind="text">
+          <span class="reveal-mask block">
+            <span>Controla tu <span class="text-brand-green italic">patrimonio</span></span>
+          </span>
+          <span class="reveal-mask block mt-2">
+            <span>con precisión total.</span>
+          </span>
+        </h1>
+      </div>
+
+      <div class="w-full space-y-8" data-animation-on-scroll="">
+        <div class="w-full h-[1px] bg-white/10"></div>
+        
+        <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+          <p class="max-w-[550px] text-text-secondary text-[20px] leading-relaxed font-secondary font-light" data-pixel-id="djmrb" data-pixel-kind="text">
+            Unifica todos tus fondos de inversión. Accede a gráficos en tiempo real, alertas por WhatsApp y reportes de rendimiento con inteligencia de grado profesional.
+          </p>
+
+          <div class="flex items-center gap-6" data-pixel-id="nemxn" data-pixel-kind="text">
+            <a href="/login" class="group flex items-center justify-center gap-5 bg-brand-green px-8 py-5 rounded-[5px] transition-all hover:bg-white w-fit shrink-0 shadow-[0_0_30px_rgba(200,248,169,0.3)]" data-pixel-id="1fnqq" data-pixel-kind="link">
+              <span class="text-black text-[15px] font-bold uppercase tracking-wider">Iniciar gestión</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" class="w-5 h-5 text-black transition-transform group-hover:translate-x-1">
+                <path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"></path>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS SECTION -->
+<section id="stats" class="py-24 bg-[#0c0c0c] border-y border-white/5">
+  <div class="max-w-[1200px] mx-auto px-6">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-12 text-center" data-animation-on-scroll="">
+      <div class="space-y-2">
+        <p class="text-brand-green font-primary text-5xl lg:text-7xl tracking-tighter" data-pixel-id="5a6el" data-pixel-kind="text">148+</p>
+        <p class="text-text-secondary text-[10px] uppercase tracking-[0.2em]" data-pixel-id="ylndh" data-pixel-kind="text">Fondos en Catálogo</p>
+      </div>
+      <div class="space-y-2">
+        <p class="text-brand-green font-primary text-5xl lg:text-7xl tracking-tighter" data-pixel-id="3rz14" data-pixel-kind="text">LIVE</p>
+        <p class="text-text-secondary text-[10px] uppercase tracking-[0.2em]" data-pixel-id="ka6xz" data-pixel-kind="text">Yahoo Finance API</p>
+      </div>
+      <div class="space-y-2">
+        <p class="text-brand-green font-primary text-5xl lg:text-7xl tracking-tighter" data-pixel-id="mj7d3" data-pixel-kind="text">Daily</p>
+        <p class="text-text-secondary text-[10px] uppercase tracking-[0.2em]" data-pixel-id="yrccr" data-pixel-kind="text">Alertas WhatsApp</p>
+      </div>
+      <div class="space-y-2">
+        <p class="text-brand-green font-primary text-5xl lg:text-7xl tracking-tighter" data-pixel-id="ece2y" data-pixel-kind="text">AES-256</p>
+        <p class="text-text-secondary text-[10px] uppercase tracking-[0.2em]" data-pixel-id="yqj4p" data-pixel-kind="text">Seguridad de Datos</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES SECTION -->
+<section id="features" class="py-32 bg-black relative overflow-hidden">
+  <div class="max-w-[1200px] mx-auto px-6">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-16 mb-32">
+      <div class="lg:col-span-5" data-animation-on-scroll="">
+        <span class="text-brand-green text-xs font-bold uppercase tracking-[0.3em] mb-8 block" data-pixel-id="iw8fp" data-pixel-kind="text">Capacidades</span>
+        <h2 class="font-primary text-4xl lg:text-6xl text-white leading-tight mb-8" data-pixel-id="cry4q" data-pixel-kind="text">
+          Diseñado para el inversor moderno.
+        </h2>
+        <p class="text-text-secondary text-lg font-light leading-relaxed mb-12" data-pixel-id="f4kew" data-pixel-kind="text">
+          FondTracker no es solo una hoja de cálculo. Es un ecosistema completo para administrar fondos españoles, ETFs internacionales y tu rendimiento histórico con precisión quirúrgica.
+        </p>
+        <div class="space-y-6">
+          <div class="flex items-start gap-4 py-6 border-b border-white/10 group cursor-default">
+            <div class="w-10 h-10 rounded-full border border-brand-green/30 flex items-center justify-center shrink-0 group-hover:bg-brand-green transition-colors" data-pixel-id="50w3a" data-pixel-kind="text">
+              <span class="text-white group-hover:text-black font-primary text-lg">01</span>
+            </div>
+            <div>
+              <h4 class="text-white text-xl tracking-wide mb-2" data-pixel-id="rtznu" data-pixel-kind="text">Multiusuario y Privado</h4>
+              <p class="text-white/40 text-sm" data-pixel-id="avywa" data-pixel-kind="text">Crea tu cuenta segura y gestiona tus inversiones de forma aislada y privada.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4 py-6 border-b border-white/10 group cursor-default">
+            <div class="w-10 h-10 rounded-full border border-brand-green/30 flex items-center justify-center shrink-0 group-hover:bg-brand-green transition-colors" data-pixel-id="8l49v" data-pixel-kind="text">
+              <span class="text-white group-hover:text-black font-primary text-lg">02</span>
+            </div>
+            <div>
+              <h4 class="text-white text-xl tracking-wide mb-2" data-pixel-id="e3ia1" data-pixel-kind="text">Hybrid Scraper Engine</h4>
+              <p class="text-white/40 text-sm" data-pixel-id="kedk1" data-pixel-kind="text">Integración QueFondos para NAV oficial de fondos españoles cuando Yahoo no tiene datos.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4 py-6 border-b border-white/10 group cursor-default">
+            <div class="w-10 h-10 rounded-full border border-brand-green/30 flex items-center justify-center shrink-0 group-hover:bg-brand-green transition-colors" data-pixel-id="scfnh" data-pixel-kind="text">
+              <span class="text-white group-hover:text-black font-primary text-lg">03</span>
+            </div>
+            <div>
+              <h4 class="text-white text-xl tracking-wide mb-2" data-pixel-id="ifduk" data-pixel-kind="text">Reportes vía WhatsApp</h4>
+              <p class="text-white/40 text-sm" data-pixel-id="k8sk0" data-pixel-kind="text">Recibe un resumen diario de tus ganancias y pérdidas directamente en tu móvil.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="lg:col-span-7" data-animation-on-scroll="">
+        <div class="relative w-full aspect-[4/5] rounded-[10px] overflow-hidden grayscale group">
+          <img src="https://images.pexels.com/photos/27396198/pexels-photo-27396198.jpeg?w=800&amp;h=1000&amp;fit=crop" alt="Interface Preview" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-pixel-verified="true" data-pixel-id="ao7kj" data-pixel-kind="image">
+          <div class="absolute inset-0 bg-black/40"></div>
+          <div class="absolute bottom-10 left-10 right-10 p-8 bg-black/80 backdrop-blur-lg border border-white/10 rounded-[5px]">
+            <p class="text-white text-xl font-primary italic leading-relaxed" data-pixel-id="u4tky" data-pixel-kind="text">
+              "En la volatilidad del mercado, la claridad es el activo más valioso. FondTracker es el lente que define el futuro."
+            </p>
+            <p class="text-brand-green text-xs font-bold uppercase tracking-widest mt-6" data-pixel-id="napzl" data-pixel-kind="text">— Wealth Management Insight</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING SECTION -->
+<section id="pricing" class="py-32 bg-[#0c0c0c] relative">
+  <div class="max-w-[1200px] mx-auto px-6">
+    <div class="text-center mb-20" data-animation-on-scroll="">
+      <span class="text-brand-green text-xs font-bold uppercase tracking-[0.3em] mb-4 block" data-pixel-id="dipz7" data-pixel-kind="text">Suscripción</span>
+      <h2 class="font-primary text-4xl lg:text-6xl text-white" data-pixel-id="iaoix" data-pixel-kind="text">Planes de Inteligencia</h2>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8" data-stagger-container="">
+      <!-- Standard -->
+      <div class="bg-black/40 border border-white/5 p-12 hover:border-brand-green/30 transition-all duration-500 flex flex-col">
+        <h3 class="text-white/60 text-xs font-bold uppercase tracking-widest mb-4" data-pixel-id="zehgq" data-pixel-kind="text">Inversor</h3>
+        <p class="font-primary text-4xl text-white mb-8" data-pixel-id="1vawf" data-pixel-kind="text">Free</p>
+        <ul class="space-y-4 mb-12 text-sm text-white/40 flex-grow">
+          <li class="flex items-center gap-3" data-pixel-id="1vq25" data-pixel-kind="text">
+            <svg class="w-4 h-4 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            Hasta 5 fondos
+          </li>
+          <li class="flex items-center gap-3" data-pixel-id="jm4xa" data-pixel-kind="text">
+            <svg class="w-4 h-4 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            Actualización diaria
+          </li>
+          <li class="flex items-center gap-3" data-pixel-id="naqzw" data-pixel-kind="text">
+            <svg class="w-4 h-4 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            Dashboard web
+          </li>
+        </ul>
+        <a href="/login" class="w-full py-4 border border-white/10 text-white text-xs font-bold uppercase tracking-widest text-center hover:bg-white/5 transition-colors" data-pixel-id="fhik8" data-pixel-kind="link">Empezar ahora</a>
+      </div>
+
+      <!-- Pro -->
+      <div class="bg-brand-dark/20 border border-brand-green/30 p-12 hover:bg-brand-dark/30 transition-all duration-500 flex flex-col relative">
+        <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-brand-green text-black px-4 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full" data-pixel-id="1yw44" data-pixel-kind="text">Recomendado</div>
+        <h3 class="text-brand-green text-xs font-bold uppercase tracking-widest mb-4" data-pixel-id="ozf6d" data-pixel-kind="text">Profesional</h3>
+        <p class="font-primary text-4xl text-white mb-8" data-pixel-id="6vb9s" data-pixel-kind="text">€12<span class="text-lg text-white/40">/mes</span></p>
+        <ul class="space-y-4 mb-12 text-sm text-white/70 flex-grow">
+          <li class="flex items-center gap-3" data-pixel-id="53wpy" data-pixel-kind="text">
+            <svg class="w-4 h-4 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            Fondos Ilimitados
+          </li>
+          <li class="flex items-center gap-3" data-pixel-id="g86ju" data-pixel-kind="text">
+            <svg class="w-4 h-4 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            Alertas WhatsApp Ilimitadas
+          </li>
+          <li class="flex items-center gap-3" data-pixel-id="4k7s8" data-pixel-kind="text">
+            <svg class="w-4 h-4 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            Gráficos Avanzados (Hybrid)
+          </li>
+          <li class="flex items-center gap-3" data-pixel-id="gaxi0" data-pixel-kind="text">
+            <svg class="w-4 h-4 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            Soporte Prioritario
+          </li>
+        </ul>
+        <a href="/login" class="w-full py-4 bg-brand-green text-black text-xs font-bold uppercase tracking-widest text-center hover:opacity-90 transition-colors" data-pixel-id="2tzjv" data-pixel-kind="link">Seleccionar Pro</a>
+      </div>
+
+      <!-- Enterprise -->
+      <div class="bg-black/40 border border-white/5 p-12 hover:border-brand-green/30 transition-all duration-500 flex flex-col">
+        <h3 class="text-white/60 text-xs font-bold uppercase tracking-widest mb-4" data-pixel-id="1skmq" data-pixel-kind="text">Institucional</h3>
+        <p class="font-primary text-4xl text-white mb-8" data-pixel-id="axc5s" data-pixel-kind="text">Custom</p>
+        <ul class="space-y-4 mb-12 text-sm text-white/40 flex-grow">
+          <li class="flex items-center gap-3" data-pixel-id="8egzf" data-pixel-kind="text">
+            <svg class="w-4 h-4 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            API Access
+          </li>
+          <li class="flex items-center gap-3" data-pixel-id="cqvco" data-pixel-kind="text">
+            <svg class="w-4 h-4 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            Cross-Source Verification
+          </li>
+          <li class="flex items-center gap-3" data-pixel-id="rtmwr" data-pixel-kind="text">
+            <svg class="w-4 h-4 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            Gestión de Cuentas
+          </li>
+        </ul>
+        <a href="mailto:contacto@fondtracker.com" class="w-full py-4 border border-white/10 text-white text-xs font-bold uppercase tracking-widest text-center hover:bg-white/5 transition-colors" data-pixel-id="606zx" data-pixel-kind="link">Contactar</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ SECTION -->
+<section id="faq" class="py-32 bg-black">
+  <div class="max-w-[800px] mx-auto px-6">
+    <div class="text-center mb-20" data-animation-on-scroll="">
+      <span class="text-brand-green text-xs font-bold uppercase tracking-[0.3em] mb-4 block" data-pixel-id="8kegx" data-pixel-kind="text">Consultas</span>
+      <h2 class="font-primary text-4xl lg:text-5xl text-white" data-pixel-id="ia5dd" data-pixel-kind="text">Preguntas Frecuentes</h2>
+    </div>
+
+    <div class="space-y-4" data-stagger-container="">
+      <details class="group bg-[#0c0c0c] border border-white/5 p-6 rounded-[5px] cursor-pointer">
+        <summary class="flex items-center justify-between font-primary text-xl text-white list-none">
+          ¿Cómo añade FondTracker los datos de mis fondos?
+          <span class="text-brand-green transition-transform group-open:rotate-180">+</span>
+        </summary>
+        <p class="text-white/40 text-sm mt-4 leading-relaxed" data-pixel-id="d40vu" data-pixel-kind="text">
+          Utilizamos el ISIN para buscar en nuestro catálogo de más de 490 fondos españoles y ETFs. Los precios se actualizan mediante Yahoo Finance API o nuestro scraper nativo de QueFondos para fondos no cotizados.
+        </p>
+      </details>
+
+      <details class="group bg-[#0c0c0c] border border-white/5 p-6 rounded-[5px] cursor-pointer">
+        <summary class="flex items-center justify-between font-primary text-xl text-white list-none">
+          ¿Es segura mi información financiera?
+          <span class="text-brand-green transition-transform group-open:rotate-180">+</span>
+        </summary>
+        <p class="text-white/40 text-sm mt-4 leading-relaxed" data-pixel-id="8ufdf" data-pixel-kind="text">
+          Absolutamente. No almacenamos tus credenciales bancarias. Solo registramos los fondos y participaciones que tú nos indiques. Tus datos están protegidos por encriptación AES-256 y un sistema de autenticación JWT.
+        </p>
+      </details>
+
+      <details class="group bg-[#0c0c0c] border border-white/5 p-6 rounded-[5px] cursor-pointer">
+        <summary class="flex items-center justify-between font-primary text-xl text-white list-none">
+          ¿Cómo funciona el servicio de WhatsApp?
+          <span class="text-brand-green transition-transform group-open:rotate-180">+</span>
+        </summary>
+        <p class="text-white/40 text-sm mt-4 leading-relaxed" data-pixel-id="upo2f" data-pixel-kind="text">
+          Integramos el servicio CallMeBot para enviarte un resumen diario a la hora que elijas (por defecto 9:00 y 18:00). Solo necesitas configurar tu número y API key en tu panel de ajustes.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section id="cta" class="py-32 bg-black relative overflow-hidden">
+  <div class="absolute inset-0 z-0">
+    <img src="https://images.pexels.com/photos/19891092/pexels-photo-19891092.jpeg?w=1920&amp;h=1080&amp;fit=crop" alt="Contact BG" class="w-full h-full object-cover opacity-20 grayscale" data-pixel-verified="true" data-pixel-id="mo8ar" data-pixel-kind="image">
+  </div>
+  
+  <div class="max-w-[1200px] mx-auto px-6 relative z-10 text-center">
+    <div class="max-w-4xl mx-auto" data-animation-on-scroll="">
+      <span class="text-brand-green text-xs font-bold uppercase tracking-[0.4em] mb-12 block" data-pixel-id="00en6" data-pixel-kind="text">Inscripción Segura</span>
+      <h2 class="font-primary text-5xl lg:text-8xl text-white leading-[0.9] mb-16 tracking-tighter" data-pixel-id="2w1qx" data-pixel-kind="text">
+        Arquitecta tu <br> soberanía financiera.
+      </h2>
+      
+      <div class="flex flex-col md:flex-row justify-center gap-6" data-pixel-id="18inq" data-pixel-kind="text">
+        <a href="/login" class="bg-brand-green text-brand-dark px-12 py-6 rounded-[5px] text-sm font-bold uppercase tracking-widest hover:bg-white transition-all shadow-[0_0_40px_rgba(200,248,169,0.2)]" data-pixel-id="rzxqu" data-pixel-kind="link">
+          Empezar Protocolo
+        </a>
+        <a href="/dashboard" class="border border-white/20 text-white px-12 py-6 rounded-[5px] text-sm font-bold uppercase tracking-widest hover:bg-white/10 transition-all" data-pixel-id="2sbfq" data-pixel-kind="link">
+          Ver Dashboard Demo
+        </a>
+      </div>
+      
+      <p class="mt-16 text-white/30 text-xs uppercase tracking-widest" data-pixel-id="iwe84" data-pixel-kind="text">
+        Todas las comunicaciones están encriptadas y son estrictamente confidenciales.
+      </p>
+    </div>
+  </div>
+</section>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Parallax effect for hero
+    const hero = document.getElementById('hero');
+    if(hero) {
+      const bg = hero.querySelector('.hero-bg-zoom');
+      hero.addEventListener('mousemove', (e) => {
+        const moveX = (e.clientX - window.innerWidth / 2) * 0.01;
+        const moveY = (e.clientY - window.innerHeight / 2) * 0.01;
+        bg.style.transform = `scale(1.05) translate(${moveX}px, ${moveY}px)`;
+      });
+      hero.addEventListener('mouseleave', () => {
+        bg.style.transform = `scale(1) translate(0px, 0px)`;
+      });
+    }
+  });
+</script></main>
+
+    <footer class="bg-black border-t border-white/10 pt-24 pb-12">
+      <div class="max-w-[1200px] mx-auto px-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-20">
+          <div class="col-span-1 md:col-span-1">
+            <a href="#" class="block mb-6" data-pixel-id="uvzic" data-pixel-kind="link">
+              <span class="font-primary text-2xl text-white tracking-widest uppercase">FondTracker</span>
+            </a>
+            <p class="text-text-secondary text-sm leading-relaxed max-w-xs" data-editable="text" data-path="footer.description" data-pixel-id="s78bk" data-pixel-kind="text">
+              Arquitectando el futuro de tu patrimonio con inteligencia de grado institucional.
+            </p>
+          </div>
+          <div data-editable-list="footer.productLinks">
+            <h4 class="text-white text-xs font-bold uppercase tracking-widest mb-6" data-pixel-id="edqy0" data-pixel-kind="text">Producto</h4>
+            <ul class="space-y-4 text-sm text-text-secondary">
+              <li data-pixel-id="vzf5b" data-pixel-kind="text"><a href="#features" class="hover:text-brand-green transition-colors" data-pixel-id="tdg7h" data-pixel-kind="link">Seguimiento Real</a></li>
+              <li data-pixel-id="odg1p" data-pixel-kind="text"><a href="#stats" class="hover:text-brand-green transition-colors" data-pixel-id="6a17r" data-pixel-kind="link">Catálogo de Fondos</a></li>
+              <li data-pixel-id="n449i" data-pixel-kind="text"><a href="#cta" class="hover:text-brand-green transition-colors" data-pixel-id="pn3ym" data-pixel-kind="link">Alertas WhatsApp</a></li>
+            </ul>
+          </div>
+          <div data-editable-list="footer.communityLinks">
+            <h4 class="text-white text-xs font-bold uppercase tracking-widest mb-6" data-pixel-id="to1dv" data-pixel-kind="text">Comunidad</h4>
+            <ul class="space-y-4 text-sm text-text-secondary">
+              <li data-pixel-id="5bw35" data-pixel-kind="text"><a href="#" class="hover:text-brand-green transition-colors" data-pixel-id="tuqpm" data-pixel-kind="link">Blog Financiero</a></li>
+              <li data-pixel-id="2johf" data-pixel-kind="text"><a href="#" class="hover:text-brand-green transition-colors" data-pixel-id="dt67v" data-pixel-kind="link">Inversores Élite</a></li>
+              <li data-pixel-id="jbad3" data-pixel-kind="text"><a href="#" class="hover:text-brand-green transition-colors" data-pixel-id="dxrvt" data-pixel-kind="link">Soporte</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4 class="text-white text-xs font-bold uppercase tracking-widest mb-6" data-pixel-id="uf6sy" data-pixel-kind="text">Contacto</h4>
+            <p class="text-text-secondary text-sm mb-4" data-pixel-id="nmp99" data-pixel-kind="text">Madrid · Barcelona · Global</p>
+            <p class="text-white font-medium" data-pixel-id="c4ahq" data-pixel-kind="text">contacto@fondtracker.com</p>
+          </div>
+        </div>
+        <div class="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p class="text-white/30 text-[10px] uppercase tracking-widest" data-pixel-id="80oha" data-pixel-kind="text">© 2024 FondTracker Global Services. Todos los derechos reservados.</p>
+          <div class="flex gap-8 text-white/30 text-[10px] uppercase tracking-widest" data-pixel-id="wrq70" data-pixel-kind="text">
+            <a href="#" class="hover:text-white transition-colors" data-pixel-id="l1wxz" data-pixel-kind="link">Protocolo de Privacidad</a>
+            <a href="#" class="hover:text-white transition-colors" data-pixel-id="ot3l2" data-pixel-kind="link">Términos de Servicio</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Advanced Scroll Reveal Animation
+      const observerOptions = {
+        threshold: 0.15,
+        rootMargin: '0px 0px -50px 0px'
+      };
+
+      const scrollObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            if (entry.target.hasAttribute('data-stagger-container')) {
+              entry.target.classList.add('stagger-visible');
+              const children = entry.target.children;
+              Array.from(children).forEach((child, index) => {
+                child.style.transitionDelay = `${index * 0.15}s`;
+              });
+            } else {
+              entry.target.classList.add('animate-on-scroll-visible');
+            }
+            scrollObserver.unobserve(entry.target);
+          }
+        });
+      }, observerOptions);
+
+      document.querySelectorAll('[data-animation-on-scroll], [data-stagger-container]').forEach(el => {
+        if (!el.classList.contains('animate-fade-up') && 
+            !el.classList.contains('animate-slide-left') && 
+            !el.classList.contains('animate-slide-right') &&
+            !el.classList.contains('animate-fade-in') &&
+            !el.hasAttribute('data-stagger-container')) {
+          el.classList.add('animate-fade-up');
+        }
+        scrollObserver.observe(el);
+      });
+
+      // Navbar Scroll Effect
+      const nav = document.getElementById('main-nav');
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 50) {
+          nav.classList.add('bg-black/95', 'backdrop-blur-xl', 'py-3');
+          nav.querySelector('nav').classList.remove('py-5');
+          nav.querySelector('nav').classList.add('py-3');
+        } else {
+          nav.classList.remove('bg-black/95', 'backdrop-blur-xl', 'py-3');
+          nav.querySelector('nav').classList.add('py-5');
+          nav.querySelector('nav').classList.remove('py-3');
+        }
+      });
+    });
+  </script>
+
+
+    <script id="lh-website-form-handler" data-lh-form-handler="true">
+    (function() {
+      if (window.__lhWebsiteFormHandlerInitialized) return;
+      window.__lhWebsiteFormHandlerInitialized = true;
+
+      var PROJECT_ID = "ufIbbzVCvNqW5EzjhSBg";
+      var DEFAULT_SUCCESS_MESSAGE = 'Thanks. Your message has been sent.';
+      var DEFAULT_ERROR_MESSAGE = 'Could not submit the form. Please try again.';
+
+      function isLocalHostname(hostname) {
+        var normalized = String(hostname || '').trim().toLowerCase();
+        return normalized === 'localhost' || normalized === '127.0.0.1';
+      }
+
+      function readHostnameFromUrl(url) {
+        if (!url) return '';
+
+        try {
+          return String(new URL(url).hostname || '').trim().toLowerCase();
+        } catch (_) {
+          return '';
+        }
+      }
+
+      function detectApiBaseUrl() {
+        try {
+          var hostname = window.location.hostname || '';
+          if (isLocalHostname(hostname)) {
+            return 'http://localhost:8080/api';
+          }
+        } catch (_) {}
+
+        try {
+          var baseHostname = readHostnameFromUrl(document.baseURI || '');
+          if (isLocalHostname(baseHostname)) {
+            return 'http://localhost:8080/api';
+          }
+        } catch (_) {}
+
+        try {
+          var parentHostname =
+            window.parent && window.parent !== window && window.parent.location
+              ? String(window.parent.location.hostname || '').trim().toLowerCase()
+              : '';
+          if (isLocalHostname(parentHostname)) {
+            return 'http://localhost:8080/api';
+          }
+        } catch (_) {}
+
+        return 'https://api.landinghero.ai/api';
+      }
+
+      var API_BASE_URL = detectApiBaseUrl();
+
+      function getFeedbackNode(form) {
+        var feedback = form.nextElementSibling;
+        if (
+          feedback &&
+          feedback.nodeType === 1 &&
+          feedback.getAttribute('data-lh-form-feedback') === 'true'
+        ) {
+          return feedback;
+        }
+
+        feedback = document.createElement('div');
+        feedback.setAttribute('data-lh-form-feedback', 'true');
+        feedback.setAttribute('aria-live', 'polite');
+        feedback.style.marginTop = '12px';
+        feedback.style.padding = '12px 14px';
+        feedback.style.borderRadius = '10px';
+        feedback.style.fontSize = '14px';
+        feedback.style.lineHeight = '1.5';
+        feedback.style.display = 'none';
+        form.insertAdjacentElement('afterend', feedback);
+        return feedback;
+      }
+
+      function setFeedback(form, kind, message) {
+        var feedback = getFeedbackNode(form);
+        feedback.textContent = message || '';
+        feedback.style.display = message ? 'block' : 'none';
+        feedback.style.border = kind === 'success'
+          ? '1px solid rgba(16, 185, 129, 0.25)'
+          : '1px solid rgba(239, 68, 68, 0.25)';
+        feedback.style.background = kind === 'success'
+          ? 'rgba(16, 185, 129, 0.08)'
+          : 'rgba(239, 68, 68, 0.08)';
+        feedback.style.color = kind === 'success' ? '#065f46' : '#991b1b';
+      }
+
+      function isElementVisible(element) {
+        if (!element) return false;
+        if (element.type === 'hidden') return false;
+
+        try {
+          var style = window.getComputedStyle(element);
+          if (
+            style.display === 'none' ||
+            style.visibility === 'hidden' ||
+            Number(style.opacity || '1') === 0
+          ) {
+            return false;
+          }
+        } catch (_) {}
+
+        if (typeof element.getClientRects === 'function') {
+          return element.getClientRects().length > 0;
+        }
+
+        return true;
+      }
+
+      function getFieldLabel(form, element) {
+        var ariaLabel = String(element.getAttribute('aria-label') || '').trim();
+        if (ariaLabel) return ariaLabel;
+
+        var labels = element.labels;
+        if (labels && labels.length > 0) {
+          var joined = Array.prototype.map.call(labels, function(label) {
+            return String(label.textContent || '').trim();
+          }).filter(Boolean).join(' ');
+          if (joined) return joined;
+        }
+
+        var id = String(element.id || '').trim();
+        if (id) {
+          try {
+            var escapedId =
+              typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+                ? CSS.escape(id)
+                : id.replace(/"/g, '\"');
+            var explicitLabel = form.querySelector('label[for="' + escapedId + '"]');
+            if (explicitLabel) {
+              var explicitText = String(explicitLabel.textContent || '').trim();
+              if (explicitText) return explicitText;
+            }
+          } catch (_) {}
+        }
+
+        var parentLabel = typeof element.closest === 'function'
+          ? element.closest('label')
+          : null;
+        if (parentLabel) {
+          var parentText = String(parentLabel.textContent || '').trim();
+          if (parentText) return parentText;
+        }
+
+        var parentElement = element.parentElement;
+        if (parentElement) {
+          var siblingLabel = parentElement.querySelector('label');
+          if (siblingLabel) {
+            var siblingLabelText = String(siblingLabel.textContent || '').trim();
+            if (siblingLabelText) return siblingLabelText;
+          }
+        }
+
+        var previousSibling = element.previousElementSibling;
+        while (previousSibling) {
+          if (String(previousSibling.tagName || '').toLowerCase() === 'label') {
+            var previousSiblingText = String(previousSibling.textContent || '').trim();
+            if (previousSiblingText) return previousSiblingText;
+          }
+          previousSibling = previousSibling.previousElementSibling;
+        }
+
+        var placeholder = String(element.getAttribute('placeholder') || '').trim();
+        if (placeholder) return placeholder;
+
+        return String(element.name || element.id || element.type || 'field').trim();
+      }
+
+      function addDataValue(data, name, value) {
+        if (!name) return;
+
+        if (Object.prototype.hasOwnProperty.call(data, name)) {
+          if (Array.isArray(data[name])) {
+            data[name].push(value);
+          } else {
+            data[name] = [data[name], value];
+          }
+          return;
+        }
+
+        data[name] = value;
+      }
+
+      function normalizeFieldType(element) {
+        var tagName = String(element.tagName || '').toLowerCase();
+        if (tagName === 'textarea') return 'textarea';
+        if (tagName === 'select') return 'select';
+        return String(element.type || tagName || 'text').toLowerCase();
+      }
+
+      function getFieldValue(element) {
+        var type = normalizeFieldType(element);
+
+        if (type === 'checkbox' || type === 'radio') {
+          return element.checked ? 'true' : '';
+        }
+
+        if (type === 'file') {
+          if (!element.files || !element.files.length) return '';
+          return Array.prototype.map.call(element.files, function(file) {
+            return file && file.name ? file.name : '';
+          }).filter(Boolean).join(', ');
+        }
+
+        if (element.tagName && String(element.tagName).toLowerCase() === 'select' && element.multiple) {
+          return Array.prototype.map.call(element.selectedOptions || [], function(option) {
+            return option && option.value ? option.value : '';
+          }).filter(Boolean).join(', ');
+        }
+
+        return String(element.value || '').trim();
+      }
+
+      function collectFormPayload(form) {
+        var fields = [];
+        var data = {};
+        var elements = form.querySelectorAll('input, textarea, select');
+
+        Array.prototype.forEach.call(elements, function(element, index) {
+          if (!element || element.disabled) return;
+          if (!isElementVisible(element)) return;
+
+          var type = normalizeFieldType(element);
+          if (
+            type === 'submit' ||
+            type === 'button' ||
+            type === 'reset' ||
+            type === 'image'
+          ) {
+            return;
+          }
+
+          if ((type === 'checkbox' || type === 'radio') && !element.checked) {
+            return;
+          }
+
+          var value = getFieldValue(element);
+          if (!value) return;
+
+          var name = String(element.name || element.id || ('field_' + index)).trim();
+          if (!name) return;
+
+          fields.push({
+            name: name,
+            label: getFieldLabel(form, element),
+            type: type,
+            value: value
+          });
+          addDataValue(data, name, value);
+        });
+
+        return { fields: fields, data: data };
+      }
+
+      function getPageUrl() {
+        try {
+          if (window.location.href && window.location.href !== 'about:srcdoc') {
+            return window.location.href;
+          }
+        } catch (_) {}
+
+        try {
+          return String(document.baseURI || '').trim();
+        } catch (_) {
+          return '';
+        }
+      }
+
+      function setSubmittingState(form, isSubmitting) {
+        var submitControls = form.querySelectorAll(
+          'button[type="submit"], input[type="submit"], input[type="image"], [data-pixel-form-submit="true"]'
+        );
+
+        Array.prototype.forEach.call(submitControls, function(control) {
+          if (!(control instanceof HTMLElement)) return;
+
+          if (isSubmitting) {
+            if (!control.hasAttribute('data-lh-original-disabled')) {
+              control.setAttribute(
+                'data-lh-original-disabled',
+                control.hasAttribute('disabled') ? 'true' : 'false'
+              );
+            }
+            control.setAttribute('disabled', 'disabled');
+          } else if (control.getAttribute('data-lh-original-disabled') === 'false') {
+            control.removeAttribute('disabled');
+          }
+
+          if (control.tagName.toLowerCase() === 'button') {
+            if (isSubmitting) {
+              if (!control.hasAttribute('data-lh-original-label')) {
+                control.setAttribute(
+                  'data-lh-original-label',
+                  String(control.textContent || '')
+                );
+              }
+              control.textContent = 'Sending...';
+            } else if (control.hasAttribute('data-lh-original-label')) {
+              control.textContent = control.getAttribute('data-lh-original-label') || '';
+              control.removeAttribute('data-lh-original-label');
+            }
+          } else if (control.tagName.toLowerCase() === 'input') {
+            if (isSubmitting) {
+              if (!control.hasAttribute('data-lh-original-label')) {
+                control.setAttribute(
+                  'data-lh-original-label',
+                  String(control.getAttribute('value') || '')
+                );
+              }
+              control.setAttribute('value', 'Sending...');
+            } else if (control.hasAttribute('data-lh-original-label')) {
+              control.setAttribute(
+                'value',
+                control.getAttribute('data-lh-original-label') || ''
+              );
+              control.removeAttribute('data-lh-original-label');
+            }
+          }
+
+          if (!isSubmitting) {
+            control.removeAttribute('data-lh-original-disabled');
+          }
+        });
+      }
+
+      async function handleLandingHeroSubmit(payload) {
+        return fetch(API_BASE_URL + '/projects/forms/submit', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+      }
+
+      async function handleBrandsLiveProductEnquirySubmit(payload) {
+        return fetch(API_BASE_URL + '/brands-live/product-enquiry', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+      }
+
+      async function handleWebhookSubmit(url, payload) {
+        return fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+      }
+
+      function normalizeFormMode(value) {
+        return String(value || '')
+          .trim()
+          .toLowerCase()
+          .replace(/[_\s]+/g, '-');
+      }
+
+      function isBrandsLiveProductEnquiryForm(form) {
+        return (
+          form.getAttribute('data-lh-brands-live-product-enquiry') === 'true' ||
+          normalizeFormMode(form.getAttribute('data-lh-form-mode')) === 'brands-live-product-enquiry'
+        );
+      }
+
+      document.addEventListener('submit', async function(event) {
+        var form = event.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        if (!PROJECT_ID) return;
+        if (form.__lhFormSubmitting) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+
+        var payload = collectFormPayload(form);
+        if (!payload.fields.length) {
+          setFeedback(form, 'error', 'Please complete the form before submitting.');
+          return;
+        }
+
+        form.__lhFormSubmitting = true;
+        setSubmittingState(form, true);
+        setFeedback(form, 'success', '');
+
+        var mode = String(form.getAttribute('data-lh-form-mode') || 'landinghero')
+          .trim()
+          .toLowerCase() === 'webhook'
+          ? 'webhook'
+          : 'landinghero';
+        var isBrandsLiveProductEnquiry = isBrandsLiveProductEnquiryForm(form);
+
+        var requestPayload = {
+          project_id: PROJECT_ID,
+          projectId: PROJECT_ID,
+          websiteId: String(form.getAttribute('data-lh-brands-live-website-id') || '').trim(),
+          submittedAt: new Date().toISOString(),
+          pageUrl: getPageUrl(),
+          form: {
+            pixelId: String(form.getAttribute('data-pixel-id') || '').trim(),
+            mode: String(form.getAttribute('data-lh-form-mode') || '').trim(),
+            businessProductId: String(form.getAttribute('data-lh-business-product-id') || '').trim(),
+            productName: String(form.getAttribute('data-lh-product-name') || '').trim()
+          },
+          businessProductId: String(form.getAttribute('data-lh-business-product-id') || '').trim(),
+          productId: String(form.getAttribute('data-lh-product-id') || '').trim(),
+          productName: String(form.getAttribute('data-lh-product-name') || '').trim(),
+          fields: payload.fields,
+          data: payload.data
+        };
+
+        try {
+          var response;
+
+          if (isBrandsLiveProductEnquiry) {
+            response = await handleBrandsLiveProductEnquirySubmit(requestPayload);
+          } else if (mode === 'webhook') {
+            var webhookUrl = String(form.getAttribute('data-lh-form-webhook-url') || '').trim();
+            if (!webhookUrl) {
+              throw new Error('Webhook URL is not configured for this form.');
+            }
+            response = await handleWebhookSubmit(webhookUrl, requestPayload);
+          } else {
+            requestPayload.recipientEmail = String(
+              form.getAttribute('data-lh-form-recipient-email') || ''
+            ).trim();
+            response = await handleLandingHeroSubmit(requestPayload);
+          }
+
+          if (!response.ok) {
+            var errorMessage = DEFAULT_ERROR_MESSAGE;
+            try {
+              var errorBody = await response.json();
+              if (errorBody && errorBody.error) {
+                errorMessage = String(errorBody.error);
+              }
+            } catch (_) {}
+            throw new Error(errorMessage);
+          }
+
+          setFeedback(form, 'success', DEFAULT_SUCCESS_MESSAGE);
+          form.reset();
+        } catch (error) {
+          setFeedback(
+            form,
+            'error',
+            error && error.message ? error.message : DEFAULT_ERROR_MESSAGE
+          );
+        } finally {
+          form.__lhFormSubmitting = false;
+          setSubmittingState(form, false);
+        }
+      }, true);
+    })();
+  </script>
+</body></html>
