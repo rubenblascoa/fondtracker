@@ -2,7 +2,8 @@ import { queries, type InvestmentRow, type InvestmentWithStats } from "./db";
 import { fetchCurrentPrice, tryDiscoverTicker } from "./yahoo";
 
 function now(): string {
-  return new Date().toISOString();
+  // MySQL DATETIME espera 'YYYY-MM-DD HH:MM:SS', no el formato ISO con 'T'/'Z'/milisegundos
+  return new Date().toISOString().slice(0, 19).replace("T", " ");
 }
 
 function computeInvestmentStats(
