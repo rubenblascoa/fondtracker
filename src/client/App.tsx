@@ -91,13 +91,13 @@ export function App() {
       return;
     }
 
-    if (isLoginPath || isPrivacyPath || isTermsPath) {
+    if (isPrivacyPath || isTermsPath) {
       clearToken();
       setChecking(false);
       return;
     }
     if (!getToken()) {
-      if (isRootPath) {
+      if (isRootPath || isLoginPath) {
         setChecking(false);
         return;
       }
@@ -108,10 +108,13 @@ export function App() {
       .me()
       .then((u) => {
         setUser(u);
+        if (isLoginPath) {
+          window.history.replaceState({}, "", "/dashboard");
+        }
       })
       .catch(() => {
         clearToken();
-        if (isRootPath) return;
+        if (isRootPath || isLoginPath) return;
         window.location.replace("/login");
       })
       .finally(() => {
