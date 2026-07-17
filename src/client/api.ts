@@ -28,11 +28,12 @@ export type User = {
   id: number;
   username: string;
   email: string;
+  phone: string | null;
   created_at: string;
 };
 
 export type AuthResponse = {
-  user: { id: number; username: string; email: string };
+  user: { id: number; username: string; email: string; phone: string | null };
   token: string;
 };
 
@@ -332,7 +333,7 @@ export function getSpecificFundUrl(isin: string, bank: string, name: string): st
 }
 
 export const api = {
-  register: (data: { username: string; email: string; password: string }) =>
+  register: (data: { username: string; email: string; password: string; phone?: string }) =>
     request<AuthResponse>("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -411,7 +412,7 @@ export const api = {
       { method: "POST" }
     ),
 
-  updateAccount: (data: { email?: string; currentPassword?: string; newPassword?: string }) =>
+  updateAccount: (data: { email?: string; currentEmail?: string; currentPassword?: string; newPassword?: string; phone?: string | null }) =>
     request<{ ok: true }>("/api/auth/me", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -425,7 +426,7 @@ export const api = {
       body: JSON.stringify({ password }),
     }),
 
-  updateWhatsAppConfig: (data: { phone?: string; api_key?: string; timezone?: string; cron?: string; enabled?: boolean }) =>
+  updateWhatsAppConfig: (data: { api_key?: string; timezone?: string; enabled?: boolean; phone?: string }) =>
     request<{ ok: true }>("/api/whatsapp/config", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

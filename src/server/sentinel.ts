@@ -1,10 +1,11 @@
 import { fetchCurrentPrice, tryDiscoverTicker } from "./yahoo";
 import { queries, type InvestmentRow, type InvestmentWithStats } from "./db";
 
-// ─── In-memory price cache ────────────────────────────────────────────────────
+// ─── In-memory price cache with LRU eviction ──────────────────────────────────
 // Avoids calling Yahoo Finance on every 10-second dashboard refresh.
 // Prices refresh automatically after TTL expires.
 const PRICE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const PRICE_CACHE_MAX = 500; // max entries before LRU eviction
 
 type CacheEntry = { price: number; currency: string; fetchedAt: number };
 const priceCache = new Map<string, CacheEntry>();
@@ -16,6 +17,11 @@ function getCachedPrice(isin: string): CacheEntry | null {
 }
 
 function setCachedPrice(isin: string, price: number, currency: string) {
+  if (priceCache.has(isin)) priceCache.delete(isin);
+  else if (priceCache.size >= PRICE_CACHE_MAX) {
+    const oldest = priceCache.keys().next().value;
+    if (oldest) priceCache.delete(oldest);
+  }
   priceCache.set(isin, { price, currency, fetchedAt: Date.now() });
 }
 
@@ -35,11 +41,11 @@ function computeInvestmentStats(
   currentPrice: number | null,
   resolvedTicker: string | null
 ): InvestmentWithStats {
-  const shares = Number(investment.shares);
-  const purchasePrice = Number(investment.purchase_price);
+  const shares = Number.isFinite(Number(investment.shares)) ? Number(investment.shares) : 0;
+  const purchasePrice = Number.isFinite(Number(investment.purchase_price)) ? Number(investment.purchase_price) : 0;
   const totalInvested = shares * purchasePrice;
   const currentValue =
-    currentPrice != null ? shares * currentPrice : totalInvested;
+    currentPrice != null && Number.isFinite(currentPrice) ? shares * currentPrice : totalInvested;
   const profitLoss = currentValue - totalInvested;
   const profitLossPct = totalInvested > 0 ? (profitLoss / totalInvested) * 100 : 0;
 

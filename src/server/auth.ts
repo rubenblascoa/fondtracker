@@ -10,12 +10,11 @@ const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID ?? "";
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET ?? "";
 const OAUTH_REDIRECT_BASE = process.env.OAUTH_REDIRECT_BASE ?? (IS_PROD ? "https://fondtracker.example.com" : "http://localhost:3741");
 
-// Hard-fail at startup if deployed to production with the default secret
-if (IS_PROD && JWT_SECRET === DEFAULT_SECRET) {
+// Hard-fail always — even in development, never run with a known default secret
+if (JWT_SECRET === DEFAULT_SECRET) {
   console.error(
-    "\n[FATAL] JWT_SECRET no está configurado. " +
-    "Debes establecer una clave aleatoria segura en la variable de entorno JWT_SECRET " +
-    "antes de arrancar en producción. Ejemplo:\n" +
+    "\n[FATAL] JWT_SECRET tiene el valor por defecto. " +
+    "Establece una clave aleatoria segura en JWT_SECRET. Ejemplo:\n" +
     "  openssl rand -base64 48\n"
   );
   process.exit(1);
@@ -29,6 +28,7 @@ type UserRow = {
   username: string;
   email: string;
   password_hash: string;
+  phone: string | null;
   created_at: string;
 };
 
@@ -109,48 +109,43 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 export async function registerUser(
   username: string,
   email: string,
-  password: string
-): Promise<{ user: { id: number; username: string; email: string }; token: string }> {
-  const [existing] = await pool.query<UserRow[]>(
-    "SELECT id, username, email FROM users WHERE email = ? OR username = ?",
+  password: string,
+  phone?: string
+): Promise<{ user: { id: number; username: string; email: string; phone: string | null }; token: string }> {
+  const [existing] = await pool.query<any[]>(
+    "SELECT id, username, email FROM users WHERE (email = ? OR username = ?) AND deleted_at IS NULL",
     [email, username]
   );
-  const conflict = (existing as any[]).find(
-    (r) => r.email === email || r.username === username
-  );
-  if (conflict) {
-    if (conflict.email === email) {
-      throw new Error("Ya existe una cuenta con ese email");
-    }
-    throw new Error("Ese nombre de usuario ya está en uso");
+  if (existing.length > 0) {
+    throw new Error("El email o nombre de usuario ya está registrado");
   }
 
   const hash = await hashPassword(password);
+  const cleanPhone = phone ? phone.replace(/[^\d+]/g, "") : null;
   const [result] = await pool.query(
-    "INSERT INTO users (username, email, password_hash, created_at) VALUES (?, ?, ?, NOW())",
-    [username, email, hash]
+    "INSERT INTO users (username, email, password_hash, phone, created_at) VALUES (?, ?, ?, ?, NOW())",
+    [username, email, hash, cleanPhone]
   );
   const id = (result as any).insertId;
   const token = await signToken({ sub: id, username });
-  return { user: { id, username, email }, token };
+  return { user: { id, username, email, phone: cleanPhone }, token };
 }
 
 export async function loginUser(
   identifier: string,
   password: string
 ): Promise<{ user: { id: number; username: string; email: string }; token: string }> {
-  const [rows] = await pool.query<UserRow[]>(
-    "SELECT * FROM users WHERE email = ? OR username = ?",
+  const [rows] = await pool.query<any[]>(
+    "SELECT * FROM users WHERE (email = ? OR username = ?) AND deleted_at IS NULL",
     [identifier, identifier]
   );
   const user = rows[0];
-  if (!user) throw new Error("Credenciales incorrectas");
-
-  const valid = await verifyPassword(password, user.password_hash);
-  if (!valid) throw new Error("Credenciales incorrectas");
+  const dummyHash = await hashPassword("dummy_fixed_salt_value");
+  const valid = user ? await verifyPassword(password, user.password_hash) : await verifyPassword(password, dummyHash);
+  if (!valid || !user) throw new Error("Credenciales incorrectas");
 
   const token = await signToken({ sub: user.id, username: user.username });
-  return { user: { id: user.id, username: user.username, email: user.email }, token };
+  return { user: { id: user.id, username: user.username, email: user.email, phone: user.phone ?? null }, token };
 }
 
 export async function getUserFromRequest(req: Request): Promise<{ id: number; username: string } | null> {
@@ -161,24 +156,28 @@ export async function getUserFromRequest(req: Request): Promise<{ id: number; us
   return { id: payload.sub, username: payload.username };
 }
 
-export async function getUserProfile(userId: number): Promise<{ id: number; username: string; email: string; created_at: string } | null> {
+export async function getUserProfile(userId: number): Promise<{ id: number; username: string; email: string; phone: string | null; created_at: string } | null> {
   const [rows] = await pool.query<any[]>(
-    "SELECT id, username, email, created_at FROM users WHERE id = ?",
+    "SELECT id, username, email, phone, created_at FROM users WHERE id = ? AND deleted_at IS NULL",
     [userId]
   );
   return rows[0] ?? null;
 }
 
 export async function changeEmail(userId: number, newEmail: string): Promise<void> {
-  const [existing] = await pool.query<any[]>(
-    "SELECT id FROM users WHERE email = ? AND id != ?",
-    [newEmail, userId]
-  );
-  if (existing.length > 0) throw new Error("Ese email ya está en uso");
-  await pool.query("UPDATE users SET email = ? WHERE id = ?", [newEmail, userId]);
+  // Let the UNIQUE constraint fail generically to prevent user enumeration
+  try {
+    await pool.query("UPDATE users SET email = ? WHERE id = ?", [newEmail, userId]);
+  } catch {
+    throw new Error("No se pudo actualizar el email");
+  }
 }
 
 export async function changePassword(userId: number, currentPassword: string, newPassword: string): Promise<void> {
+  if (newPassword.length < 8) throw new Error("Mínimo 8 caracteres");
+  if (!/[A-Z]/.test(newPassword)) throw new Error("Requiere al menos una mayúscula");
+  if (!/[a-z]/.test(newPassword)) throw new Error("Requiere al menos una minúscula");
+  if (!/[0-9]/.test(newPassword)) throw new Error("Requiere al menos un número");
   const [rows] = await pool.query<any[]>("SELECT password_hash FROM users WHERE id = ?", [userId]);
   if (!rows[0]) throw new Error("Usuario no encontrado");
   const valid = await verifyPassword(currentPassword, rows[0].password_hash);
@@ -194,11 +193,45 @@ export async function deleteAccount(userId: number, password: string): Promise<v
     const valid = await verifyPassword(password, rows[0].password_hash);
     if (!valid) throw new Error("La contraseña no es correcta");
   }
-  await pool.query("DELETE FROM investments WHERE user_id = ?", [userId]);
-  await pool.query("DELETE FROM users WHERE id = ?", [userId]);
+  // Soft-delete: keep data for 7 days in case of accidental deletion
+  await pool.query("UPDATE users SET deleted_at = NOW() WHERE id = ?", [userId]);
+  // Clean up fund_history for soft-deleted investments (CASCADE won't fire on UPDATE)
+  await pool.query(
+    "DELETE FROM fund_history WHERE fund_id IN (SELECT id FROM investments WHERE user_id = ?)",
+    [userId]
+  );
+  await pool.query("UPDATE investments SET deleted_at = NOW() WHERE user_id = ?", [userId]);
 }
 
 // --- OAUTH LOGIC ---
+
+// One-time state tokens for OAuth CSRF protection
+const oauthStateMap = new Map<string, { createdAt: number }>();
+
+function generateOAuthState(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  const state = Array.from(bytes, (b) => b.toString(36).padStart(2, "0")).join("");
+  oauthStateMap.set(state, { createdAt: Date.now() });
+  // Auto-expire old states after 10 minutes
+  setTimeout(() => oauthStateMap.delete(state), 600_000);
+  return state;
+}
+
+function verifyOAuthState(state: string): boolean {
+  const entry = oauthStateMap.get(state);
+  if (!entry) return false;
+  oauthStateMap.delete(state); // one-time use
+  return true;
+}
+
+// Periodically clean stale entries every 5 min
+setInterval(() => {
+  const cutoff = Date.now() - 600_000;
+  for (const [key, val] of oauthStateMap) {
+    if (val.createdAt < cutoff) oauthStateMap.delete(key);
+  }
+}, 300_000).unref();
 
 export function getGoogleAuthUrl(): string {
   const params = new URLSearchParams({
@@ -208,11 +241,13 @@ export function getGoogleAuthUrl(): string {
     scope: "email profile",
     access_type: "offline",
     prompt: "consent",
+    state: generateOAuthState(),
   });
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
 
-export async function handleGoogleCallback(code: string): Promise<string> {
+export async function handleGoogleCallback(code: string, state: string): Promise<string> {
+  if (!verifyOAuthState(state)) throw new Error("Estado de OAuth inválido");
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -244,11 +279,13 @@ export function getGithubAuthUrl(): string {
     client_id: GITHUB_CLIENT_ID,
     redirect_uri: `${OAUTH_REDIRECT_BASE}/api/auth/github/callback`,
     scope: "user:email",
+    state: generateOAuthState(),
   });
   return `https://github.com/login/oauth/authorize?${params.toString()}`;
 }
 
-export async function handleGithubCallback(code: string): Promise<string> {
+export async function handleGithubCallback(code: string, state: string): Promise<string> {
+  if (!verifyOAuthState(state)) throw new Error("Estado de OAuth inválido");
   const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
     method: "POST",
     headers: { 

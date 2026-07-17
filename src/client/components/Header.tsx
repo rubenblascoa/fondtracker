@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import type { Status, User } from "../api";
 import { api, clearToken } from "../api";
+import { COUNTRIES } from "./RegisterPage";
 
 type Props = {
   status?: Status | null;
@@ -12,8 +13,14 @@ type Props = {
 
 export function Header({ status, user, onLogout, onOpenApiDocs, landingNav }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [view, setView] = useState<"menu" | "email" | "password" | "delete" | null>(null);
+  const [view, setView] = useState<"menu" | "email" | "password" | "delete" | "phone" | null>(null);
+  const [phoneCountry, setPhoneCountry] = useState(() => COUNTRIES.find(c => c.code === "ES") ?? COUNTRIES[0]);
+  const [localNumber, setLocalNumber] = useState("");
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [countrySearch, setCountrySearch] = useState("");
+  const countryRef = useRef<HTMLDivElement>(null);
   const [email, setEmail] = useState("");
+  const [currentEmail, setCurrentEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState("");
@@ -32,20 +39,35 @@ export function Header({ status, user, onLogout, onOpenApiDocs, landingNav }: Pr
     return () => document.removeEventListener("mousedown", handler);
   }, [menuOpen]);
 
-  function openView(v: "email" | "password" | "delete") {
+  function openView(v: "email" | "password" | "delete" | "phone") {
     setView(v);
     setError("");
     setEmail("");
+    setCurrentEmail("");
     setCurrentPassword("");
     setNewPassword("");
+    if (v === "phone") {
+      if (user?.phone) {
+        const matchingCountry = COUNTRIES.slice().sort((a,b) => b.dial.length - a.dial.length).find(c => user.phone!.startsWith(c.dial));
+        if (matchingCountry) {
+          setPhoneCountry(matchingCountry);
+          setLocalNumber(user.phone.slice(matchingCountry.dial.length));
+        } else {
+          setLocalNumber(user.phone);
+        }
+      } else {
+        setLocalNumber("");
+      }
+    }
   }
 
   async function handleChangeEmail() {
     setError("");
-    if (!email.includes("@")) { setError("Invalid email"); return; }
+    if (!currentEmail.includes("@")) { setError("Invalid current email"); return; }
+    if (!email.includes("@")) { setError("Invalid new email"); return; }
     setLoading(true);
     try {
-      await api.updateAccount({ email: email.trim() });
+      await api.updateAccount({ currentEmail: currentEmail.trim(), email: email.trim() });
       setView(null);
       setMenuOpen(false);
     } catch (err) {
@@ -79,6 +101,30 @@ export function Header({ status, user, onLogout, onOpenApiDocs, landingNav }: Pr
       await api.deleteAccount(currentPassword);
       clearToken();
       window.location.replace("/login");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSavePhone() {
+    setError("");
+    const num = localNumber.replace(/\D/g, "");
+    const full = num ? `${phoneCountry.dial}${num}` : "";
+    if (num && !/^\+[1-9]\d{6,14}$/.test(full.replace(/[\s-]/g, ""))) {
+      setError("Invalid phone number. Format: +34123456789");
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.updateAccount({ phone: full || null } as any);
+      if (user) {
+        user.phone = full || null;
+      }
+      setView(null);
+      setMenuOpen(false);
+      window.location.reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error");
     } finally {
@@ -174,6 +220,11 @@ export function Header({ status, user, onLogout, onOpenApiDocs, landingNav }: Pr
                     <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                     Change Password
                   </button>
+
+                  <button onClick={() => openView("phone")} className="w-full flex items-center gap-3 px-3 py-2 text-[12px] font-medium text-[var(--color-fg-2)] hover:bg-white/10 hover:text-white rounded-xl transition-all">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.362 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                    Phone Number
+                  </button>
                   
                   <div className="h-px bg-white/5 my-2 mx-2" />
                   
@@ -198,11 +249,14 @@ export function Header({ status, user, onLogout, onOpenApiDocs, landingNav }: Pr
                     <h3 className="text-[13px] font-semibold text-white">Change Email</h3>
                   </div>
                   
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="New email address" className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-[13px] text-white outline-none transition-all mb-3 placeholder:text-[var(--color-fg-5)]" autoFocus />
+                  <div className="space-y-2 mb-3">
+                    <input type="email" value={currentEmail} onChange={(e) => setCurrentEmail(e.target.value)} placeholder="Current email address" className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-[13px] text-white outline-none transition-all placeholder:text-[var(--color-fg-5)]" autoFocus />
+                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="New email address" className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-[13px] text-white outline-none transition-all placeholder:text-[var(--color-fg-5)]" />
+                  </div>
                   
                   {error && <p className="text-[11px] text-[var(--color-danger)] bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/20 px-2 py-1.5 rounded-lg mb-3 flex items-center gap-2"><span className="font-bold">!</span>{error}</p>}
                   
-                  <button onClick={handleChangeEmail} disabled={loading || !email} className="w-full bg-[var(--color-accent)] text-[#0a0a0a] font-semibold text-[12px] py-2.5 rounded-xl hover:brightness-110 disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(57,255,136,0.2)]">
+                  <button onClick={handleChangeEmail} disabled={loading || !currentEmail || !email} className="w-full bg-[var(--color-accent)] text-[#0a0a0a] font-semibold text-[12px] py-2.5 rounded-xl hover:brightness-110 disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(57,255,136,0.2)]">
                     {loading ? "Saving..." : "Save Changes"}
                   </button>
                 </div>
@@ -249,6 +303,82 @@ export function Header({ status, user, onLogout, onOpenApiDocs, landingNav }: Pr
                   
                   <button onClick={handleDeleteAccount} disabled={loading || !currentPassword} className="w-full bg-[var(--color-danger)] text-white font-semibold text-[12px] py-2.5 rounded-xl hover:brightness-110 disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(255,90,74,0.2)]">
                     {loading ? "Deleting..." : "Permanently Delete"}
+                  </button>
+                </div>
+              )}
+
+              {menuOpen && view === "phone" && (
+                <div className="absolute right-0 top-full mt-3 w-72 border border-white/10 bg-black/70 backdrop-blur-2xl rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)] z-50 p-5 fade-in" style={{maxWidth: 'calc(100vw - 1rem)'}}>
+                  <div className="flex items-center gap-3 mb-4">
+                    <button onClick={() => { setView(null); setError(""); }} className="text-[var(--color-fg-4)] hover:text-white transition-colors">
+                      <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    </button>
+                    <h3 className="text-[13px] font-semibold text-white">Phone Number</h3>
+                  </div>
+                  
+                  <div className="flex gap-2 mb-4 relative" ref={countryRef}>
+                    <div className="relative shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => { setShowCountryPicker(!showCountryPicker); setCountrySearch(""); }}
+                        className="flex items-center gap-1.5 bg-black/40 border border-white/10 hover:border-white/20 text-white text-xs px-2.5 py-2.5 rounded-xl outline-none transition-all min-w-[76px]"
+                      >
+                        <span className="text-sm leading-none">{phoneCountry.flag}</span>
+                        <span className="font-mono text-[10px]">{phoneCountry.dial}</span>
+                        <svg className={`w-2.5 h-2.5 text-[var(--color-fg-4)] transition-transform ${showCountryPicker ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      {showCountryPicker && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setShowCountryPicker(false)} />
+                          <div className="absolute top-full left-0 mt-2 z-50 w-60 bg-[#0d0d0f]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+                            <div className="p-2 border-b border-white/5">
+                              <input
+                                type="text"
+                                value={countrySearch}
+                                onChange={(e) => setCountrySearch(e.target.value)}
+                                placeholder="Search..."
+                                className="w-full bg-black/60 border border-white/5 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder:text-[var(--color-fg-5)] outline-none focus:border-[var(--color-accent)]/50"
+                                autoFocus
+                              />
+                            </div>
+                            <div className="max-h-40 overflow-y-auto font-sans">
+                              {COUNTRIES.filter(c =>
+                                !countrySearch ||
+                                c.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
+                                c.dial.includes(countrySearch) ||
+                                c.code.toLowerCase().includes(countrySearch.toLowerCase())
+                              ).map((c) => (
+                                <button
+                                  key={c.code}
+                                  type="button"
+                                  onClick={() => { setPhoneCountry(c); setShowCountryPicker(false); }}
+                                  className={`flex items-center gap-2 w-full px-2 py-1.5 text-left text-xs transition-colors hover:bg-white/5 ${phoneCountry.code === c.code ? "bg-white/5 text-white" : "text-[var(--color-fg-2)]"}`}
+                                >
+                                  <span>{c.flag}</span>
+                                  <span className="font-mono text-[10px] text-[var(--color-fg-4)] w-10">{c.dial}</span>
+                                  <span className="truncate flex-1 text-left">{c.name}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <input
+                      type="tel"
+                      value={localNumber}
+                      onChange={(e) => setLocalNumber(e.target.value.replace(/\D/g, ""))}
+                      className="flex-1 bg-black/40 border border-white/10 focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-[13px] text-white outline-none transition-all placeholder:text-[var(--color-fg-5)]"
+                      placeholder="612345678"
+                    />
+                  </div>
+
+                  {error && <p className="text-[11px] text-[var(--color-danger)] bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/20 px-2 py-1.5 rounded-lg mb-3 flex items-center gap-2"><span className="font-bold">!</span>{error}</p>}
+                  
+                  <button onClick={handleSavePhone} disabled={loading} className="w-full bg-[var(--color-accent)] text-[#0a0a0a] font-semibold text-[12px] py-2.5 rounded-xl hover:brightness-110 disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(57,255,136,0.2)]">
+                    {loading ? "Saving..." : "Save Phone"}
                   </button>
                 </div>
               )}

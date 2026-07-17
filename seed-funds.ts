@@ -61,7 +61,7 @@ const funds: FundSeed[] = [
   { isin: "IE000L2OHAU4", name: "Vanguard FTSE North America UCITS ETF USD (Acc)", bank: "Vanguard", category: "RV EEUU", risk_level: 4, currency: "USD", yahoo_ticker: null },
   { isin: "IE00BFM6T167", name: "Vanguard S&P 500 UCITS ETF USD (Acc)", bank: "Vanguard", category: "RV EEUU", risk_level: 4, currency: "USD", yahoo_ticker: "VUAA.AS" },
   { isin: "IE00BZ4BQT80", name: "Vanguard FTSE All-World High Dividend Yield UCITS ETF USD (Acc)", bank: "Vanguard", category: "RV Dividendos", risk_level: 4, currency: "USD", yahoo_ticker: null },
-  { isin: "IE00BZ4BQT80", name: "Vanguard FTSE All-World High Dividend Yield UCITS ETF USD (Dist)", bank: "Vanguard", category: "RV Dividendos", risk_level: 4, currency: "USD", yahoo_ticker: null },
+  // TODO: Verificar ISIN correcto para la clase Distributing (Dist) de este fondo
   { isin: "IE00BDFB8L45", name: "Vanguard Global Minimum Volatility UCITS ETF USD (Acc)", bank: "Vanguard", category: "RV Baja Volatilidad", risk_level: 3, currency: "USD", yahoo_ticker: null },
 
   // ═══════════════════════════════════════════════════════════════
@@ -174,8 +174,8 @@ const funds: FundSeed[] = [
   // ═══════════════════════════════════════════════════════════════
   // BBVA — Fondos de Inversi\u00f3n
   // ═══════════════════════════════════════════════════════════════
-  { isin: "ESV84841055", name: "Acci\u00f3n EuroSTOXX 50 ETF FI", bank: "BBVA", category: "RV Euro 50", risk_level: 4, currency: "EUR", yahoo_ticker: null },
-  { isin: "ESV84750637", name: "Acci\u00f3n IBEX 35 ETF FI", bank: "BBVA", category: "RV Espa\u00f1a", risk_level: 4, currency: "EUR", yahoo_ticker: null },
+  { isin: "ES0105321030", name: "Acci\u00f3n EuroSTOXX 50 ETF FI", bank: "BBVA", category: "RV Euro 50", risk_level: 4, currency: "EUR", yahoo_ticker: null },
+  { isin: "ES0105336038", name: "Acci\u00f3n IBEX 35 ETF FI", bank: "BBVA", category: "RV Espa\u00f1a", risk_level: 4, currency: "EUR", yahoo_ticker: null },
   { isin: "ES0151700082", name: "BBVA FondIndex RF Euro FI", bank: "BBVA", category: "RF Europa", risk_level: 2, currency: "EUR", yahoo_ticker: null },
   { isin: "ES0151700090", name: "BBVA FondIndex RV Europa FI", bank: "BBVA", category: "RV Europa", risk_level: 4, currency: "EUR", yahoo_ticker: null },
   { isin: "ES0151700108", name: "BBVA FondIndex RV Global FI", bank: "BBVA", category: "RV Global", risk_level: 5, currency: "USD", yahoo_ticker: null },

@@ -35,7 +35,7 @@ export const FUND_CATALOG: FundCatalogEntry[] = [
   { isin: "ES0139090069", name: "Caixabank Emergentes RV", bank: "Caixabank", category: "RV Emergentes", riskLevel: 5, currency: "USD", yahooTicker: null },
 
   // BBVA
-  { isin: "ES0139090010", name: "BBVA Banca Privada España", bank: "BBVA", category: "RV España", riskLevel: 4, currency: "EUR", yahooTicker: null },
+  { isin: "ES0151700074", name: "BBVA Banca Privada España", bank: "BBVA", category: "RV España", riskLevel: 4, currency: "EUR", yahooTicker: null },
   { isin: "ES0151700082", name: "BBVA FondIndex RF Euro", bank: "BBVA", category: "RF Europa", riskLevel: 2, currency: "EUR", yahooTicker: null },
   { isin: "ES0151700090", name: "BBVA FondIndex RV Europa", bank: "BBVA", category: "RV Europa", riskLevel: 4, currency: "EUR", yahooTicker: null },
   { isin: "ES0151700108", name: "BBVA FondIndex RV Global", bank: "BBVA", category: "RV Global", riskLevel: 5, currency: "USD", yahooTicker: null },

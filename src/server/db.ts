@@ -14,13 +14,19 @@ export const pool = await mysql.createPool({
   database: DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
+  queueLimit: 50,
+  idleTimeout: 30000,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000,
   charset: "utf8mb4",
-  // Return DATE/DATETIME/TIMESTAMP as strings (e.g. "2024-01-15") instead of
-  // JavaScript Date objects. Prevents ".slice is not a function" errors.
   dateStrings: true,
 });
 
 async function createIndexIfNotExists(indexName: string, table: string, columns: string) {
+  // Validate identifiers to prevent SQL injection in DDL (no parameterized placeholders for identifiers)
+  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(indexName)) throw new Error("Invalid index name");
+  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(table)) throw new Error("Invalid table name");
+  if (!/^[a-zA-Z0-9_,\s()]+$/.test(columns)) throw new Error("Invalid columns");
   const [rows] = await pool.query<any[]>(
     `SELECT COUNT(*) AS cnt FROM information_schema.statistics
      WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?`,
@@ -56,6 +62,15 @@ export async function ensureSchema() {
   } catch (e) {} // Ignore if already exists
   try {
     await pool.query(`ALTER TABLE users ADD COLUMN github_id VARCHAR(255) DEFAULT NULL UNIQUE`);
+  } catch (e) {} // Ignore if already exists
+  try {
+    await pool.query(`ALTER TABLE users ADD COLUMN deleted_at DATETIME DEFAULT NULL`);
+  } catch (e) {} // Ignore if already exists
+  try {
+    await pool.query(`ALTER TABLE users ADD COLUMN phone VARCHAR(20) DEFAULT NULL`);
+  } catch (e) {} // Ignore if already exists
+  try {
+    await pool.query(`ALTER TABLE investments ADD COLUMN deleted_at DATETIME DEFAULT NULL`);
   } catch (e) {} // Ignore if already exists
   await pool.query(`
     CREATE TABLE IF NOT EXISTS investments (
@@ -137,6 +152,13 @@ export async function ensureSchema() {
     await pool.query("ALTER TABLE investments ADD COLUMN user_id INT NOT NULL DEFAULT 1 AFTER id");
     await pool.query("CREATE INDEX idx_investments_user ON investments(user_id)");
   }
+  // Indexes for soft-delete queries
+  try {
+    await pool.query("CREATE INDEX idx_users_deleted_at ON users(deleted_at)");
+  } catch {}
+  try {
+    await pool.query("CREATE INDEX idx_investments_deleted_at ON investments(deleted_at)");
+  } catch {}
 }
 
 export async function closeDatabase() {
@@ -172,13 +194,13 @@ export const queries = {
   async listInvestments(userId?: number): Promise<InvestmentRow[]> {
     if (userId != null) {
       const [rows] = await pool.query<InvestmentRow[]>(
-        "SELECT * FROM investments WHERE user_id = ? ORDER BY created_at DESC",
+        "SELECT * FROM investments WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC",
         [userId]
       );
       return rows;
     }
     const [rows] = await pool.query<InvestmentRow[]>(
-      "SELECT * FROM investments ORDER BY created_at DESC"
+      "SELECT * FROM investments WHERE deleted_at IS NULL ORDER BY created_at DESC"
     );
     return rows;
   },
@@ -186,13 +208,13 @@ export const queries = {
   async getInvestment(id: number, userId?: number): Promise<InvestmentRow | null> {
     if (userId != null) {
       const [rows] = await pool.query<InvestmentRow[]>(
-        "SELECT * FROM investments WHERE id = ? AND user_id = ?",
+        "SELECT * FROM investments WHERE id = ? AND user_id = ? AND deleted_at IS NULL",
         [id, userId]
       );
       return rows[0] ?? null;
     }
     const [rows] = await pool.query<InvestmentRow[]>(
-      "SELECT * FROM investments WHERE id = ?",
+      "SELECT * FROM investments WHERE id = ? AND deleted_at IS NULL",
       [id]
     );
     return rows[0] ?? null;
@@ -287,7 +309,14 @@ export const queries = {
     await pool.query("UPDATE investments SET ticker = ? WHERE id = ?", [ticker, id]);
   },
 
-  async getInvestmentsByIsin(isin: string): Promise<InvestmentRow[]> {
+  async getInvestmentsByIsin(isin: string, userId?: number): Promise<InvestmentRow[]> {
+    if (userId != null) {
+      const [rows] = await pool.query<InvestmentRow[]>(
+        "SELECT * FROM investments WHERE isin = ? AND user_id = ?",
+        [isin, userId]
+      );
+      return rows;
+    }
     const [rows] = await pool.query<InvestmentRow[]>(
       "SELECT * FROM investments WHERE isin = ?",
       [isin]
@@ -316,8 +345,15 @@ export const queries = {
     let params: any[];
 
     if (query && query.trim()) {
-      sql = `SELECT * FROM fund_catalog WHERE MATCH(name, isin, bank, category) AGAINST(? IN BOOLEAN MODE)`;
-      params = [query.trim().split(/\s+/).map(w => `+${w}*`).join(" ")];
+      const sanitized = query.trim().slice(0, 200).replace(/[+\-<>()~*"@]/g, "").trim();
+      const terms = sanitized.split(/\s+/).filter(Boolean);
+      if (terms.length > 0) {
+        sql = `SELECT * FROM fund_catalog WHERE MATCH(name, isin, bank, category) AGAINST(? IN BOOLEAN MODE)`;
+        params = [terms.map(w => `+${w}*`).join(" ")];
+      } else {
+        sql = `SELECT * FROM fund_catalog WHERE 1=1`;
+        params = [];
+      }
     } else {
       sql = `SELECT * FROM fund_catalog WHERE 1=1`;
       params = [];
@@ -430,7 +466,7 @@ export const queries = {
   /** Returns the ID of every registered user. Used by the digest scheduler. */
   async getAllUserIds(): Promise<number[]> {
     const [rows] = await pool.query<{ id: number }[]>(
-      "SELECT id FROM users ORDER BY id ASC"
+      "SELECT id FROM users WHERE deleted_at IS NULL ORDER BY id ASC"
     );
     return rows.map((r) => r.id);
   },

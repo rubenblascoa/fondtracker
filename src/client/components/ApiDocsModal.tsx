@@ -9,7 +9,9 @@ type Props = {
 export function ApiDocsModal({ isOpen, onClose }: Props) {
   if (!isOpen) return null;
 
-  const token = getToken() || "TU_JWT_TOKEN_AQUI";
+  const rawToken = getToken() || "";
+  const token = rawToken ? `${rawToken.slice(0, 8)}...${rawToken.slice(-4)}` : "TU_JWT_TOKEN_AQUI";
+  const baseUrl = `${window.location.protocol}//${window.location.host}`;
   const [copied, setCopied] = useState<string | null>(null);
 
   const copyToClipboard = (text: string, id: string) => {
@@ -18,14 +20,14 @@ export function ApiDocsModal({ isOpen, onClose }: Props) {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const curlList = `curl -X GET http://localhost:3000/api/funds \\
-  -H "Authorization: Bearer ${token}"`;
+  const curlList = `curl -X GET ${baseUrl}/api/funds \
+  -H "Authorization: Bearer ${rawToken || "TU_JWT_TOKEN_AQUI"}"`;
 
-  const curlCatalog = `curl -X GET "http://localhost:3000/api/funds/catalog?q=santander" \\
-  -H "Authorization: Bearer ${token}"`;
+  const curlCatalog = `curl -X GET "${baseUrl}/api/funds/catalog?q=santander" \
+  -H "Authorization: Bearer ${rawToken || "TU_JWT_TOKEN_AQUI"}"`;
 
-  const curlChart = `curl -X GET "http://localhost:3000/api/funds/chart/ES0109360000?range=1y&interval=1d" \\
-  -H "Authorization: Bearer ${token}"`;
+  const curlChart = `curl -X GET "${baseUrl}/api/funds/chart/ES0109360000?range=1y&interval=1d" \
+  -H "Authorization: Bearer ${rawToken || "TU_JWT_TOKEN_AQUI"}"`;
 
   return (
     <div className="fixed inset-0 bg-[var(--color-bg-0)]/80 backdrop-blur-md flex items-center justify-center z-50 p-6 fade-in">

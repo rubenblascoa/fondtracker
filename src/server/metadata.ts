@@ -6,6 +6,7 @@ export interface ExtraMetadata {
   sectors?: { name: string; weight: number }[];
   geography?: { name: string; weight: number }[];
   topHoldings?: { name: string; ticker?: string; weight: number }[];
+  isPlaceholder?: boolean;
 }
 
 export function getFundExtraMetadata(
@@ -18,10 +19,10 @@ export function getFundExtraMetadata(
   const normCat = (category || "").toLowerCase();
   const normName = (name || "").toLowerCase();
 
-  // Initialize return metrics
-  let return1Y = returns.r1Y ?? 12.5;
-  let return3Y = returns.r3Y ?? 28.4;
-  let return5Y = returns.r5Y ?? 45.2;
+  // Initialize return metrics (null = unknown, UI shows "N/A")
+  let return1Y = returns.r1Y ?? undefined;
+  let return3Y = returns.r3Y ?? undefined;
+  let return5Y = returns.r5Y ?? undefined;
   let ter = 0.20; // Default index fund TER
 
   // Default values
@@ -236,6 +237,7 @@ export function getFundExtraMetadata(
     ter,
     sectors,
     geography,
-    topHoldings
+    topHoldings,
+    isPlaceholder: true,
   };
 }

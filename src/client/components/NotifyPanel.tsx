@@ -18,8 +18,8 @@ export function NotifyPanel({ status, onChange }: Props) {
     text: string;
   } | null>(null);
   const [showConfig, setShowConfig] = useState(false);
-  const [phone, setPhone] = useState("");
   const [apiKey, setApiKey] = useState("");
+  const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<{
     ok: boolean;
@@ -49,8 +49,15 @@ export function NotifyPanel({ status, onChange }: Props) {
     return () => clearTimeout(t);
   }, [testResult]);
 
+  useEffect(() => {
+    if (wa?.phone) {
+      setPhone(wa.phone);
+    } else {
+      setPhone("");
+    }
+  }, [wa?.phone]);
+
   const openConfig = () => {
-    setPhone("");
     setApiKey("");
     setShowConfig(true);
     setFeedback(null);
@@ -115,8 +122,8 @@ export function NotifyPanel({ status, onChange }: Props) {
     setFeedback(null);
     try {
       await api.updateWhatsAppConfig({
-        phone: phone || undefined,
         api_key: apiKey || undefined,
+        phone: phone || "",
       });
       setShowConfig(false);
       setFeedback({ kind: "ok", text: "configuration saved" });

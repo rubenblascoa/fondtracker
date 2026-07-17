@@ -22,7 +22,9 @@ export function FundCard({ fund, onChange }: Props) {
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   
   // Interactive Hover/Tooltip state
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -193,8 +195,20 @@ export function FundCard({ fund, onChange }: Props) {
     }
   };
 
+  // IntersectionObserver: only fetch/refresh chart when card is visible
   useEffect(() => {
-    if (!hasTicker) return;
+    const el = cardRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { setIsVisible(entry.isIntersecting); },
+      { threshold: 0.1 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!hasTicker || !isVisible) return;
     
     const fetchData = () => {
       setChartLoading(true);
@@ -224,12 +238,12 @@ export function FundCard({ fund, onChange }: Props) {
     const ticker = fund.ticker!;
     fetchData();
 
-    // Auto-refresh chart data every 60 seconds
+    // Auto-refresh chart data every 60 seconds (only while visible)
     const t = setInterval(fetchData, 60_000);
     return () => {
       clearInterval(t);
     };
-  }, [chartRange, fund.ticker, fund.isin]);
+  }, [chartRange, fund.ticker, fund.isin, isVisible]);
 
   // Fetch max-range chart data when editing for auto-fill price
   useEffect(() => {
@@ -329,7 +343,7 @@ export function FundCard({ fund, onChange }: Props) {
     : `https://finance.yahoo.com/quote/${encodeURIComponent(fund.ticker || "")}/`;
 
   return (
-    <div className={`border border-white/5 bg-black/20 backdrop-blur-sm transition-all duration-300 relative overflow-hidden hover:border-[var(--color-accent)]/50 shadow-sm hover:shadow-[0_0_15px_rgba(57,255,136,0.1)] ${deleting ? "opacity-50" : ""} group`}>
+    <div ref={cardRef} className={`border border-white/5 bg-black/20 backdrop-blur-sm transition-all duration-300 relative overflow-hidden hover:border-[var(--color-accent)]/50 shadow-sm hover:shadow-[0_0_15px_rgba(57,255,136,0.1)] ${deleting ? "opacity-50" : ""} group`}>
         <div className={`flex flex-col sm:flex-row sm:items-start sm:justify-between px-4 py-4 sm:p-6 ${hasTicker ? "" : "pb-4"}`}>
         <div className="flex-1 min-w-0">
           {editing ? (

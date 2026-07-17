@@ -46,26 +46,34 @@ const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? (IS_PROD ? "" : "http://loc
 
 const PROJECT_ROOT = process.cwd();
 const PUBLIC_DIR = resolve(PROJECT_ROOT, "public");
+const DIST_DIR = resolve(PROJECT_ROOT, "dist");
 const STARTED_AT = Date.now();
 const MAX_BODY_BYTES = 65_536; // 64 KB
+let serverInstance: any = null; // For Bun.requestIP access
+let cachedIndexHtml: string | null = null;
 
 // ─── Rate Limiter ──────────────────────────────────────────────────────────
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_ENTRIES = 10_000;
 
-function rateLimit(ip: string, maxRequests = 10): boolean {
+function rateLimit(namespace: string, ip: string, maxRequests = 10): boolean {
+  const key = `${namespace}:${ip}`;
   const now = Date.now();
-  const entry = rateLimitMap.get(ip);
+  const entry = rateLimitMap.get(key);
   if (!entry || now >= entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return false; // not limited
+    if (rateLimitMap.size >= RATE_LIMIT_MAX_ENTRIES) {
+      const oldest = rateLimitMap.entries().next().value;
+      if (oldest) rateLimitMap.delete(oldest[0]);
+    }
+    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return false;
   }
   entry.count++;
-  if (entry.count > maxRequests) return true; // limited
+  if (entry.count > maxRequests) return true;
   return false;
 }
 
-// Prune stale rate-limit entries every minute
 setInterval(() => {
   const now = Date.now();
   for (const [key, val] of rateLimitMap) {
@@ -74,10 +82,20 @@ setInterval(() => {
 }, 60_000).unref();
 
 // ─── Security headers ──────────────────────────────────────────────────────
+function generateNonce(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes)).replace(/[+/=]/g, "");
+}
+
+let cachedNonce = generateNonce();
+setInterval(() => { cachedNonce = generateNonce(); }, 60_000).unref();
+
 function securityHeaders(extra?: Record<string, string>): Record<string, string> {
+  const nonce = cachedNonce;
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com",
+    `script-src 'self' 'nonce-${nonce}' https://cdn.tailwindcss.com`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https://assets.landinghero.app",
@@ -98,6 +116,13 @@ function securityHeaders(extra?: Record<string, string>): Record<string, string>
 }
 
 function getClientIp(req: Request): string {
+  // Prefer direct TCP connection IP (not spoofable)
+  if (serverInstance) {
+    try {
+      const addr = serverInstance.requestIP(req);
+      if (addr) return addr.family === "IPv6" ? addr.address : addr.address;
+    } catch {}
+  }
   // Trust X-Forwarded-For only if behind a known proxy (env TRUST_PROXY=1)
   if (process.env.TRUST_PROXY === "1") {
     const forwarded = req.headers.get("x-forwarded-for");
@@ -122,6 +147,18 @@ function corsHeaders(): Record<string, string> {
   };
 }
 
+/** Validate Origin/Referer header to prevent CSRF on mutating requests */
+function checkCSRF(req: Request): boolean {
+  if (!ALLOWED_ORIGIN) return true; // no origin configured, skip check
+  const origin = req.headers.get("Origin");
+  const referer = req.headers.get("Referer");
+  // If neither header is present, allow (browsers always send Origin/Referer on cross-origin requests)
+  if (!origin && !referer) return true;
+  // Check Origin first, then Referer as fallback
+  const check = (origin || referer || "").replace(/\/+$/, "");
+  return check === ALLOWED_ORIGIN.replace(/\/+$/, "");
+}
+
 function json(data: unknown, init?: ResponseInit) {
   const headers: Record<string, string> = {
     ...corsHeaders(),
@@ -143,19 +180,48 @@ function tooManyRequests() {
   return json({ error: "Demasiados intentos. Espera un momento." }, { status: 429 });
 }
 
-/** Safely read request body with a size limit to prevent DoS */
+/** Safely read request body with streaming size limit to prevent OOM DoS */
 async function safeJson(req: Request): Promise<unknown> {
-  const contentLength = Number(req.headers.get("content-length") ?? 0);
-  if (contentLength > MAX_BODY_BYTES) throw new Error("Payload demasiado grande");
-  const text = await req.text();
+  if (!req.body) throw new Error("Body ausente");
+  const reader = req.body.getReader();
+  const decoder = new TextDecoder();
+  const chunks: string[] = [];
+  let totalSize = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    totalSize += value.length;
+    if (totalSize > MAX_BODY_BYTES) {
+      await reader.cancel();
+      throw new Error("Payload demasiado grande");
+    }
+    chunks.push(decoder.decode(value, { stream: true }));
+  }
+  chunks.push(decoder.decode()); // flush
+
+  const text = chunks.join("");
   if (text.length > MAX_BODY_BYTES) throw new Error("Payload demasiado grande");
   return JSON.parse(text);
 }
 
 /** Sanitize error messages for client — never expose SQL/internals in production */
+const SAFE_ERROR_PREFIXES = [
+  "Credenciales incorrectas", "Mínimo 8 caracteres", "Requiere al menos una mayúscula",
+  "Requiere al menos una minúscula", "Requiere al menos un número",
+  "El email o nombre de usuario ya está registrado", "Usuario no encontrado",
+  "El usuario necesita al menos 3 caracteres", "El usuario solo puede tener letras, números y guión bajo",
+  "Introduce un email válido", "Introduce tu email o usuario", "Introduce tu contraseña",
+  "Payload demasiado grande", "Body ausente", "Falta ", "Email inválido",
+  "ISIN inválido", "Ticker inválido", "Rango inválido", "Intervalo inválido",
+  "fondo no encontrado", "datos de mercado no disponibles para este fondo",
+  "Demasiados intentos", "No autenticado",
+  "La contraseña actual no es correcta", "No se pudo actualizar el email",
+  "Faltan WHATSAPP_PHONE", "WhatsApp no configurado",
+];
 function safeError(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
-  if (IS_PROD && (msg.includes("ER_") || msg.includes("SQL") || msg.toLowerCase().includes("stack"))) {
+  if (IS_PROD && !SAFE_ERROR_PREFIXES.some(p => msg.startsWith(p))) {
     return "Error interno del servidor";
   }
   return msg;
@@ -171,8 +237,13 @@ function serveStatic(req: Request) {
   const url = new URL(req.url);
   const pathname = decodeURIComponent(url.pathname);
   const safe = normalize(pathname).replace(/^([/\\])+/, "");
-  const full = join(PUBLIC_DIR, safe);
+  const full = resolve(join(PUBLIC_DIR, safe));
+  // Prevent path traversal: resolved path must be within PUBLIC_DIR
   if (!full.startsWith(PUBLIC_DIR + sep) && full !== PUBLIC_DIR) {
+    return new Response("Forbidden", { status: 403 });
+  }
+  // Block Windows reserved device names
+  if (/^(con|nul|prn|aux|com[1-9]|lpt[1-9])($|\/|\\)/i.test(safe)) {
     return new Response("Forbidden", { status: 403 });
   }
   return new Response(Bun.file(full), {
@@ -186,7 +257,31 @@ function serveStatic(req: Request) {
   });
 }
 
-await ensureSchema();
+/** Serve index.html with nonce injection for CSP */
+function serveIndexHtml(): Response {
+  const html = cachedIndexHtml?.replace(/\{nonce\}/g, cachedNonce) ?? "";
+  return new Response(html, {
+    headers: {
+      "Content-Type": "text/html",
+      ...securityHeaders(),
+    },
+  });
+}
+
+try {
+  await ensureSchema();
+} catch (err) {
+  console.error(`[tracker] ERROR: No se pudo conectar a la base de datos.`, err);
+  console.error(`[tracker] La landing page seguirá funcionando, pero las funciones que requieren DB no estarán disponibles.`);
+}
+
+// Pre-cache index.html for CSP nonce injection
+try {
+  cachedIndexHtml = await Bun.file(join(PROJECT_ROOT, "index.html")).text();
+} catch {
+  console.error("[tracker] ERROR: index.html no encontrado. Ejecuta 'bun run build' primero.");
+  process.exit(1);
+}
 
 const server = serve({
   port: PORT,
@@ -198,7 +293,8 @@ const server = serve({
     return new Response("Internal Server Error", { status: 500 });
   },
 
-  fetch(req) {
+  fetch(req, server) {
+    serverInstance = server;
     if (req.method === "OPTIONS") {
       return new Response(null, {
         status: 204,
@@ -214,7 +310,7 @@ const server = serve({
   routes: {
     "/favicon.svg": (req) => serveStatic(req),
     "/favicon.ico": (req) => serveStatic(req),
-    "/": () => new Response(Bun.file(join(PROJECT_ROOT, "index.html")), { headers: { "Content-Type": "text/html" } }),
+    "/": () => serveIndexHtml(),
     "/dashboard": index,
     "/dashboard/*": index,
     "/login": index,
@@ -225,16 +321,23 @@ const server = serve({
     "/legal/*": index,
 
     "/api/health": {
-      GET(req) {
-        // In production, require auth to view health details
-        const token = req.headers.get("Authorization");
-        const showDetails = !IS_PROD || Boolean(token);
+      async GET(req) {
+        // In production, require a valid verified JWT to view health details (VULN-12 fix)
+        let showDetails = !IS_PROD;
+        if (IS_PROD) {
+          const auth = req.headers.get("Authorization");
+          if (auth?.startsWith("Bearer ")) {
+            const { verifyToken } = await import("./auth");
+            const payload = await verifyToken(auth.slice(7));
+            showDetails = payload !== null;
+          }
+        }
         return json({
           ok: true,
           uptime: Math.round((Date.now() - STARTED_AT) / 1000),
           ...(showDetails ? {
             pid: process.pid,
-            platform: process.platform,
+            
             bun: Bun.version,
           } : {}),
         });
@@ -243,17 +346,20 @@ const server = serve({
 
     "/api/auth/register": {
       async POST(req) {
+        if (!checkCSRF(req)) return json({ error: "Origen no permitido" }, { status: 403 });
         const ip = getClientIp(req);
-        if (rateLimit(ip, 5)) return tooManyRequests();
+        if (rateLimit("register", ip, 5)) return tooManyRequests();
         try {
           const body = (await safeJson(req)) as {
             username?: string;
             email?: string;
             password?: string;
+            phone?: string;
           };
           const username = (body.username ?? "").trim();
           const email = (body.email ?? "").trim().toLowerCase();
           const password = body.password ?? "";
+          const phone = (body.phone ?? "").trim();
 
           if (username.length < 3) {
             return badRequest("El usuario necesita al menos 3 caracteres");
@@ -261,14 +367,18 @@ const server = serve({
           if (!/^[a-zA-Z0-9_]+$/.test(username)) {
             return badRequest("El usuario solo puede tener letras, números y guión bajo");
           }
-          if (!email.includes("@") || !email.includes(".")) {
+          if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
             return badRequest("Introduce un email válido");
           }
-          if (password.length < 8) {
-            return badRequest("La contraseña necesita al menos 8 caracteres");
+          if (password.length < 8) return badRequest("Mínimo 8 caracteres");
+          if (!/[A-Z]/.test(password)) return badRequest("Requiere al menos una mayúscula");
+          if (!/[a-z]/.test(password)) return badRequest("Requiere al menos una minúscula");
+          if (!/[0-9]/.test(password)) return badRequest("Requiere al menos un número");
+          if (phone && !/^\+[1-9]\d{6,14}$/.test(phone.replace(/[\s-]/g, ""))) {
+            return badRequest("Teléfono inválido. Formato: +34123456789");
           }
 
-          const result = await registerUser(username, email, password);
+          const result = await registerUser(username, email, password, phone);
           return json(result, { status: 201 });
         } catch (err) {
           return badRequest(safeError(err));
@@ -278,8 +388,9 @@ const server = serve({
 
     "/api/auth/login": {
       async POST(req) {
+        if (!checkCSRF(req)) return json({ error: "Origen no permitido" }, { status: 403 });
         const ip = getClientIp(req);
-        if (rateLimit(ip, 10)) return tooManyRequests();
+        if (rateLimit("login", ip, 10)) return tooManyRequests();
         try {
           const body = (await safeJson(req)) as {
             identifier?: string;
@@ -310,12 +421,16 @@ const server = serve({
       async GET(req) {
         const url = new URL(req.url);
         const code = url.searchParams.get("code");
+        const state = url.searchParams.get("state") ?? "";
         if (!code) return badRequest("Missing code");
         try {
-          const token = await handleGoogleCallback(code);
-          return Response.redirect(`/dashboard?token=${token}`, 302);
+          const token = await handleGoogleCallback(code, state);
+          // VULN-02 fix: pass token via URL fragment (#) so it never appears in server logs,
+          // Referer headers, or browser history as a query parameter.
+          return Response.redirect(`/dashboard#token=${token}`, 302);
         } catch (err: any) {
-          return new Response(err.message, { status: 500 });
+          // VULN-06 fix: sanitize error message and use json() for security headers
+          return json({ error: safeError(err) }, { status: 500 });
         }
       }
     },
@@ -330,12 +445,16 @@ const server = serve({
       async GET(req) {
         const url = new URL(req.url);
         const code = url.searchParams.get("code");
+        const state = url.searchParams.get("state") ?? "";
         if (!code) return badRequest("Missing code");
         try {
-          const token = await handleGithubCallback(code);
-          return Response.redirect(`/dashboard?token=${token}`, 302);
+          const token = await handleGithubCallback(code, state);
+          // VULN-02 fix: pass token via URL fragment (#) so it never appears in server logs,
+          // Referer headers, or browser history as a query parameter.
+          return Response.redirect(`/dashboard#token=${token}`, 302);
         } catch (err: any) {
-          return new Response(err.message, { status: 500 });
+          // VULN-06 fix: sanitize error message and use json() for security headers
+          return json({ error: safeError(err) }, { status: 500 });
         }
       }
     },
@@ -344,6 +463,8 @@ const server = serve({
       async GET(req) {
         const user = await requireUser(req);
         if (user instanceof Response) return user;
+        const ip = getClientIp(req);
+        if (rateLimit("auth-me", ip, 30)) return tooManyRequests();
         const { getUserProfile } = await import("./auth");
         const profile = await getUserProfile(user.id);
         if (!profile) return unauthorized("Usuario no encontrado");
@@ -352,16 +473,44 @@ const server = serve({
       async PUT(req) {
         const user = await requireUser(req);
         if (user instanceof Response) return user;
+        if (!checkCSRF(req)) return json({ error: "Origen no permitido" }, { status: 403 });
         try {
-          const body = (await safeJson(req)) as { email?: string; currentPassword?: string; newPassword?: string };
+          const body = (await safeJson(req)) as { email?: string; currentEmail?: string; currentPassword?: string; newPassword?: string; phone?: string };
           if (body.email) {
+            if (!body.currentEmail) return badRequest("Falta el email actual");
             const email = (body.email as string).trim().toLowerCase();
-            if (!email.includes("@") || !email.includes(".")) return badRequest("Email inválido");
+            const currentEmail = (body.currentEmail as string).trim().toLowerCase();
+            if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) return badRequest("Email inválido");
+
+            const [rows] = await (await import("./db")).pool.query<any[]>(
+              "SELECT email FROM users WHERE id = ? AND deleted_at IS NULL",
+              [user.id]
+            );
+            if (!rows[0]) return badRequest("Usuario no encontrado");
+            if (rows[0].email.trim().toLowerCase() !== currentEmail) {
+              return badRequest("El email actual es incorrecto");
+            }
             await changeEmail(user.id, email);
           }
+          if (body.phone !== undefined) {
+            const clean = body.phone.trim();
+            if (clean && !/^\+[1-9]\d{6,14}$/.test(clean.replace(/[\s-]/g, ""))) {
+              return badRequest("Teléfono inválido. Formato: +34123456789");
+            }
+            await (await import("./db")).pool.query(
+              "UPDATE users SET phone = ? WHERE id = ?",
+              [clean.replace(/[^\d+]/g, "") || null, user.id]
+            );
+          }
           if (body.currentPassword && body.newPassword) {
-            if ((body.newPassword as string).length < 8) return badRequest("La nueva contraseña necesita al menos 8 caracteres");
-            await changePassword(user.id, body.currentPassword as string, body.newPassword as string);
+            const ip = getClientIp(req);
+            if (rateLimit("pwchange", ip, 5)) return tooManyRequests();
+            const newPw = body.newPassword as string;
+            if (newPw.length < 8) return badRequest("Mínimo 8 caracteres");
+            if (!/[A-Z]/.test(newPw)) return badRequest("Requiere al menos una mayúscula");
+            if (!/[a-z]/.test(newPw)) return badRequest("Requiere al menos una minúscula");
+            if (!/[0-9]/.test(newPw)) return badRequest("Requiere al menos un número");
+            await changePassword(user.id, body.currentPassword as string, newPw);
           }
           return json({ ok: true });
         } catch (err) {
@@ -371,6 +520,7 @@ const server = serve({
       async DELETE(req) {
         const user = await requireUser(req);
         if (user instanceof Response) return user;
+        if (!checkCSRF(req)) return json({ error: "Origen no permitido" }, { status: 403 });
         try {
           const body = (await safeJson(req)) as { password?: string };
           if (!body.password) return badRequest("Falta la contraseña");
@@ -386,10 +536,9 @@ const server = serve({
       async GET(req) {
         const user = await requireUser(req);
         if (user instanceof Response) return user;
-        // Load investments once and derive totals from the same result
         const [investments, digest] = await Promise.all([
           listInvestments(user.id),
-          digestStatus(),
+          digestStatus(user.id),
         ]);
         const totals = computePortfolioTotals(investments);
         return json({
@@ -397,24 +546,24 @@ const server = serve({
           whatsapp: {
             ...digest.config,
             lastSent: digest.lastSent,
-            nextRunAt: digest.nextRunAt,
+            nextRunAt: null,
             lastTestAt: digest.lastTestAt,
             lastStatus: digest.lastStatus,
           },
-          platform: process.platform,
         });
       },
     },
 
     // Unified endpoint: returns funds + totals + whatsapp status in one request.
-    // Replaces the client's double-fetch of /api/status + /api/funds.
     "/api/portfolio": {
       async GET(req) {
         const user = await requireUser(req);
         if (user instanceof Response) return user;
+        const ip = getClientIp(req);
+        if (rateLimit("portfolio", ip, 30)) return tooManyRequests();
         const [investments, digest] = await Promise.all([
           listInvestments(user.id),
-          digestStatus(),
+          digestStatus(user.id),
         ]);
         const totals = computePortfolioTotals(investments);
         return json({
@@ -424,11 +573,11 @@ const server = serve({
             whatsapp: {
               ...digest.config,
               lastSent: digest.lastSent,
-              nextRunAt: digest.nextRunAt,
+              nextRunAt: null,
               lastTestAt: digest.lastTestAt,
               lastStatus: digest.lastStatus,
             },
-            platform: process.platform,
+            
           },
         });
       },
@@ -490,12 +639,18 @@ const server = serve({
 
     "/api/funds/search": {
       async GET(req) {
+        // VULN-04 fix: require authentication — prevents unauthenticated full catalog dumps
+        const user = await requireUser(req);
+        if (user instanceof Response) return user;
+
         const url = new URL(req.url);
         const q = url.searchParams.get("q") ?? "";
         const bank = url.searchParams.get("bank") ?? undefined;
         const category = url.searchParams.get("category") ?? undefined;
 
-        const results = await queries.searchFundCatalog(q, bank, category, 10000);
+        // Limit results per request to prevent bulk scraping
+        const MAX_RESULTS = 500;
+        const results = await queries.searchFundCatalog(q, bank, category, MAX_RESULTS);
         const banks = await queries.getFundCatalogBanks();
         const categories = await queries.getFundCatalogCategories();
 
@@ -551,18 +706,20 @@ const server = serve({
         if (user instanceof Response) return user;
         return json(await listInvestments(user.id));
       },
-      async POST(req) {
-        const user = await requireUser(req);
-        if (user instanceof Response) return user;
-        try {
-          const body = (await safeJson(req)) as {
-            isin?: string;
-            shares?: number;
-            purchase_price?: number;
-            purchase_date?: string;
-            notes?: string;
-          };
-          if (!body.isin) return badRequest("Falta 'isin'");
+       async POST(req) {
+         const user = await requireUser(req);
+         if (user instanceof Response) return user;
+         if (!checkCSRF(req)) return json({ error: "Origen no permitido" }, { status: 403 });
+         if (rateLimit("funds-write", String(user.id), 30)) return tooManyRequests();
+         try {
+           const body = (await safeJson(req)) as {
+             isin?: string;
+             shares?: number;
+             purchase_price?: number;
+             purchase_date?: string;
+             notes?: string;
+           };
+           if (!body.isin) return badRequest("Falta 'isin'");
           if (!/^[A-Z]{2}[A-Z0-9]{10}$/i.test(body.isin)) return badRequest("ISIN inválido");
           if (body.shares == null || !Number.isFinite(body.shares) || body.shares <= 0) {
             return badRequest("Falta 'shares' (número positivo)");
@@ -584,8 +741,7 @@ const server = serve({
           );
           return json(fund, { status: 201 });
         } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return badRequest(msg);
+          return badRequest(safeError(err));
         }
       },
     },
@@ -603,6 +759,8 @@ const server = serve({
       async PUT(req) {
         const user = await requireUser(req);
         if (user instanceof Response) return user;
+        if (!checkCSRF(req)) return json({ error: "Origen no permitido" }, { status: 403 });
+        if (rateLimit("funds-write", String(user.id), 30)) return tooManyRequests();
         const id = Number(req.params.id);
         if (!Number.isFinite(id)) return badRequest("id inválido");
         try {
@@ -631,13 +789,14 @@ const server = serve({
           if (!fund) return json({ error: "fondo no encontrado" }, { status: 404 });
           return json(fund);
         } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return badRequest(msg);
+          return badRequest(safeError(err));
         }
       },
       async DELETE(req) {
         const user = await requireUser(req);
         if (user instanceof Response) return user;
+        if (!checkCSRF(req)) return json({ error: "Origen no permitido" }, { status: 403 });
+        if (rateLimit("funds-write", String(user.id), 30)) return tooManyRequests();
         const id = Number(req.params.id);
         if (!Number.isFinite(id)) return badRequest("id inválido");
         const ok = await deleteInvestment(id, user.id);
@@ -650,7 +809,9 @@ const server = serve({
       async GET(req) {
         const user = await requireUser(req);
         if (user instanceof Response) return user;
-        const cfg = (await digestStatus()).config;
+        const ip = getClientIp(req);
+        if (rateLimit("notify-preview", ip, 10)) return tooManyRequests();
+        const cfg = (await digestStatus(user.id)).config;
         const message = await previewDigest({
           slot: "manual",
           timezone: cfg.timezone,
@@ -663,18 +824,15 @@ const server = serve({
       async PUT(req) {
         const user = await requireUser(req);
         if (user instanceof Response) return user;
+        if (!checkCSRF(req)) return json({ error: "Origen no permitido" }, { status: 403 });
         try {
           const body = (await safeJson(req)) as {
-            phone?: string;
             api_key?: string;
             timezone?: string;
-            cron?: string;
             enabled?: boolean;
+            phone?: string;
           };
-          await saveWhatsAppConfig(body);
-
-          stopDigestScheduler();
-          await startDigestScheduler();
+          await saveWhatsAppConfig(user.id, body);
 
           return json({ ok: true });
         } catch (err) {
@@ -688,9 +846,9 @@ const server = serve({
         const user = await requireUser(req);
         if (user instanceof Response) return user;
         const ip = getClientIp(req);
-        if (rateLimit(`wa-test:${ip}`, 3)) return tooManyRequests();
+        if (rateLimit("wa-test", ip, 3)) return tooManyRequests();
         try {
-          const cfg = (await digestStatus()).config;
+          const cfg = (await digestStatus(user.id)).config;
           if (!cfg.configured) {
             return badRequest(
               "WhatsApp no configurado. Guarda primero tu número y API key."
@@ -710,13 +868,13 @@ const server = serve({
             "───",
             `_FondTracker · test ${new Date().toISOString().slice(0, 10)}_`,
           ].join("\n");
-          await sendWhatsApp(testMsg);
-          await queries.setSetting("digest:last_test_at", new Date().toISOString());
-          await queries.setSetting("digest:last_status", "ok");
+          await sendWhatsApp(user.id, testMsg);
+          await queries.setSetting(`digest:last_test_at:${user.id}`, new Date().toISOString());
+          await queries.setSetting(`digest:last_status:${user.id}`, "ok");
           return json({ ok: true });
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
-          await queries.setSetting("digest:last_status", msg);
+          await queries.setSetting(`digest:last_status:${user.id}`, msg);
           return json({ error: IS_PROD ? "Error al enviar WhatsApp" : msg }, { status: 500 });
         }
       },
@@ -727,10 +885,10 @@ const server = serve({
         const user = await requireUser(req);
         if (user instanceof Response) return user;
         try {
-          const cfg = (await digestStatus()).config;
+          const cfg = (await digestStatus(user.id)).config;
           if (!cfg.configured) {
             return badRequest(
-              "WhatsApp no configurado. Define WHATSAPP_PHONE y CALLMEBOT_API_KEY."
+              "WhatsApp no configurado. Guarda primero tu número y API key."
             );
           }
           const result = await runDigest({
@@ -744,7 +902,7 @@ const server = serve({
       },
     },
 
-    "/*": () => new Response(Bun.file(join(PROJECT_ROOT, "index.html")), { headers: { "Content-Type": "text/html" } }),
+    "/*": () => serveIndexHtml(),
   },
 
   development: process.env.NODE_ENV !== "production" && {
@@ -755,9 +913,34 @@ const server = serve({
 
 await startDigestScheduler();
 
+// Data retention: purge soft-deleted records older than 7 days
+(async () => {
+  try {
+    const { pool } = await import("./db");
+    const [userResult] = await pool.query(
+      "DELETE FROM users WHERE deleted_at IS NOT NULL AND deleted_at < NOW() - INTERVAL 7 DAY"
+    );
+    const [invResult] = await pool.query(
+      "DELETE FROM investments WHERE deleted_at IS NOT NULL AND deleted_at < NOW() - INTERVAL 7 DAY"
+    );
+    const affected = (userResult as any).affectedRows + (invResult as any).affectedRows;
+    if (affected > 0) {
+      console.log(`[tracker] limpieza: ${affected} registros soft-delete purgados (>7 días)`);
+    }
+  } catch (err) {
+    console.error(`[tracker] error en limpieza de datos:`, err);
+  }
+})();
+
 const KEEP_ALIVE_URL = process.env.RENDER_EXTERNAL_URL || process.env.OAUTH_REDIRECT_BASE;
 if (IS_PROD && KEEP_ALIVE_URL) {
-  console.log(`[tracker] activando keep-alive automático hacia ${KEEP_ALIVE_URL} cada 30s`);
+  try {
+    const u = new URL(KEEP_ALIVE_URL);
+    if (u.protocol !== "https:") throw new Error("Keep-alive URL must be HTTPS");
+  } catch (e) {
+    console.error(`[tracker] KEEP_ALIVE_URL inválida:`, e);
+  }
+  console.log(`[tracker] activando keep-alive automático cada 30s`);
   setInterval(() => {
     fetch(`${KEEP_ALIVE_URL}/api/health`).catch(() => {});
   }, 30_000);
@@ -771,8 +954,10 @@ console.log(`\n  FondTracker`);
 console.log(`  ───────────`);
 console.log(`  url      ${server.url}`);
 console.log(`  platform ${process.platform} · bun ${Bun.version}`);
-console.log(`  mysql    ${process.env.MYSQL_HOST ?? "127.0.0.1"}:${process.env.MYSQL_PORT ?? 3306}`);
-console.log(`  db       ${process.env.MYSQL_DATABASE ?? "fondtracker"}`);
+if (!IS_PROD) {
+  console.log(`  mysql    ${process.env.MYSQL_HOST ?? "127.0.0.1"}:${process.env.MYSQL_PORT ?? 3306}`);
+  console.log(`  db       ${process.env.MYSQL_DATABASE ?? "fondtracker"}`);
+}
 console.log(`  pid      ${process.pid}\n`);
 
 let shuttingDown = false;
@@ -785,11 +970,10 @@ async function shutdown(signal: string) {
     await server.stop(true);
     await closeDatabase();
     console.log(`[tracker] ${ts()} cierre limpio. bye.`);
-    process.exit(0);
   } catch (err) {
     console.error(`[tracker] error durante el cierre:`, err);
-    process.exit(1);
   }
+  // Let the event loop drain naturally
 }
 
 process.on("SIGINT", () => void shutdown("SIGINT"));

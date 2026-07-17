@@ -83,10 +83,12 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-    if (token) {
-      setToken(token);
+    // Only accept tokens from hash fragment (#token=...) — never logged by servers
+    const hash = window.location.hash;
+    const fragmentToken = hash.startsWith("#token=") ? hash.slice(7) : null;
+
+    if (fragmentToken) {
+      setToken(fragmentToken);
       window.location.replace("/dashboard");
       return;
     }

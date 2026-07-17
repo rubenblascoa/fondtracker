@@ -181,6 +181,7 @@ export function LoginPage({ onAuth, onSwitchToRegister }: Props) {
                 <label className="block text-[13px] text-[var(--color-fg-1)] font-medium">Password</label>
                 <button
                   type="button"
+                  onClick={() => alert("Contacta al administrador en rubenblascoarmengod@gmail.com para restablecer tu contraseña.")}
                   className="text-[11px] text-[var(--color-fg-4)] hover:text-[var(--color-accent)] transition-colors"
                 >
                   Forgot Password?
