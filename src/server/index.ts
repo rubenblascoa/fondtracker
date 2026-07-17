@@ -755,6 +755,14 @@ const server = serve({
 
 await startDigestScheduler();
 
+const KEEP_ALIVE_URL = process.env.RENDER_EXTERNAL_URL || process.env.OAUTH_REDIRECT_BASE;
+if (IS_PROD && KEEP_ALIVE_URL) {
+  console.log(`[tracker] activando keep-alive automático hacia ${KEEP_ALIVE_URL} cada 30s`);
+  setInterval(() => {
+    fetch(`${KEEP_ALIVE_URL}/api/health`).catch(() => {});
+  }, 30_000);
+}
+
 function ts() {
   return new Date().toISOString();
 }
