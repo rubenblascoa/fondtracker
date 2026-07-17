@@ -448,6 +448,19 @@ export const queries = {
     return rows[0] ?? null;
   },
 
+  async getFundPricesByIsins(isins: string[]): Promise<Map<string, { price: number; currency: string; updated_at: string }>> {
+    const map = new Map<string, { price: number; currency: string; updated_at: string }>();
+    if (isins.length === 0) return map;
+    const [rows] = await pool.query<any[]>(
+      "SELECT isin, price, currency, updated_at FROM fund_prices WHERE isin IN (?)",
+      [isins]
+    );
+    for (const row of rows) {
+      map.set(row.isin, { price: Number(row.price), currency: row.currency, updated_at: row.updated_at });
+    }
+    return map;
+  },
+
   async setFundPrice(isin: string, price: number, currency: string = "EUR"): Promise<void> {
     await pool.query(
       `INSERT INTO fund_prices (isin, price, currency, updated_at) VALUES (?, ?, ?, NOW())

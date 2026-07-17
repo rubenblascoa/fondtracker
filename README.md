@@ -78,13 +78,12 @@ El backend implementa una clara separación de responsabilidades entre el servid
 * **Multiusuario y Aislado:** Cada cuenta gestiona su propia cartera de forma independiente, con autenticación por contraseña hasheada.
 * **Cotización en Tiempo Real:** Precios actuales e históricos obtenidos de Yahoo Finance, con caché local en base de datos como respaldo ante caídas del proveedor.
 * **Catálogo de Fondos Precargado:** Búsqueda por texto completo (`FULLTEXT`) sobre cientos de fondos y ETFs indexados por ISIN, banco, categoría y nivel de riesgo.
-* **Cálculo Automático de Rentabilidad:** Valor invertido, valor actual, plusvalía y porcentaje de rentabilidad calculados en vivo para cada posición y para el total de la cartera.
-* **Resúmenes por WhatsApp:** Notificaciones periódicas configurables (horario y zona horaria) con el estado de la cartera, enviadas vía CallMeBot.
+* **Resúmenes por WhatsApp:** Notificaciones periódicas configurables (horario y zona horaria) con el estado de la cartera, enviadas vía CallMeBot de forma completamente aislada por usuario.
+* **Optimizado de Alto Rendimiento:** Cuenta con coalescencia de peticiones en paralelo (Request Coalescing), almacenamiento en caché en memoria con un TTL de 5 minutos para cotizaciones e históricos de gráficos, y procesamiento unificado por ISIN único para evitar sobrecargar a los proveedores externos y eliminar el lag en el frontend.
 * **Despliegue 100% Gratuito:** Backend en **Render** (free tier) conectado a una base de datos **MySQL en Railway**, sin coste mensual para uso personal.
 * **Auto-gestión de Esquema:** La base de datos se crea y migra sola al arrancar (`ensureSchema()`), sin necesidad de scripts de migración manuales en producción.
 
 ---
-
 ## <picture><source media="(prefers-color-scheme: dark)" srcset="https://api.iconify.design/lucide:git-compare.svg?color=white"><img src="https://api.iconify.design/lucide:git-compare.svg?color=black" width="26" align="center"></picture> El Problema vs La Solución
 
 Llevar el seguimiento de una cartera de fondos "a mano" (Excel, apuntes sueltos, apps bancarias fragmentadas) es lento y poco fiable.

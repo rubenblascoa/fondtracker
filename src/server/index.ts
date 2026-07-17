@@ -546,7 +546,7 @@ const server = serve({
           whatsapp: {
             ...digest.config,
             lastSent: digest.lastSent,
-            nextRunAt: null,
+            nextRunAt: digest.nextRunAt,
             lastTestAt: digest.lastTestAt,
             lastStatus: digest.lastStatus,
           },
@@ -573,11 +573,10 @@ const server = serve({
             whatsapp: {
               ...digest.config,
               lastSent: digest.lastSent,
-              nextRunAt: null,
+              nextRunAt: digest.nextRunAt,
               lastTestAt: digest.lastTestAt,
               lastStatus: digest.lastStatus,
             },
-            
           },
         });
       },
@@ -821,6 +820,18 @@ const server = serve({
     },
 
     "/api/whatsapp/config": {
+      async GET(req) {
+        const user = await requireUser(req);
+        if (user instanceof Response) return user;
+        const digest = await digestStatus(user.id);
+        return json({
+          ...digest.config,
+          lastSent: digest.lastSent,
+          nextRunAt: digest.nextRunAt,
+          lastTestAt: digest.lastTestAt,
+          lastStatus: digest.lastStatus,
+        });
+      },
       async PUT(req) {
         const user = await requireUser(req);
         if (user instanceof Response) return user;
@@ -831,6 +842,7 @@ const server = serve({
             timezone?: string;
             enabled?: boolean;
             phone?: string;
+            hours?: number[];
           };
           await saveWhatsAppConfig(user.id, body);
 

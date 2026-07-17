@@ -17,7 +17,7 @@ type Props = {
 export function FundCard({ fund, onChange }: Props) {
   const [chartData, setChartData] = useState<YahooChartData | null>(null);
   const [chartLoading, setChartLoading] = useState(false);
-  const [chartRange, setChartRange] = useState("1y");
+  const [chartRange, setChartRange] = useState("max");
   const [chartError, setChartError] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -565,12 +565,12 @@ return (
           )}
         </div>
 
-        <div className="flex sm:flex-col items-center gap-2 sm:gap-1 shrink-0">
+        <div className="flex sm:flex-col items-center justify-between shrink-0 sm:h-[68px] sm:-mt-[2px] gap-2 sm:gap-0 sm:ml-3">
           {!editing && (
             <>
               <button
                 onClick={startEditing}
-                className="text-[var(--color-fg-4)] hover:text-[var(--color-accent)] transition-colors p-2 sm:p-1.5 min-w-[36px] sm:min-w-0 flex items-center justify-center"
+                className="text-[var(--color-fg-4)] hover:text-[var(--color-accent)] transition-colors p-2 sm:p-1 min-w-[36px] sm:min-w-0 flex items-center justify-center"
                 title="edit"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -582,7 +582,7 @@ return (
                 href={fundUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[var(--color-fg-4)] hover:text-[var(--color-accent)] transition-colors p-2 sm:p-1.5 min-w-[36px] sm:min-w-0 flex items-center justify-center"
+                className="text-[var(--color-fg-4)] hover:text-[var(--color-accent)] transition-colors p-2 sm:p-1 min-w-[36px] sm:min-w-0 flex items-center justify-center"
                 title={isQueFondos ? "Ver en QueFondos" : "Ver en Yahoo Finance"}
               >
                 <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -593,7 +593,7 @@ return (
               <button
                 onClick={remove}
                 disabled={deleting}
-                className={`transition-all p-2 sm:p-1.5 min-w-[36px] sm:min-w-0 flex items-center justify-center ${
+                className={`transition-all p-2 sm:p-1 min-w-[36px] sm:min-w-0 flex items-center justify-center ${
                   confirmDelete
                     ? "text-[var(--color-danger)] bg-[var(--color-danger)]/10"
                     : "text-[var(--color-fg-4)] hover:text-[var(--color-danger)]"

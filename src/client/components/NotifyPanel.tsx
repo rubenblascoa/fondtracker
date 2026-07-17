@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, type Status } from "../api";
 import { formatRelative } from "../utils";
+import { COUNTRIES } from "./RegisterPage";
 
 type Props = {
   status: Status | null;
@@ -19,7 +20,11 @@ export function NotifyPanel({ status, onChange }: Props) {
   } | null>(null);
   const [showConfig, setShowConfig] = useState(false);
   const [apiKey, setApiKey] = useState("");
-  const [phone, setPhone] = useState("");
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [phoneCountry, setPhoneCountry] = useState(() => COUNTRIES.find(c => c.code === "ES") ?? COUNTRIES[0]);
+  const [localNumber, setLocalNumber] = useState("");
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [countrySearch, setCountrySearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<{
     ok: boolean;
@@ -27,6 +32,25 @@ export function NotifyPanel({ status, onChange }: Props) {
   } | null>(null);
 
   const wa = status?.whatsapp;
+  const [selectedHours, setSelectedHours] = useState<number[]>([9, 18]);
+
+  useEffect(() => {
+    if (wa?.hours) {
+      setSelectedHours(wa.hours);
+    }
+  }, [wa?.hours]);
+
+  const toggleHour = (hour: number) => {
+    if (selectedHours.includes(hour)) {
+      if (selectedHours.length > 1) {
+        setSelectedHours(selectedHours.filter((h) => h !== hour));
+      } else {
+        setFeedback({ kind: "err", text: "You must select at least one hour" });
+      }
+    } else {
+      setSelectedHours([...selectedHours, hour].sort((a, b) => a - b));
+    }
+  };
 
   useEffect(() => {
     setPreview(null);
@@ -51,14 +75,28 @@ export function NotifyPanel({ status, onChange }: Props) {
 
   useEffect(() => {
     if (wa?.phone) {
-      setPhone(wa.phone);
+      const matchingCountry = COUNTRIES.slice().sort((a,b) => b.dial.length - a.dial.length).find(c => wa.phone!.startsWith(c.dial));
+      if (matchingCountry) {
+        setPhoneCountry(matchingCountry);
+        setLocalNumber(wa.phone.slice(matchingCountry.dial.length));
+      } else {
+        setLocalNumber(wa.phone);
+      }
     } else {
-      setPhone("");
+      setLocalNumber("");
     }
   }, [wa?.phone]);
 
+  useEffect(() => {
+    if (wa?.api_key) {
+      setApiKey(wa.api_key);
+    } else {
+      setApiKey("");
+    }
+  }, [wa?.api_key]);
+
   const openConfig = () => {
-    setApiKey("");
+    setApiKey(wa?.api_key || "");
     setShowConfig(true);
     setFeedback(null);
   };
@@ -121,9 +159,11 @@ export function NotifyPanel({ status, onChange }: Props) {
     setSaving(true);
     setFeedback(null);
     try {
+      const fullPhone = localNumber ? `${phoneCountry.dial}${localNumber}` : "";
       await api.updateWhatsAppConfig({
         api_key: apiKey || undefined,
-        phone: phone || "",
+        phone: fullPhone,
+        hours: selectedHours,
       });
       setShowConfig(false);
       setFeedback({ kind: "ok", text: "configuration saved" });
@@ -177,26 +217,122 @@ export function NotifyPanel({ status, onChange }: Props) {
               <label className="block text-[10px] uppercase tracking-[0.2em] text-[var(--color-fg-4)] mb-1">
                 WhatsApp number
               </label>
-              <input
-                type="text"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+34123456789"
-                className="w-full bg-[var(--color-ink-0)] border border-[var(--color-ink-3)] px-2 py-1.5 text-xs font-mono text-[var(--color-fg-2)] placeholder-[var(--color-fg-4)] focus:outline-none focus:border-[var(--color-accent)]"
-              />
+              <div className="flex gap-2 relative">
+                <div className="relative shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => { setShowCountryPicker(!showCountryPicker); setCountrySearch(""); }}
+                    className="flex items-center gap-1.5 bg-black/40 border border-white/10 hover:border-white/20 text-white text-[11px] px-2.5 py-1.5 rounded-sm outline-none transition-all min-w-[76px] h-full"
+                  >
+                    <span className="text-sm leading-none">{phoneCountry.flag}</span>
+                    <span className="font-mono text-[10px]">{phoneCountry.dial}</span>
+                    <svg className={`w-2 h-2 text-[var(--color-fg-4)] transition-transform ${showCountryPicker ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {showCountryPicker && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowCountryPicker(false)} />
+                      <div className="absolute top-full left-0 mt-1.5 z-50 w-60 bg-[#0d0d0f]/95 backdrop-blur-xl border border-white/10 rounded-md shadow-2xl overflow-hidden">
+                        <div className="p-2 border-b border-white/5">
+                          <input
+                            type="text"
+                            value={countrySearch}
+                            onChange={(e) => setCountrySearch(e.target.value)}
+                            placeholder="Search..."
+                            className="w-full bg-black/60 border border-white/5 rounded px-2 py-1 text-xs text-white placeholder:text-[var(--color-fg-4)] outline-none focus:border-[var(--color-accent)]/50"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="max-h-40 overflow-y-auto font-sans">
+                          {COUNTRIES.filter(c =>
+                            !countrySearch ||
+                            c.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
+                            c.dial.includes(countrySearch) ||
+                            c.code.toLowerCase().includes(countrySearch.toLowerCase())
+                          ).map((c) => (
+                            <button
+                              key={c.code}
+                              type="button"
+                              onClick={() => { setPhoneCountry(c); setShowCountryPicker(false); }}
+                              className={`flex items-center gap-2 w-full px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-white/5 ${phoneCountry.code === c.code ? "bg-white/5 text-white" : "text-[var(--color-fg-2)]"}`}
+                            >
+                              <span>{c.flag}</span>
+                              <span className="font-mono text-[10px] text-[var(--color-fg-4)] w-10">{c.dial}</span>
+                              <span className="truncate flex-1 text-left">{c.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <input
+                  type="tel"
+                  value={localNumber}
+                  onChange={(e) => setLocalNumber(e.target.value.replace(/\D/g, ""))}
+                  placeholder="612345678"
+                  className="flex-1 bg-[var(--color-ink-0)] border border-[var(--color-ink-3)] px-2.5 py-1.5 text-xs font-mono text-[var(--color-fg-2)] placeholder-[var(--color-fg-4)] focus:outline-none focus:border-[var(--color-accent)]"
+                />
+              </div>
             </div>
             <div>
               <label className="block text-[10px] uppercase tracking-[0.2em] text-[var(--color-fg-4)] mb-1">
                 API key
               </label>
-              <input
-                type="text"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder={wa?.configured ? "********" : "your_api_key"}
-                className="w-full bg-[var(--color-ink-0)] border border-[var(--color-ink-3)] px-2 py-1.5 text-xs font-mono text-[var(--color-fg-2)] placeholder-[var(--color-fg-4)] focus:outline-none focus:border-[var(--color-accent)]"
-              />
+              <div className="relative">
+                <input
+                  type={showApiKey ? "text" : "password"}
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder={wa?.configured ? "••••••••••••••••" : "your_api_key"}
+                  className="w-full bg-[var(--color-ink-0)] border border-[var(--color-ink-3)] pl-2.5 pr-9 py-1.5 text-xs font-mono text-[var(--color-fg-2)] placeholder-[var(--color-fg-4)] focus:outline-none focus:border-[var(--color-accent)]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-fg-4)] hover:text-white transition-colors cursor-pointer"
+                >
+                  {showApiKey ? (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-[0.2em] text-[var(--color-fg-4)] mb-2">
+              scheduled dispatch hours ({selectedHours.length} selected)
+            </label>
+            <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5 p-3 bg-[var(--color-ink-0)] border border-[var(--color-ink-3)] rounded-sm">
+              {Array.from({ length: 24 }).map((_, h) => {
+                const active = selectedHours.includes(h);
+                return (
+                  <button
+                    key={h}
+                    type="button"
+                    onClick={() => toggleHour(h)}
+                    className={`py-1.5 text-[11px] sm:text-xs font-mono text-center border transition-all cursor-pointer rounded-sm ${
+                      active
+                        ? "bg-[var(--color-accent)]/20 border-[var(--color-accent)] text-[var(--color-accent)] font-bold shadow-[0_0_8px_rgba(57,255,136,0.15)]"
+                        : "bg-black/30 border-white/10 text-[var(--color-fg-2)] hover:border-[var(--color-accent)]/40 hover:text-white"
+                    }`}
+                  >
+                    {String(h).padStart(2, "0")}:00
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[9px] text-[var(--color-fg-4)] mt-1.5 leading-relaxed">
+              Click the hours you wish to receive your alerts. Alerts are automatically dispatched at the selected hours in your timezone ({wa?.timezone || "Europe/Madrid"}).
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -222,7 +358,7 @@ export function NotifyPanel({ status, onChange }: Props) {
       {wa?.configured && !showConfig && (
         <>
           <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-            <DigestMetric label="cron" value={`${wa.cron} UTC`} />
+            <DigestMetric label="horario" value={wa.hours ? wa.hours.map(h => `${String(h).padStart(2, "0")}:00`).join(", ") : `${wa.cron}`} />
             <DigestMetric
               label="next run"
               value={formatCountdown(wa.nextRunAt, now)}

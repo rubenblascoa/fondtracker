@@ -50,6 +50,8 @@ const CHART_CACHE_TTL = 5 * 60 * 1000;
 const activeCharts = new Map<string, Promise<YahooChartResult | null>>();
 const activePrices = new Map<string, Promise<{ price: number; currency: string } | null>>();
 const activeDiscoveries = new Map<string, Promise<string | null>>();
+const discoveryCache = new Map<string, { ticker: string | null; fetchedAt: number }>();
+const DISCOVERY_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
 export async function fetchYahooChart(
   ticker: string,
@@ -74,8 +76,12 @@ export async function fetchYahooChart(
     
     if (isinMatch) {
       const isin = isinMatch[1];
-      const qfData = await fetchQueFondosData(isin);
-      if (qfData) {
+      const qfDataCached = await fetchQueFondosData(isin);
+      if (qfDataCached) {
+        const qfData = {
+          ...qfDataCached,
+          quotes: [...qfDataCached.quotes],
+        };
         qfData.quotes = filterQuotesByRange(qfData.quotes, range);
         qfData.dataPoints = qfData.quotes.length;
         const verification = await verifyFundData(isin, qfData.currentPrice, qfData.currency);
@@ -272,6 +278,13 @@ export async function fetchCurrentPrice(
 }
 export async function tryDiscoverTicker(isin: string): Promise<string | null> {
   const cleanIsin = isin.toUpperCase().trim();
+
+  // Check discovery cache first (including failed/null results)
+  const cached = discoveryCache.get(cleanIsin);
+  if (cached && Date.now() - cached.fetchedAt < DISCOVERY_CACHE_TTL) {
+    return cached.ticker;
+  }
+
   const active = activeDiscoveries.get(cleanIsin);
   if (active) return active;
 
@@ -295,7 +308,7 @@ export async function tryDiscoverTicker(isin: string): Promise<string | null> {
           headers: {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
           },
-          signal: AbortSignal.timeout(5_000),
+          signal: AbortSignal.timeout(3_000),
         });
         if (!res.ok) continue;
         const data = await res.json();
@@ -313,7 +326,9 @@ export async function tryDiscoverTicker(isin: string): Promise<string | null> {
 
   activeDiscoveries.set(cleanIsin, promise);
   try {
-    return await promise;
+    const result = await promise;
+    discoveryCache.set(cleanIsin, { ticker: result, fetchedAt: Date.now() });
+    return result;
   } finally {
     activeDiscoveries.delete(cleanIsin);
   }

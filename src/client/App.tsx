@@ -138,6 +138,31 @@ export function App() {
   useEffect(() => {
     if (!user) return;
     const ctrl = new AbortController();
+
+    // Fetch WhatsApp config instantly
+    api.getWhatsAppConfig()
+      .then((waConfig) => {
+        if (ctrl.signal.aborted) return;
+        setStatus(prev => {
+          if (!prev) {
+            return {
+              total_initial: 0,
+              total_current: 0,
+              total_profit_loss: 0,
+              total_profit_loss_pct: 0,
+              fund_count: 0,
+              platform: "",
+              whatsapp: waConfig
+            };
+          }
+          return {
+            ...prev,
+            whatsapp: waConfig
+          };
+        });
+      })
+      .catch(() => {});
+
     void refresh(ctrl.signal);
     // 30s is enough — prices are cached 5 min server-side
     const t = setInterval(() => void refresh(ctrl.signal), 30_000);

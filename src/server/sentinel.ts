@@ -7,7 +7,7 @@ import { queries, type InvestmentRow, type InvestmentWithStats } from "./db";
 const PRICE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const PRICE_CACHE_MAX = 500; // max entries before LRU eviction
 
-type CacheEntry = { price: number; currency: string; fetchedAt: number };
+type CacheEntry = { price: number | null; currency: string; fetchedAt: number };
 const priceCache = new Map<string, CacheEntry>();
 
 function getCachedPrice(isin: string): CacheEntry | null {
@@ -16,7 +16,7 @@ function getCachedPrice(isin: string): CacheEntry | null {
   return null;
 }
 
-function setCachedPrice(isin: string, price: number, currency: string) {
+function setCachedPrice(isin: string, price: number | null, currency: string) {
   if (priceCache.has(isin)) priceCache.delete(isin);
   else if (priceCache.size >= PRICE_CACHE_MAX) {
     const oldest = priceCache.keys().next().value;
@@ -68,9 +68,12 @@ export async function listInvestments(userId: number): Promise<InvestmentWithSta
   const investments = await queries.listInvestments(userId);
   if (investments.length === 0) return [];
 
-  // ① Batch-load all catalog entries in ONE query
+  // ① Batch-load all catalog entries and database prices in ONE parallel query
   const uniqueIsins = [...new Set(investments.map((i) => i.isin))];
-  const catalogMap = await queries.getFundCatalogByIsins(uniqueIsins);
+  const [catalogMap, pricesMap] = await Promise.all([
+    queries.getFundCatalogByIsins(uniqueIsins),
+    queries.getFundPricesByIsins(uniqueIsins),
+  ]);
 
   // ② Resolve tickers & prices per unique ISIN
   const resolvedTickers = new Map<string, string | null>();
@@ -114,14 +117,16 @@ export async function listInvestments(userId: number): Promise<InvestmentWithSta
         }
       }
 
-      // DB fallback
-      const cached = await queries.getFundPrice(isin);
+      // DB fallback (loaded in batch)
+      const cached = pricesMap.get(isin);
       if (cached && cached.price > 0) {
         setCachedPrice(isin, cached.price, cached.currency);
         resolvedPrices.set(isin, cached.price);
         return;
       }
 
+      // Cache failed resolve (null) for 5 minutes to avoid network flood on future refreshes
+      setCachedPrice(isin, null, "EUR");
       resolvedPrices.set(isin, null);
     })
   );

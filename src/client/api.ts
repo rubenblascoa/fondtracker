@@ -118,6 +118,8 @@ export type Status = {
     phone: string | null;
     timezone: string;
     cron: string;
+    hours: number[];
+    api_key?: string | null;
     lastSent: string | null;
     nextRunAt: string | null;
     lastTestAt: string | null;
@@ -426,7 +428,10 @@ export const api = {
       body: JSON.stringify({ password }),
     }),
 
-  updateWhatsAppConfig: (data: { api_key?: string; timezone?: string; enabled?: boolean; phone?: string }) =>
+  getWhatsAppConfig: () =>
+    request<Status["whatsapp"]>("/api/whatsapp/config", { method: "GET" }),
+
+  updateWhatsAppConfig: (data: { api_key?: string; timezone?: string; enabled?: boolean; phone?: string; hours?: number[] }) =>
     request<{ ok: true }>("/api/whatsapp/config", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

@@ -17,11 +17,14 @@ export type WhatsAppConfig = {
   phone: string | null;
   timezone: string;
   cron: string;
+  hours: number[];
+  api_key?: string | null;
 };
 
 function settingKey(base: string, userId?: number): string {
   return userId != null ? `${base}:${userId}` : base;
 }
+
 
 export async function loadRawPhone(userId?: number): Promise<string | null> {
   if (userId != null) {
@@ -72,32 +75,57 @@ export async function loadEnabled(userId?: number): Promise<boolean> {
   return (process.env.WHATSAPP_ENABLED ?? "true").toLowerCase() !== "false";
 }
 
+export async function loadHours(userId?: number): Promise<number[]> {
+  if (userId != null) {
+    const fromUser = await queries.getSetting(settingKey("digest:hours", userId));
+    if (fromUser) {
+      return fromUser.split(",").map(Number).filter(n => !isNaN(n) && n >= 0 && n <= 23);
+    }
+  }
+  const fromDb = await queries.getSetting("digest:hours");
+  if (fromDb) {
+    return fromDb.split(",").map(Number).filter(n => !isNaN(n) && n >= 0 && n <= 23);
+  }
+  return [9, 18]; // default slots
+}
+
 export async function whatsappConfig(userId?: number): Promise<WhatsAppConfig> {
-  const [phone, apikey, timezone, enabled] = await Promise.all([
+  const [phone, apikey, timezone, enabled, hours] = await Promise.all([
     loadRawPhone(userId),
     loadRawApiKey(userId),
     loadTimezone(userId),
     loadEnabled(userId),
+    loadHours(userId),
   ]);
   return {
     enabled,
     configured: Boolean(phone && apikey),
-    phone: phone ? maskPhone(phone) : null,
+    phone: phone ? phone : null,
     timezone,
-    cron: loadCron(),
+    cron: `0 ${hours.join(",")} * * *`,
+    hours,
+    api_key: apikey,
   };
 }
+
+
+
 
 export async function saveWhatsAppConfig(userId: number, data: {
   api_key?: string;
   timezone?: string;
   enabled?: boolean;
   phone?: string;
+  hours?: number[];
 }): Promise<void> {
   const ops: Promise<void>[] = [];
   if (data.api_key !== undefined) ops.push(queries.setSetting(settingKey(SETTING_API_KEY, userId), data.api_key));
   if (data.timezone !== undefined) ops.push(queries.setSetting(settingKey(SETTING_TIMEZONE, userId), data.timezone));
   if (data.enabled !== undefined) ops.push(queries.setSetting(settingKey(SETTING_ENABLED, userId), data.enabled ? "true" : "false"));
+  if (data.hours !== undefined) {
+    const cleanHours = data.hours.filter(h => typeof h === "number" && h >= 0 && h <= 23).join(",");
+    ops.push(queries.setSetting(settingKey("digest:hours", userId), cleanHours));
+  }
   if (data.phone !== undefined) {
     const clean = data.phone.trim();
     if (clean !== "" && !clean.includes("…") && !clean.includes("...")) {
@@ -217,10 +245,16 @@ export async function buildFundReport(ctx: DigestContext, userId: number): Promi
     listInvestments(userId),
   ]);
   const name = profile?.username ? ` ${profile.username}` : "";
+  const localHour = new Intl.DateTimeFormat("en-US", {
+    timeZone: ctx.timezone,
+    hour: "numeric",
+    hour12: false,
+  }).format(now);
+  const hourNum = Number(localHour);
   const greeting =
-    ctx.slot === "morning" ? `Buenos días${name} ☀️` :
-    ctx.slot === "evening" ? `Buenas tardes${name} 🌆` :
-    `Resumen${name} 📋`;
+    hourNum >= 6 && hourNum < 13 ? `Buenos días${name} ☀️` :
+    hourNum >= 13 && hourNum < 21 ? `Buenas tardes${name} 🌆` :
+    `Buenas noches${name} 🌙`;
   const sections: string[] = [];
 
   sections.push(

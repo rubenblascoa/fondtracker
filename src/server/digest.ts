@@ -33,10 +33,6 @@ function localTimeInTimezone(timezone: string): { hour: number } {
   return { hour: Number(get("hour")) };
 }
 
-function currentDigestSlot(timezone: string): DigestContext["slot"] {
-  return localTimeInTimezone(timezone).hour < 12 ? "morning" : "evening";
-}
-
 async function runScheduledDigest(): Promise<void> {
   const userIds = await queries.getAllUserIds();
   for (const userId of userIds) {
@@ -47,23 +43,26 @@ async function runScheduledDigest(): Promise<void> {
       if (!enabled) continue;
       
       const cfg = await whatsappConfig(userId);
-      const slot = currentDigestSlot(cfg.timezone);
+      const { hour } = localTimeInTimezone(cfg.timezone);
       
-      // Calculate current date string in user's timezone (e.g. YYYY-MM-DD)
+      // Check if current hour in user timezone is scheduled
+      if (!cfg.hours.includes(hour)) continue;
+
+      const slot = `hour-${hour}`;
       const nowInTz = new Date().toLocaleDateString("en-CA", { timeZone: cfg.timezone }); // formats as YYYY-MM-DD
       const slotKey = `digest:last_sent_slot:${userId}`;
       const expectedVal = `${nowInTz}:${slot}`;
       
       const lastSentSlot = await queries.getSetting(slotKey);
       if (lastSentSlot === expectedVal) {
-        // Already sent in this slot today!
+        // Already sent for this hour today!
         continue;
       }
       
-      const result = await runDigest({ slot, timezone: cfg.timezone }, userId);
+      const result = await runDigest({ slot: "manual", timezone: cfg.timezone }, userId);
       if (result.sent > 0) {
         await queries.setSetting(slotKey, expectedVal);
-        console.log(`[digest] usuario=${userId} enviado=${result.sent}`);
+        console.log(`[digest] usuario=${userId} enviado=${result.sent} (hora=${hour})`);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -187,6 +186,17 @@ export function getNextCronDate(cronStr: string, timezone: string): Date {
     day: "numeric",
   });
   
+  const checkFormatter = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    hour12: false,
+  });
+
   const candidates: Date[] = [];
   for (let d = 0; d < 8; d++) {
     const dayDate = new Date(now.getTime() + d * 24 * 3600 * 1000);
@@ -198,17 +208,6 @@ export function getNextCronDate(cronStr: string, timezone: string): Date {
         const mPad = String(m).padStart(2, "0");
         const isoEstimate = `${dayStr}T${hPad}:${mPad}:00.000Z`;
         const estDate = new Date(isoEstimate);
-        
-        const checkFormatter = new Intl.DateTimeFormat("sv-SE", {
-          timeZone: timezone,
-          year: "numeric",
-          month: "numeric",
-          day: "numeric",
-          hour: "numeric",
-          minute: "numeric",
-          second: "numeric",
-          hour12: false,
-        });
         
         const checkStr = checkFormatter.format(estDate);
         const checkDate = new Date(checkStr.replace(" ", "T") + ".000Z");
