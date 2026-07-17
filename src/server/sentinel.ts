@@ -68,59 +68,69 @@ export async function listInvestments(userId: number): Promise<InvestmentWithSta
   const investments = await queries.listInvestments(userId);
   if (investments.length === 0) return [];
 
-  // ① Batch-load all catalog entries in ONE query instead of N individual queries
-  const isins = [...new Set(investments.map((i) => i.isin))];
-  const catalogMap = await queries.getFundCatalogByIsins(isins);
+  // ① Batch-load all catalog entries in ONE query
+  const uniqueIsins = [...new Set(investments.map((i) => i.isin))];
+  const catalogMap = await queries.getFundCatalogByIsins(uniqueIsins);
 
-  // ② Resolve tickers — DB first, then catalog, then discover (persisted back)
-  const tickers: (string | null)[] = await Promise.all(
-    investments.map(async (inv) => {
-      let ticker = inv.ticker ?? catalogMap.get(inv.isin)?.yahoo_ticker ?? null;
+  // ② Resolve tickers & prices per unique ISIN
+  const resolvedTickers = new Map<string, string | null>();
+  const resolvedPrices = new Map<string, number | null>();
+
+  await Promise.all(
+    uniqueIsins.map(async (isin) => {
+      // Find any investment sharing this ISIN to check if ticker is already stored
+      const matchingInvs = investments.filter((i) => i.isin === isin);
+      let ticker = matchingInvs.find((i) => i.ticker != null)?.ticker ?? catalogMap.get(isin)?.yahoo_ticker ?? null;
+
       if (!ticker) {
-        ticker = await tryDiscoverTicker(inv.isin);
+        ticker = await tryDiscoverTicker(isin);
         if (ticker) {
-          try { await queries.updateInvestmentTicker(inv.id, ticker); } catch {}
+          // Update DB for all investments with this ISIN (since they all get the discovered ticker)
+          await Promise.all(
+            matchingInvs.map(async (inv) => {
+              try { await queries.updateInvestmentTicker(inv.id, ticker); } catch {}
+            })
+          );
         }
       }
-      return ticker;
-    })
-  );
+      resolvedTickers.set(isin, ticker);
 
-  // ③ Resolve prices — in-memory cache → DB cache → Yahoo (sets both caches)
-  const prices: (number | null)[] = await Promise.all(
-    investments.map(async (inv, i) => {
-      const isin = inv.isin;
-      const ticker = tickers[i];
-
-      // Fast path: in-memory cache hit (avoids DB + network)
+      // Resolve Price for this unique ISIN
+      // Fast path: in-memory cache hit
       const mem = getCachedPrice(isin);
-      if (mem) return mem.price;
+      if (mem) {
+        resolvedPrices.set(isin, mem.price);
+        return;
+      }
 
-      // Slow path: try Yahoo, then DB fallback
+      // Slow path: fetch live price
       if (ticker) {
         const quote = await fetchCurrentPrice(ticker).catch(() => null);
         if (quote?.price) {
-          // Write to both caches
           setCachedPrice(isin, quote.price, quote.currency);
           await queries.setFundPrice(isin, quote.price, quote.currency);
-          return quote.price;
+          resolvedPrices.set(isin, quote.price);
+          return;
         }
       }
 
-      // DB fallback (no network)
+      // DB fallback
       const cached = await queries.getFundPrice(isin);
       if (cached && cached.price > 0) {
         setCachedPrice(isin, cached.price, cached.currency);
-        return cached.price;
+        resolvedPrices.set(isin, cached.price);
+        return;
       }
 
-      return null;
+      resolvedPrices.set(isin, null);
     })
   );
 
-  return investments.map((inv, i) =>
-    computeInvestmentStats(inv, prices[i], tickers[i])
-  );
+  return investments.map((inv) => {
+    const ticker = resolvedTickers.get(inv.isin) ?? null;
+    const price = resolvedPrices.get(inv.isin) ?? null;
+    return computeInvestmentStats(inv, price, ticker);
+  });
 }
 
 export async function getInvestmentWithStats(

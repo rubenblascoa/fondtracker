@@ -42,26 +42,49 @@ export type YahooSearchResult = {
   type: string;
 };
 
+// In-memory cache for YahooChartResult (5 minutes TTL)
+const chartCache = new Map<string, { data: YahooChartResult; fetchedAt: number }>();
+const CHART_CACHE_TTL = 5 * 60 * 1000;
+
+// Request coalescing maps to prevent duplicate parallel fetches/scrapes
+const activeCharts = new Map<string, Promise<YahooChartResult | null>>();
+const activePrices = new Map<string, Promise<{ price: number; currency: string } | null>>();
+const activeDiscoveries = new Map<string, Promise<string | null>>();
+
 export async function fetchYahooChart(
   ticker: string,
   range: YahooRange = "1y",
   interval: "1d" | "1wk" | "1mo" | "5m" | "15m" = "1d"
 ): Promise<YahooChartResult | null> {
-  const isinMatch = ticker.match(/^([A-Z]{2}[A-Z0-9]{10})/i);
-  
-  if (isinMatch) {
-    const isin = isinMatch[1];
-    const qfData = await fetchQueFondosData(isin);
-    if (qfData) {
-      qfData.quotes = filterQuotesByRange(qfData.quotes, range);
-      qfData.dataPoints = qfData.quotes.length;
-      const verification = await verifyFundData(isin, qfData.currentPrice, qfData.currency);
-      qfData.verificationLog = verification.detail;
-      return qfData;
-    }
+  const cleanTicker = ticker.toUpperCase().trim();
+  const cacheKey = `${cleanTicker}:${range}:${interval}`;
+
+  // 1. Check in-memory cache
+  const cached = chartCache.get(cacheKey);
+  if (cached && Date.now() - cached.fetchedAt < CHART_CACHE_TTL) {
+    return cached.data;
   }
 
-  const url = `${YAHOO_BASE}/${encodeURIComponent(ticker)}?range=${range}&interval=${interval}`;
+  // 2. Check active requests
+  const active = activeCharts.get(cacheKey);
+  if (active) return active;
+
+  const promise = (async () => {
+    const isinMatch = cleanTicker.match(/^([A-Z]{2}[A-Z0-9]{10})/i);
+    
+    if (isinMatch) {
+      const isin = isinMatch[1];
+      const qfData = await fetchQueFondosData(isin);
+      if (qfData) {
+        qfData.quotes = filterQuotesByRange(qfData.quotes, range);
+        qfData.dataPoints = qfData.quotes.length;
+        const verification = await verifyFundData(isin, qfData.currentPrice, qfData.currency);
+        qfData.verificationLog = verification.detail;
+        return qfData;
+      }
+    }
+
+    const url = `${YAHOO_BASE}/${encodeURIComponent(cleanTicker)}?range=${range}&interval=${interval}`;
 
   try {
     const res = await fetch(url, {
@@ -170,92 +193,130 @@ export async function fetchYahooChart(
       ...extra,
     };
   } catch {
-    const qfData = await fetchQueFondosData(ticker);
+    const qfData = await fetchQueFondosData(cleanTicker);
     if (qfData) return qfData;
     return null;
+  }
+  })();
+
+  activeCharts.set(cacheKey, promise);
+
+  try {
+    const res = await promise;
+    if (res) {
+      chartCache.set(cacheKey, { data: res, fetchedAt: Date.now() });
+    }
+    return res;
+  } finally {
+    activeCharts.delete(cacheKey);
   }
 }
 
 export async function fetchCurrentPrice(
   ticker: string
 ): Promise<{ price: number; currency: string } | null> {
-  const isinMatch = ticker.match(/^([A-Z]{2}[A-Z0-9]{10})/i);
+  const cleanTicker = ticker.toUpperCase().trim();
+  const active = activePrices.get(cleanTicker);
+  if (active) return active;
 
-  if (isinMatch) {
-    const qfData = await fetchQueFondosData(isinMatch[1]);
-    if (qfData) {
-      return { price: qfData.currentPrice, currency: qfData.currency };
-    }
-  }
+  const promise = (async () => {
+    const isinMatch = cleanTicker.match(/^([A-Z]{2}[A-Z0-9]{10})/i);
 
-  const url = `${YAHOO_BASE}/${encodeURIComponent(ticker)}?range=1d&interval=1d`;
-
-  try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-      },
-      signal: AbortSignal.timeout(8_000),
-    });
-
-    if (!res.ok) {
-      const qfData = await fetchQueFondosData(ticker);
-      if (qfData) return { price: qfData.currentPrice, currency: qfData.currency };
-      return null;
+    if (isinMatch) {
+      const qfData = await fetchQueFondosData(isinMatch[1]);
+      if (qfData) {
+        return { price: qfData.currentPrice, currency: qfData.currency };
+      }
     }
 
-    const data = await res.json();
-    const meta = data.chart?.result?.[0]?.meta;
-    if (!meta?.regularMarketPrice) return null;
+    const url = `${YAHOO_BASE}/${encodeURIComponent(cleanTicker)}?range=1d&interval=1d`;
 
-    return {
-      price: meta.regularMarketPrice,
-      currency: meta.currency ?? "EUR",
-    };
-  } catch {
-    const qfData = await fetchQueFondosData(ticker);
-    if (qfData) {
-      return { price: qfData.currentPrice, currency: qfData.currency };
-    }
-    return null;
-  }
-}
-
-export async function tryDiscoverTicker(isin: string): Promise<string | null> {
-  // If QueFondos has it, prefer using the ISIN itself as the ticker
-  const qfData = await fetchQueFondosData(isin);
-  if (qfData) {
-    return isin;
-  }
-
-  const candidates = [
-    `${isin}.BC`,
-    `${isin}.MC`,
-    `${isin}.MA`,
-  ];
-
-  for (const ticker of candidates) {
     try {
-      const url = `${YAHOO_BASE}/${encodeURIComponent(ticker)}?range=1d&interval=1d`;
       const res = await fetch(url, {
         headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         },
-        signal: AbortSignal.timeout(5_000),
+        signal: AbortSignal.timeout(8_000),
       });
-      if (!res.ok) continue;
+
+      if (!res.ok) {
+        const qfData = await fetchQueFondosData(cleanTicker);
+        if (qfData) return { price: qfData.currentPrice, currency: qfData.currency };
+        return null;
+      }
+
       const data = await res.json();
       const meta = data.chart?.result?.[0]?.meta;
-      if (meta?.regularMarketPrice) {
-        return ticker;
-      }
-    } catch {
-      continue;
-    }
-  }
+      if (!meta?.regularMarketPrice) return null;
 
-  return null;
+      return {
+        price: meta.regularMarketPrice,
+        currency: meta.currency ?? "EUR",
+      };
+    } catch {
+      const qfData = await fetchQueFondosData(cleanTicker);
+      if (qfData) {
+        return { price: qfData.currentPrice, currency: qfData.currency };
+      }
+      return null;
+    }
+  })();
+
+  activePrices.set(cleanTicker, promise);
+  try {
+    return await promise;
+  } finally {
+    activePrices.delete(cleanTicker);
+  }
+}
+export async function tryDiscoverTicker(isin: string): Promise<string | null> {
+  const cleanIsin = isin.toUpperCase().trim();
+  const active = activeDiscoveries.get(cleanIsin);
+  if (active) return active;
+
+  const promise = (async () => {
+    // If QueFondos has it, prefer using the ISIN itself as the ticker
+    const qfData = await fetchQueFondosData(cleanIsin);
+    if (qfData) {
+      return cleanIsin;
+    }
+
+    const candidates = [
+      `${cleanIsin}.BC`,
+      `${cleanIsin}.MC`,
+      `${cleanIsin}.MA`,
+    ];
+
+    for (const ticker of candidates) {
+      try {
+        const url = `${YAHOO_BASE}/${encodeURIComponent(ticker)}?range=1d&interval=1d`;
+        const res = await fetch(url, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          },
+          signal: AbortSignal.timeout(5_000),
+        });
+        if (!res.ok) continue;
+        const data = await res.json();
+        const meta = data.chart?.result?.[0]?.meta;
+        if (meta?.regularMarketPrice) {
+          return ticker;
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    return null;
+  })();
+
+  activeDiscoveries.set(cleanIsin, promise);
+  try {
+    return await promise;
+  } finally {
+    activeDiscoveries.delete(cleanIsin);
+  }
 }
 
 export function yahooTickerToUrl(ticker: string): string {

@@ -26,22 +26,43 @@ function businessDaysDiff(d1: Date, d2: Date): number {
   return count;
 }
 
+// In-memory cache for QueFondos scraping results (5 minutes TTL)
+const qfCache = new Map<string, { data: YahooChartResult | null; fetchedAt: number }>();
+const QF_CACHE_TTL = 5 * 60 * 1000;
+
+// Request coalescing map for active scraping promises
+const activeScrapes = new Map<string, Promise<YahooChartResult | null>>();
+
 export async function fetchQueFondosData(isin: string): Promise<YahooChartResult | null> {
-  const url = `https://www.quefondos.com/es/fondos/ficha/index.html?isin=${isin}`;
-  try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-      },
-      signal: AbortSignal.timeout(12_000),
-    });
+  const cleanIsin = isin.toUpperCase().trim();
+  
+  // 1. Check in-memory cache
+  const cached = qfCache.get(cleanIsin);
+  if (cached && Date.now() - cached.fetchedAt < QF_CACHE_TTL) {
+    return cached.data;
+  }
 
-    if (!res.ok) return null;
+  // 2. Check active scrapes (coalescing concurrent requests)
+  const active = activeScrapes.get(cleanIsin);
+  if (active) return active;
 
-    const html = await res.text();
+  // 3. Initiate fetch and scrape
+  const promise = (async () => {
+    const url = `https://www.quefondos.com/es/fondos/ficha/index.html?isin=${cleanIsin}`;
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        },
+        signal: AbortSignal.timeout(12_000),
+      });
 
-    // Reject template pages (ISIN not found in QueFondos)
-    if (html.includes("{ISIN}") || html.includes("{NFONDO}")) return null;
+      if (!res.ok) return null;
+
+      const html = await res.text();
+
+      // Reject template pages (ISIN not found in QueFondos)
+      if (html.includes("{ISIN}") || html.includes("{NFONDO}")) return null;
 
     // 1. Extract Current NAV (Valor Liquidativo)
     const navMatch = html.match(/Valor liquidativo:\s*<\/span>\s*<span[^>]*>\s*([\d,\.]+)\s*[A-Z]{3}/i);
@@ -178,8 +199,8 @@ export async function fetchQueFondosData(isin: string): Promise<YahooChartResult
       r5Y: return5Y
     });
 
-    return {
-      symbol: isin,
+    const result = {
+      symbol: cleanIsin,
       currency,
       name,
       currentPrice,
@@ -195,8 +216,21 @@ export async function fetchQueFondosData(isin: string): Promise<YahooChartResult
       ...extra
     } as any;
 
+    return result;
+
   } catch (err) {
-    console.error(`QueFondos error for ${isin}:`, err);
+    console.error(`QueFondos error for ${cleanIsin}:`, err);
     return null;
+  }
+  })();
+
+  activeScrapes.set(cleanIsin, promise);
+
+  try {
+    const res = await promise;
+    qfCache.set(cleanIsin, { data: res, fetchedAt: Date.now() });
+    return res;
+  } finally {
+    activeScrapes.delete(cleanIsin);
   }
 }
