@@ -1,31 +1,106 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, clearToken, getToken, type Investment, type Status, type User } from "./api";
+import { api, clearToken, getToken, setToken, type Investment, type Status, type User } from "./api";
 import { AddFundForm } from "./components/AddFundForm";
 import { FundCard } from "./components/FundCard";
 import { Header } from "./components/Header";
 import { LoginPage } from "./components/LoginPage";
 import { NotifyPanel } from "./components/NotifyPanel";
 import { RegisterPage } from "./components/RegisterPage";
+import { LandingPage } from "./components/LandingPage";
 import { Stats } from "./components/Stats";
 import { ApiDocsModal } from "./components/ApiDocsModal";
+import { LegalPage } from "./components/LegalPage";
+import { Footer } from "./components/Footer";
+
+function AnimatedBackground() {
+  return (
+    <div className="fixed inset-0 overflow-hidden pointer-events-none bg-[var(--color-ink-0)]" style={{ zIndex: 0 }}>
+      {/* Grid Pattern with fading edges */}
+      <div 
+        className="absolute inset-0 opacity-40"
+        style={{ 
+          backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
+          maskImage: 'radial-gradient(circle at center, black 40%, transparent 100%)', 
+          WebkitMaskImage: 'radial-gradient(circle at center, black 40%, transparent 100%)' 
+        }}
+      />
+      
+      {/* Floating Orbs */}
+      <div 
+        className="absolute animate-float-1 rounded-full" 
+        style={{ top: '10%', right: '10%', width: '40vw', height: '40vw', maxWidth: '500px', maxHeight: '500px', backgroundColor: 'var(--color-accent)', opacity: 0.12, filter: 'blur(120px)' }} 
+      />
+      <div 
+        className="absolute animate-float-3 rounded-full" 
+        style={{ bottom: '5%', left: '5%', width: '50vw', height: '50vw', maxWidth: '600px', maxHeight: '600px', backgroundColor: 'var(--color-accent)', opacity: 0.08, filter: 'blur(150px)' }} 
+      />
+    </div>
+  );
+}
+
+function SectionTitle({ title }: { title: string }) {
+  return <h2 className="font-pixel text-xs text-[var(--color-fg-4)] tracking-widest uppercase mb-4">{title}</h2>;
+}
 
 export function App() {
   const [user, setUser] = useState<User | null>(null);
-  const [authView, setAuthView] = useState<"login" | "register">("login");
+  const [authView, setAuthView] = useState<"login" | "register">(
+    window.location.pathname.startsWith("/register") ? "register" : "login"
+  );
   const [checking, setChecking] = useState(true);
   const [status, setStatus] = useState<Status | null>(null);
   const [funds, setFunds] = useState<Investment[]>([]);
   const [apiDocsOpen, setApiDocsOpen] = useState(false);
 
   const isLoginPath = window.location.pathname.startsWith("/login") || window.location.pathname.startsWith("/register");
+  const isPrivacyPath = window.location.pathname.startsWith("/legal/privacy-policy");
+  const isTermsPath = window.location.pathname.startsWith("/legal/terms-of-service");
+  const isRootPath = window.location.pathname === "/";
 
   useEffect(() => {
+    let title = "FondTracker";
     if (isLoginPath) {
+      title = authView === "register" ? "FondTracker | Register" : "FondTracker | Login";
+    } else if (isPrivacyPath || isTermsPath) {
+      title = "FondTracker | Legal";
+    } else {
+      title = "FondTracker | Dashboard";
+    }
+    document.title = title;
+  }, [isLoginPath, isPrivacyPath, isTermsPath, authView]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (window.location.pathname.startsWith("/register")) {
+        setAuthView("register");
+      } else if (window.location.pathname.startsWith("/login")) {
+        setAuthView("login");
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    if (token) {
+      setToken(token);
+      window.location.replace("/dashboard");
+      return;
+    }
+
+    if (isLoginPath || isPrivacyPath || isTermsPath) {
       clearToken();
       setChecking(false);
       return;
     }
     if (!getToken()) {
+      if (isRootPath) {
+        setChecking(false);
+        return;
+      }
       window.location.replace("/login");
       return;
     }
@@ -36,18 +111,20 @@ export function App() {
       })
       .catch(() => {
         clearToken();
+        if (isRootPath) return;
         window.location.replace("/login");
       })
       .finally(() => {
         setChecking(false);
       });
-  }, [isLoginPath]);
+  }, [isLoginPath, isPrivacyPath, isTermsPath]);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
-      const [s, f] = await Promise.all([api.status(), api.listFunds()]);
-      setStatus(s);
-      setFunds(f);
+      const { funds, status } = await api.portfolio();
+      if (signal?.aborted) return;
+      setStatus(status);
+      setFunds(funds);
     } catch {
       // token expired or server error — don't crash
     }
@@ -55,9 +132,11 @@ export function App() {
 
   useEffect(() => {
     if (!user) return;
-    void refresh();
-    const t = setInterval(refresh, 10_000);
-    return () => clearInterval(t);
+    const ctrl = new AbortController();
+    void refresh(ctrl.signal);
+    // 30s is enough — prices are cached 5 min server-side
+    const t = setInterval(() => void refresh(ctrl.signal), 30_000);
+    return () => { ctrl.abort(); clearInterval(t); };
   }, [user, refresh]);
 
   function handleLogout() {
@@ -65,10 +144,38 @@ export function App() {
     window.location.replace("/login");
   }
 
+  function handleSwitchToRegister() {
+    window.history.pushState({}, "", "/register");
+    setAuthView("register");
+  }
+
+  function handleSwitchToLogin() {
+    window.history.pushState({}, "", "/login");
+    setAuthView("login");
+  }
+
+  if (isPrivacyPath) {
+    return (
+      <div className="min-h-screen bg-[var(--color-ink-0)] text-[var(--color-fg-1)] font-sans relative">
+        <AnimatedBackground />
+        <LegalPage view="privacy" />
+      </div>
+    );
+  }
+
+  if (isTermsPath) {
+    return (
+      <div className="min-h-screen bg-[var(--color-ink-0)] text-[var(--color-fg-1)] font-sans relative">
+        <AnimatedBackground />
+        <LegalPage view="terms" />
+      </div>
+    );
+  }
+
   if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="scanline" />
+        <AnimatedBackground />
         <div className="flex items-center gap-3 relative z-10">
           <div className="w-1.5 h-1.5 bg-[var(--color-accent)] rounded-full animate-pulse" />
           <span className="font-pixel text-xs text-[var(--color-fg-4)] tracking-widest uppercase">
@@ -79,54 +186,64 @@ export function App() {
     );
   }
 
+  if (isRootPath) {
+    return <LandingPage user={user} onLogout={handleLogout} />;
+  }
+
   if (!user) {
     if (authView === "register") {
       return (
-        <RegisterPage
-          onAuth={() => {
-            if (isLoginPath) { window.location.replace("/dashboard"); return; }
-            api.me().then(setUser).catch(() => {});
-          }}
-          onSwitchToLogin={() => setAuthView("login")}
-        />
+        <div className="flex flex-col min-h-screen bg-[var(--color-ink-0)] relative">
+          <AnimatedBackground />
+          <Header />
+          <RegisterPage
+            onAuth={() => {
+              window.location.replace("/dashboard");
+            }}
+            onSwitchToLogin={handleSwitchToLogin}
+          />
+        </div>
       );
     }
     return (
-      <LoginPage
-        onAuth={() => {
-          if (isLoginPath) { window.location.replace("/dashboard"); return; }
-          api.me().then(setUser).catch(() => {});
-        }}
-        onSwitchToRegister={() => setAuthView("register")}
-      />
+      <div className="flex flex-col min-h-screen bg-[var(--color-ink-0)] relative">
+        <AnimatedBackground />
+        <Header />
+        <LoginPage
+          onAuth={() => {
+            window.location.replace("/dashboard");
+          }}
+          onSwitchToRegister={handleSwitchToRegister}
+        />
+      </div>
     );
   }
 
   return (
     <div className="min-h-screen relative">
-      <div className="scanline" />
+      <AnimatedBackground />
       <Header status={status} user={user} onLogout={handleLogout} />
       <ApiDocsModal isOpen={apiDocsOpen} onClose={() => setApiDocsOpen(false)} />
 
-      <main className="max-w-6xl mx-auto px-6 py-10 relative z-10">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 relative z-10">
         <Stats status={status} />
 
         <section className="mb-12">
-          <SectionTitle index="01" title="añadir inversión" />
+          <SectionTitle title="Add Investment" />
           <AddFundForm onAdded={refresh} />
         </section>
 
         <section className="mb-12">
-          <SectionTitle index="02" title="mis inversiones" />
+          <SectionTitle title="My Investments" />
           {funds.length === 0 ? (
             <div className="border border-dashed border-[var(--color-ink-3)] p-10 text-center text-sm text-[var(--color-fg-3)]">
               <div className="font-pixel text-3xl text-[var(--color-fg-4)] mb-3">∅</div>
               <p className="max-w-sm mx-auto leading-relaxed">
-                tu cartera está vacía. busca un fondo en el catálogo y registra tu primera inversión.
+                your portfolio is empty. search for a fund in the catalog and add your first investment.
               </p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-6">
               {funds.map((fund) => (
                 <FundCard key={fund.id} fund={fund} onChange={refresh} />
               ))}
@@ -135,29 +252,23 @@ export function App() {
         </section>
 
         <section className="mb-12">
-          <SectionTitle index="03" title="notificaciones" />
+          <SectionTitle title="Notifications" />
           <NotifyPanel status={status} onChange={refresh} />
         </section>
-
-        <footer className="mt-20 pt-8 border-t border-[var(--color-ink-3)] text-[10px] uppercase tracking-[0.25em] text-[var(--color-fg-4)] flex items-center justify-between">
-          <span>fondtracker · v1.0</span>
-          <span>datos de mercado vía Yahoo Finance</span>
-        </footer>
       </main>
+
+      <Footer />
     </div>
   );
 }
 
-function SectionTitle({ index, title }: { index: string; title: string }) {
+function SectionTitle({ title, button }: { title: string; button?: React.ReactNode }) {
   return (
-    <h2 className="flex items-center gap-3 mb-4">
-      <span className="font-pixel text-xs text-[var(--color-accent)]">
-        {index}
-      </span>
-      <span className="font-pixel uppercase text-sm text-[var(--color-fg-1)] tracking-wider">
+    <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
+      <h2 className="font-heading font-semibold text-2xl text-[var(--color-fg-1)] flex items-center gap-3">
         {title}
-      </span>
-      <span className="flex-1 h-px bg-[var(--color-ink-3)]" />
-    </h2>
+      </h2>
+      {button}
+    </div>
   );
 }

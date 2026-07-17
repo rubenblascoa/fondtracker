@@ -368,6 +368,10 @@ export const api = {
 
   listFunds: () => request<Investment[]>("/api/funds"),
 
+  /** Single request returning both funds and status — use instead of status()+listFunds() */
+  portfolio: () =>
+    request<{ funds: Investment[]; status: Status }>("/api/portfolio"),
+
   addFund: (data: {
     isin: string;
     shares: number;

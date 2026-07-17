@@ -79,7 +79,7 @@ export function NotifyPanel({ status, onChange }: Props) {
       const res = await api.sendDigest();
       setFeedback({
         kind: "ok",
-        text: `enviado · ${res.sent} mensaje(s)`,
+        text: `sent · ${res.sent} message(s)`,
       });
       await onChange();
     } catch (err) {
@@ -98,7 +98,7 @@ export function NotifyPanel({ status, onChange }: Props) {
     setFeedback(null);
     try {
       await api.testWhatsApp();
-      setTestResult({ ok: true, message: "Mensaje de prueba enviado correctamente" });
+      setTestResult({ ok: true, message: "Test message sent successfully" });
       await onChange();
     } catch (err) {
       setTestResult({
@@ -119,7 +119,7 @@ export function NotifyPanel({ status, onChange }: Props) {
         api_key: apiKey || undefined,
       });
       setShowConfig(false);
-      setFeedback({ kind: "ok", text: "configuración guardada" });
+      setFeedback({ kind: "ok", text: "configuration saved" });
       await onChange();
     } catch (err) {
       setFeedback({
@@ -132,7 +132,7 @@ export function NotifyPanel({ status, onChange }: Props) {
   };
 
   return (
-    <div className="border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] p-5 slide-up">
+    <div className="border border-white/5 bg-black/20 backdrop-blur-sm p-5 slide-up">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
@@ -144,12 +144,12 @@ export function NotifyPanel({ status, onChange }: Props) {
             }`}
           />
           <span className="font-pixel uppercase text-xs text-[var(--color-fg-1)] tracking-wider">
-            whatsapp digest
+            automatic alerts
           </span>
           <span className="text-[10px] text-[var(--color-fg-4)]">
             {wa?.configured
               ? `${wa.phone} · ${wa.timezone}`
-              : "sin configurar"}
+              : "unconfigured"}
           </span>
         </div>
         {wa?.configured && (
@@ -157,7 +157,7 @@ export function NotifyPanel({ status, onChange }: Props) {
             onClick={() => setShowConfig(!showConfig)}
             className="font-pixel uppercase text-[10px] tracking-wider px-2 py-1 border border-[var(--color-ink-3)] text-[var(--color-fg-4)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors"
           >
-            {showConfig ? "cerrar" : "config"}
+            {showConfig ? "close" : "config"}
           </button>
         )}
       </div>
@@ -168,7 +168,7 @@ export function NotifyPanel({ status, onChange }: Props) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[10px] uppercase tracking-[0.2em] text-[var(--color-fg-4)] mb-1">
-                número WhatsApp
+                WhatsApp number
               </label>
               <input
                 type="text"
@@ -186,7 +186,7 @@ export function NotifyPanel({ status, onChange }: Props) {
                 type="text"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder={wa?.configured ? "********" : "tu_api_key"}
+                placeholder={wa?.configured ? "********" : "your_api_key"}
                 className="w-full bg-[var(--color-ink-0)] border border-[var(--color-ink-3)] px-2 py-1.5 text-xs font-mono text-[var(--color-fg-2)] placeholder-[var(--color-fg-4)] focus:outline-none focus:border-[var(--color-accent)]"
               />
             </div>
@@ -197,14 +197,14 @@ export function NotifyPanel({ status, onChange }: Props) {
               disabled={saving}
               className="font-pixel uppercase text-[10px] tracking-wider px-3 py-1.5 border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-ink-0)] transition-colors disabled:opacity-30"
             >
-              {saving ? "guardando..." : "guardar"}
+              {saving ? "saving..." : "save"}
             </button>
             {wa?.configured && (
               <button
                 onClick={() => setShowConfig(false)}
                 className="font-pixel uppercase text-[10px] tracking-wider px-3 py-1.5 border border-[var(--color-ink-3)] text-[var(--color-fg-3)] hover:border-[var(--color-fg-2)] hover:text-[var(--color-fg-2)] transition-colors"
               >
-                cancelar
+                cancel
               </button>
             )}
           </div>
@@ -214,19 +214,19 @@ export function NotifyPanel({ status, onChange }: Props) {
       {/* Metrics + Actions – only when configured */}
       {wa?.configured && !showConfig && (
         <>
-          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-px bg-[var(--color-ink-3)] border border-[var(--color-ink-3)]">
+          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
             <DigestMetric label="cron" value={`${wa.cron} UTC`} />
             <DigestMetric
-              label="próximo envío"
+              label="next run"
               value={formatCountdown(wa.nextRunAt, now)}
               highlight
             />
             <DigestMetric
-              label="último envío"
-              value={wa.lastSent ? formatRelative(wa.lastSent) : "nunca"}
+              label="last sent"
+              value={wa.lastSent ? formatRelative(wa.lastSent) : "never"}
             />
             <DigestMetric
-              label="último test"
+              label="last test"
               value={wa.lastTestAt ? formatRelative(wa.lastTestAt) : "—"}
               highlight={wa.lastStatus === "ok"}
               danger={wa.lastStatus && wa.lastStatus !== "ok"}
@@ -255,27 +255,27 @@ export function NotifyPanel({ status, onChange }: Props) {
             </div>
           )}
 
-          <div className="mt-4 flex items-center gap-2 flex-wrap">
+          <div className="mt-4 flex items-center gap-2 flex-wrap gap-y-2">
             <button
               onClick={testConnection}
               disabled={testing}
               className="font-pixel uppercase text-[10px] tracking-wider px-3 py-1.5 border border-[var(--color-ink-3)] text-[var(--color-fg-2)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors disabled:opacity-30"
             >
-              {testing ? "enviando test..." : "test conexión"}
+              {testing ? "sending test..." : "test connection"}
             </button>
             <button
               onClick={loadPreview}
               disabled={loadingPreview}
               className="font-pixel uppercase text-[10px] tracking-wider px-3 py-1.5 border border-[var(--color-ink-3)] text-[var(--color-fg-2)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors disabled:opacity-40"
             >
-              {loadingPreview ? "generando..." : "vista previa"}
+              {loadingPreview ? "generating..." : "preview"}
             </button>
             <button
               onClick={send}
               disabled={sending}
               className="font-pixel uppercase text-[10px] tracking-wider px-3 py-1.5 border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-ink-0)] transition-colors disabled:opacity-30"
             >
-              {sending ? "enviando..." : "enviar ahora"}
+              {sending ? "sending..." : "send now"}
             </button>
             {feedback && (
               <span
@@ -315,7 +315,7 @@ function DigestMetric({
   badge?: "ok" | "error";
 }) {
   return (
-    <div className="bg-[var(--color-ink-1)] p-3 relative">
+    <div className="bg-transparent border border-[var(--color-ink-3)] hover:border-[var(--color-ink-4)] hover:bg-[var(--color-ink-2)] transition-colors p-3 relative rounded-sm">
       <div className="text-[10px] uppercase tracking-[0.2em] text-[var(--color-fg-4)] mb-1 flex items-center gap-1.5">
         {label}
         {badge && (
@@ -348,7 +348,7 @@ function DigestMetric({
 function formatCountdown(iso: string | null | undefined, now: number): string {
   if (!iso) return "—";
   const diff = new Date(iso).getTime() - now;
-  if (diff <= 0) return "ahora";
+  if (diff <= 0) return "now";
 
   const totalSeconds = Math.ceil(diff / 1000);
   const days = Math.floor(totalSeconds / 86_400);
@@ -356,8 +356,8 @@ function formatCountdown(iso: string | null | undefined, now: number): string {
   const minutes = Math.floor((totalSeconds % 3_600) / 60);
   const seconds = totalSeconds % 60;
 
-  if (days > 0) return `en ${days}d ${hours}h`;
-  if (hours > 0) return `en ${hours}h ${minutes}m`;
-  if (minutes > 0) return `en ${minutes}m ${seconds}s`;
-  return `en ${seconds}s`;
+  if (days > 0) return `in ${days}d ${hours}h`;
+  if (hours > 0) return `in ${hours}h ${minutes}m`;
+  if (minutes > 0) return `in ${minutes}m ${seconds}s`;
+  return `in ${seconds}s`;
 }

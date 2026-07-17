@@ -1,998 +1,704 @@
 <!DOCTYPE html>
-<html lang="es" class="scroll-smooth"><head>
+<html lang="en"><head>
   <meta charset="utf-8">
-  <meta content="width=device-width, initial-scale=1.0" name="viewport">
-  <title>FondTracker - Control Total de tus Inversiones</title>
-  <link rel="stylesheet" href="/styles.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FondTracker | Professional Investment Fund Analytics</title>
+  <meta name="description" content="Track your investment portfolio with precision. Real-time NAV syncing and advanced analytics for Mutual Funds and ETFs.">
   
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com" rel="preconnect">
-  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
-  <link href="https://fonts.googleapis.com/css2?family=Forum&amp;family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Outfit:wght@400;600;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet">
+  
+  <style>
+    .mobile-menu-hidden { opacity: 0; pointer-events: none; transform: translateY(-10px); }
+    .mobile-menu-visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+    .hamburger-line { transition: all 0.3s ease; }
+    .hamburger-open .hamburger-line:nth-child(1) { transform: translateY(7px) rotate(45deg); background: #39ff88; }
+    .hamburger-open .hamburger-line:nth-child(2) { opacity: 0; }
+    .hamburger-open .hamburger-line:nth-child(3) { transform: translateY(-7px) rotate(-45deg); background: #39ff88; }
+    .sm-show { display: none; }
+    @media (min-width: 640px) { .sm-show { display: block !important; } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
 <style type="text/tailwindcss">@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 80px;
+    background-color: #050505;
+  }
+  
   body {
-    @apply m-0 p-0;
-  }
-  
-  /* Advanced Scroll Reveal Classes */
-  [data-animation-on-scroll] { 
-    opacity: 0; 
-    transition: all 1s cubic-bezier(0.16, 1, 0.3, 1); 
-  }
-  
-  .animate-fade-up { transform: translateY(40px); }
-  .animate-fade-in { transform: scale(0.95); }
-  .animate-slide-left { transform: translateX(-40px); }
-  .animate-slide-right { transform: translateX(40px); }
-  
-  .animate-on-scroll-visible { 
-    opacity: 1 !important; 
-    transform: translate(0, 0) scale(1) !important; 
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color: #f5f5f5;
   }
 
-  /* Staggered children container */
-  [data-stagger-container] > * {
-    opacity: 0;
-    transform: translateY(20px);
-    transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  
-  .stagger-visible > * {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  
-  /* Text Reveal Masking */
-  .reveal-mask {
-    overflow: hidden;
-    display: block;
-  }
-  .reveal-mask > span {
-    display: block;
-    transform: translateY(110%);
-    transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .animate-on-scroll-visible .reveal-mask > span {
-    transform: translateY(0);
+  .text-glow {
+    text-shadow: 0 0 10px rgba(57, 255, 136, 0.3);
   }
 }
 
-::selection { 
-  background-color: rgb(200, 248, 169); 
-  color: rgb(15, 61, 58); 
+@layer utilities {
+  .animate-on-scroll-hidden {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+  }
+  
+  .animate-on-scroll-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .glass-card {
+    background: rgba(13, 13, 15, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .grid-overlay {
+    background-image: linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
 }</style><script src="https://cdn.tailwindcss.com"></script><script>tailwind.config = {
   important: '#app-root',
   theme: {
     extend: {
       colors: {
-        'brand-green': 'rgb(200, 248, 169)',
-        'brand-dark': 'rgb(15, 61, 58)',
-        'neutral-background': 'rgb(0, 0, 0)',
-        'text-primary': 'rgb(255, 255, 255)',
-        'text-secondary': 'rgba(255, 255, 255, 0.7)',
+        'brand-primary': '#39ff88', // Neon Green
+        'brand-secondary': '#ff5a4a', // Alert Red
+        'brand-accent': '#ffb547', // Alert Orange
+        'neutral-background': '#050505', // Absolute Black
+        'neutral-surface': '#0d0d0f', // Very Deep Grey
+        'text-primary': '#f5f5f5', // Pure Light Grey
+        'text-secondary': '#9ca3af', // Muted Grey
+        'text-light': '#6b7280',
+        'border-terminal': '#1f2937',
+        'profit': '#39ff88',
+        'loss': '#ff5a4a',
       },
       fontFamily: {
-        'primary': ['Forum', 'serif'],
-        'secondary': ['DM Sans', 'sans-serif'],
+        'primary': ['Inter', 'system-ui', 'sans-serif'],
+        'heading': ['Outfit', 'Inter', 'sans-serif'], 
+        'mono': ['JetBrains Mono', 'monospace'], // Used for data/ISINs only
       },
-      spacing: {
-        's': '16px',
-        'm': '24px',
-        'l': '32px',
-        'xl': '48px',
+      boxShadow: {
+        'neon': '0 0 15px rgba(57, 255, 136, 0.2)',
+        'neon-hover': '0 0 25px rgba(57, 255, 136, 0.4)',
+        'card': '0 10px 30px rgba(0, 0, 0, 0.5)',
       },
-      borderRadius: {
-        'sm': '5px',
-        'md': '10px',
-        'lg': '40px',
+      backgroundImage: {
+        'grid-pattern': 'linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px)',
+      },
+      backgroundSize: {
+        'grid-size': '40px 40px',
       },
       animation: {
-        'float': 'float 8s ease-in-out infinite',
+        'pulse-glow': 'pulseGlow 3s ease-in-out infinite',
       },
       keyframes: {
-        float: {
-          '0%, 100%': { transform: 'translateY(0px)' },
-          '50%': { transform: 'translateY(-20px)' },
+        pulseGlow: {
+          '0%, 100%': { opacity: '0.5', filter: 'drop-shadow(0 0 5px #39ff88)' },
+          '50%': { opacity: '1', filter: 'drop-shadow(0 0 10px #39ff88)' },
         }
       }
     }
   }
 }</script></head>
 
-<body id="app-root">
-  <!-- Master Wrapper -->
-  <div class="font-secondary bg-neutral-background text-text-primary overflow-x-hidden min-h-screen flex flex-col w-full relative">
-    
-    <!-- Navbar -->
-    <header class="fixed top-0 left-0 right-0 z-50 transition-all duration-300" id="main-nav">
-      <nav class="max-w-[1200px] mx-auto px-6 py-5 flex items-center justify-between border-b border-white/10">
-        <div class="flex items-center gap-10" data-pixel-id="49d0h" data-pixel-kind="text">
-          <a href="#" class="block" data-pixel-id="u6n34" data-pixel-kind="link">
-            <span class="font-primary text-2xl text-white tracking-widest uppercase">FondTracker</span>
-          </a>
-        </div>
+<body id="app-root" class="font-primary bg-neutral-background text-text-primary overflow-x-hidden selection:bg-brand-primary selection:text-black">
+  
+  <div class="min-h-screen flex flex-col relative grid-overlay">
 
-        <div class="hidden md:flex items-center gap-2" data-editable-list="header.navLinks" data-pixel-id="2d1fu" data-pixel-kind="text">
-          <a href="#features" class="px-3 py-1 text-sm font-medium hover:bg-white/10 rounded-full transition-colors" data-pixel-id="w8jlo" data-pixel-kind="link">Funciones</a>
-          <a href="#stats" class="px-3 py-1 text-sm font-medium hover:bg-white/10 rounded-full transition-colors" data-pixel-id="fbeie" data-pixel-kind="link">Inteligencia</a>
-          <a href="#pricing" class="px-3 py-1 text-sm font-medium hover:bg-white/10 rounded-full transition-colors" data-pixel-id="icrxp" data-pixel-kind="link">Planes</a>
-          <a href="#faq" class="px-3 py-1 text-sm font-medium hover:bg-white/10 rounded-full transition-colors" data-pixel-id="gp8p1" data-pixel-kind="link">FAQ</a>
+    <!-- Header -->
+    <header class="fixed top-0 left-0 w-full z-50 border-b border-white border-opacity-5" style="background: rgba(5, 5, 5, 0.85); backdrop-filter: blur(12px);">
+      <nav class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+        <!-- Logo -->
+        <a href="/" class="flex items-center gap-2 group" data-pixel-id="3sk89" data-pixel-kind="link">
+          <div class="w-8 h-8 bg-brand-primary rounded-lg flex items-center justify-center shadow-neon group-hover:scale-110 transition-transform">
+            <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+            </svg>
+          </div>
+          <span class="font-heading text-xl font-bold tracking-tight text-white">FondTracker</span>
+        </a>
+        
+        <!-- Desktop Navigation -->
+        <div class="hidden md:flex items-center gap-8" data-pixel-id="xg2sd" data-pixel-kind="text">
+          <a href="#features" class="text-sm font-medium text-text-secondary hover:text-brand-primary transition-colors" data-pixel-id="vuavx" data-pixel-kind="link">Features</a>
+          <a href="#how-it-works" class="text-sm font-medium text-text-secondary hover:text-brand-primary transition-colors" data-pixel-id="7zzk7" data-pixel-kind="link">How it Works</a>
+          <a href="#tech-stack" class="text-sm font-medium text-text-secondary hover:text-brand-primary transition-colors" data-pixel-id="bb6fh" data-pixel-kind="link">Technology</a>
         </div>
-
-        <div class="flex items-center gap-3" data-pixel-id="qwwmm" data-pixel-kind="text">
-          <a href="/login" class="hidden sm:flex bg-white/5 border border-white/10 text-white px-4 py-2 rounded-[5px] text-sm font-medium hover:bg-white/10 transition-colors" data-pixel-id="j0tjv" data-pixel-kind="link">
-            Acceder
-          </a>
-          <a href="/login" class="bg-brand-green text-brand-dark px-4 py-2 rounded-[5px] text-sm font-medium hover:opacity-90 transition-colors shadow-[0_0_20px_rgba(200,248,169,0.3)]" data-pixel-id="90u3c" data-pixel-kind="link">
-            Empezar gratis
+        
+        <!-- CTA -->
+        <div id="desktop-cta" class="hidden md:flex items-center gap-4" data-pixel-id="u9e9k" data-pixel-kind="text">
+          <a href="/login" target="_blank" rel="noopener noreferrer" class="text-sm font-semibold text-text-secondary hover:text-text-primary transition-colors" data-pixel-id="cfxe4" data-pixel-kind="link">Log in</a>
+          <a href="/register" target="_blank" rel="noopener noreferrer" class="px-5 py-2.5 bg-brand-primary text-black font-semibold text-sm rounded-lg shadow-neon hover:shadow-neon-hover transition-all" data-pixel-id="nqf7d" data-pixel-kind="link">
+            Get Started
           </a>
         </div>
+        
+        <!-- Mobile Menu Button -->
+        <button class="md:hidden flex flex-col gap-1.5 w-6 h-6 justify-center" id="mobile-menu-btn">
+          <span class="hamburger-line block h-0.5 w-full bg-text-primary"></span>
+          <span class="hamburger-line block h-0.5 w-full bg-text-primary"></span>
+          <span class="hamburger-line block h-0.5 w-full bg-text-primary"></span>
+        </button>
       </nav>
+      
+      <!-- Mobile Menu -->
+      <div class="mobile-menu-hidden md:hidden absolute top-full left-0 w-full bg-neutral-surface border-b border-border-terminal transition-all duration-300" id="mobile-menu">
+        <div class="flex flex-col px-6 py-8 gap-6 font-heading">
+          <a href="#features" class="text-xl text-text-secondary hover:text-brand-primary" data-pixel-id="qkhox" data-pixel-kind="link">Features</a>
+          <a href="#how-it-works" class="text-xl text-text-secondary hover:text-brand-primary" data-pixel-id="4x25l" data-pixel-kind="link">How it Works</a>
+          <a href="#tech-stack" class="text-xl text-text-secondary hover:text-brand-primary" data-pixel-id="w3oc3" data-pixel-kind="link">Technology</a>
+          <hr class="border-border-terminal">
+          <div class="flex flex-col gap-4" data-pixel-id="z2djs" data-pixel-kind="text">
+            <a href="/login" target="_blank" rel="noopener noreferrer" class="text-center py-3 text-text-secondary font-semibold" data-pixel-id="norwq" data-pixel-kind="link">Log in</a>
+            <a href="/register" target="_blank" rel="noopener noreferrer" class="text-center py-3 bg-brand-primary text-black font-bold rounded-lg" data-pixel-id="fe200" data-pixel-kind="link">Get Started</a>
+          </div>
+        </div>
+      </div>
     </header>
 
-    <main class="flex-grow"><section id="hero" class="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-black">
-  <div class="absolute inset-0 z-0">
-    <img src="https://images.pexels.com/photos/7135013/pexels-photo-7135013.jpeg?w=1920&amp;h=1080&amp;fit=crop" alt="Background" class="hero-bg-zoom w-full h-full object-cover grayscale opacity-40" data-pixel-verified="true" data-pixel-id="m9jke" data-pixel-kind="image">
-    <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black"></div>
-  </div>
-
-  <div class="absolute top-1/4 -left-20 w-96 h-96 bg-brand-green/10 rounded-full blur-[120px] animate-float opacity-50"></div>
-
-  <div class="relative z-10 w-full max-w-[1200px] px-6 mt-20">
-    <div class="flex flex-col items-start gap-12">
-      <div class="max-w-[850px] space-y-6" data-animation-on-scroll="">
-        <div class="flex items-center gap-3 overflow-hidden">
-          <div class="bg-white/10 border border-white/20 px-3 py-1 rounded-[5px]" data-pixel-id="d38ld" data-pixel-kind="text">
-            <span class="text-brand-green text-sm font-medium tracking-widest uppercase">Inteligencia de Fondos</span>
-          </div>
-          <p class="text-white/60 text-sm font-normal" data-pixel-id="ce7y1" data-pixel-kind="text">Domina tu cartera de inversión en un solo lugar</p>
+    <main class="flex-grow pt-20"><section class="relative pt-24 pb-20 overflow-hidden">
+  <div class="max-w-7xl mx-auto px-6 relative z-10">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+      <div data-animation-on-scroll="">
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-brand-primary bg-opacity-10 border border-brand-primary border-opacity-30 text-brand-primary font-semibold text-xs rounded-full mb-8" data-pixel-id="xhsrf" data-pixel-kind="text">
+          Now supporting 490+ European Funds
         </div>
-
-        <h1 class="font-primary text-[56px] lg:text-[90px] xl:text-[110px] leading-[0.9] text-white tracking-tighter" data-pixel-id="5mds9" data-pixel-kind="text">
-          <span class="reveal-mask block">
-            <span>Controla tu <span class="text-brand-green italic">patrimonio</span></span>
-          </span>
-          <span class="reveal-mask block mt-2">
-            <span>con precisión total.</span>
-          </span>
+        <h1 class="font-heading text-5xl md:text-7xl font-bold leading-tight text-white mb-6" data-pixel-id="3zxoj" data-pixel-kind="text">
+          Investment tracking <br>
+          <span class="text-brand-primary">reimagined.</span>
         </h1>
+        <p class="text-lg text-text-secondary max-w-lg mb-10 leading-relaxed" data-pixel-id="jjvzd" data-pixel-kind="text">
+          The all-in-one terminal for mutual funds and ETFs. Real-time NAV syncing, deep portfolio analytics, and automated WhatsApp notifications.
+        </p>
+        <div class="flex flex-wrap gap-4" data-pixel-id="qoinn" data-pixel-kind="text">
+          <a href="/register" target="_blank" rel="noopener noreferrer" class="px-8 py-4 bg-brand-primary text-black font-bold text-lg rounded-xl shadow-neon hover:shadow-neon-hover transition-all" data-pixel-id="qgdae" data-pixel-kind="link">
+            Get Started for Free
+          </a>
+          <a href="https://github.com/rubenblascoa/fondtracker" target="_blank" rel="noopener noreferrer" class="px-8 py-4 border border-border-terminal text-text-primary font-semibold text-lg rounded-xl hover:bg-neutral-surface transition-all flex items-center gap-2" data-pixel-id="ea6p7" data-pixel-kind="link">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.372.79 1.102.79 2.222 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"></path></svg>
+            View GitHub
+          </a>
+        </div>
       </div>
 
-      <div class="w-full space-y-8" data-animation-on-scroll="">
-        <div class="w-full h-[1px] bg-white/10"></div>
+      <!-- Dashboard Mockup -->
+      <div class="relative lg:mt-0 mt-12" data-animation-on-scroll="">
+        <div class="glass-card rounded-2xl p-6 border border-white border-opacity-10 shadow-card overflow-hidden group">
+          <div class="flex items-center justify-between mb-8">
+            <div class="flex gap-1.5">
+              <div class="w-3 h-3 rounded-full bg-loss"></div>
+              <div class="w-3 h-3 rounded-full bg-brand-accent"></div>
+              <div class="w-3 h-3 rounded-full bg-brand-primary"></div>
+            </div>
+            <div class="text-[10px] font-mono text-text-light uppercase tracking-widest" data-pixel-id="bhmh2" data-pixel-kind="text">Analytics Dashboard</div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-6 mb-8">
+            <div class="space-y-1">
+              <div class="text-xs text-text-secondary uppercase" data-pixel-id="rr27p" data-pixel-kind="text">Total Value</div>
+              <div class="text-3xl font-bold text-white" data-pixel-id="c2aau" data-pixel-kind="text">€124,562</div>
+            </div>
+            <div class="space-y-1">
+              <div class="text-xs text-text-secondary uppercase" data-pixel-id="yvxz1" data-pixel-kind="text">24h Change</div>
+              <div class="text-3xl font-bold text-brand-primary" data-pixel-id="pj2ma" data-pixel-kind="text">+1.24%</div>
+            </div>
+          </div>
+          
+          <div class="relative rounded-xl overflow-hidden border border-white border-opacity-5">
+            <img src="https://assets.landinghero.app/m/P6c9APcQzZhpeVW3mkqYFQ.webp#lh=1026x842" alt="Dashboard interface" class="w-full h-auto opacity-90 group-hover:opacity-100 transition-opacity" data-pixel-id="iv96q" data-pixel-kind="image">
+            <div class="absolute inset-0 bg-gradient-to-t from-neutral-surface to-transparent opacity-40"></div>
+          </div>
+        </div>
         
-        <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
-          <p class="max-w-[550px] text-text-secondary text-[20px] leading-relaxed font-secondary font-light" data-pixel-id="djmrb" data-pixel-kind="text">
-            Unifica todos tus fondos de inversión. Accede a gráficos en tiempo real, alertas por WhatsApp y reportes de rendimiento con inteligencia de grado profesional.
-          </p>
+        <!-- Decoration -->
+        <div class="absolute -top-12 -right-12 w-64 h-64 bg-brand-primary opacity-5 rounded-full blur-[100px] pointer-events-none"></div>
+        <div class="absolute -bottom-12 -left-12 w-64 h-64 bg-brand-primary opacity-5 rounded-full blur-[100px] pointer-events-none"></div>
+      </div>
+    </div>
+  </div>
+</section>
 
-          <div class="flex items-center gap-6" data-pixel-id="nemxn" data-pixel-kind="text">
-            <a href="/login" class="group flex items-center justify-center gap-5 bg-brand-green px-8 py-5 rounded-[5px] transition-all hover:bg-white w-fit shrink-0 shadow-[0_0_30px_rgba(200,248,169,0.3)]" data-pixel-id="1fnqq" data-pixel-kind="link">
-              <span class="text-black text-[15px] font-bold uppercase tracking-wider">Iniciar gestión</span>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" class="w-5 h-5 text-black transition-transform group-hover:translate-x-1">
-                <path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"></path>
-              </svg>
-            </a>
+<!-- Features Grid -->
+<section class="py-24 border-y border-border-terminal bg-neutral-surface" id="features">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="mb-16" data-animation-on-scroll="">
+      <h2 class="font-heading text-4xl md:text-5xl font-bold text-white mb-4" data-pixel-id="1bjwt" data-pixel-kind="text">Precision Engineering</h2>
+      <p class="text-text-secondary text-lg max-w-2xl" data-pixel-id="0fii1" data-pixel-kind="text">Mathematical accuracy meets professional design for serious investors.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <!-- Feature 1 -->
+      <div class="glass-card p-8 rounded-2xl border border-white border-opacity-5 hover:border-brand-primary hover:border-opacity-30 transition-all group" data-animation-on-scroll="">
+        <div class="w-12 h-12 bg-brand-primary bg-opacity-10 rounded-xl flex items-center justify-center text-brand-primary mb-6 group-hover:scale-110 transition-transform">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+        </div>
+        <h3 class="text-xl font-bold text-white mb-3" data-pixel-id="95cw2" data-pixel-kind="text">Hybrid Sync Engine</h3>
+        <p class="text-sm text-text-secondary leading-relaxed" data-pixel-id="n9ff1" data-pixel-kind="text">
+          Combines Yahoo Finance v8 for global ETFs with specialized QueFondos scraping for Spanish mutual fund NAVs.
+        </p>
+      </div>
+
+      <!-- Feature 2 -->
+      <div class="glass-card p-8 rounded-2xl border border-white border-opacity-5 hover:border-brand-primary hover:border-opacity-30 transition-all group" data-animation-on-scroll="">
+        <div class="w-12 h-12 bg-brand-primary bg-opacity-10 rounded-xl flex items-center justify-center text-brand-primary mb-6 group-hover:scale-110 transition-transform">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.9 1.9 0 01-1.2-.4L4 18V6a2 2 0 012-2h10a2 2 0 012 2v2z"></path></svg>
+        </div>
+        <h3 class="text-xl font-bold text-white mb-3" data-pixel-id="4z457" data-pixel-kind="text">WhatsApp Digests</h3>
+        <p class="text-sm text-text-secondary leading-relaxed" data-pixel-id="h2u83" data-pixel-kind="text">
+          Receive automated portfolio reports via CallMeBot. Intelligent data chunking ensures you never miss a delta.
+        </p>
+      </div>
+
+      <!-- Feature 3 -->
+      <div class="glass-card p-8 rounded-2xl border border-white border-opacity-5 hover:border-brand-primary hover:border-opacity-30 transition-all group" data-animation-on-scroll="">
+        <div class="w-12 h-12 bg-brand-primary bg-opacity-10 rounded-xl flex items-center justify-center text-brand-primary mb-6 group-hover:scale-110 transition-transform">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h4a2 2 0 002-2zm6 0v-11a2 2 0 00-2-2h-4a2 2 0 00-2 2v11a2 2 0 002 2h4a2 2 0 002-2zM21 19V3a2 2 0 00-2-2h-4a2 2 0 00-2 2v16a2 2 0 002 2h4a2 2 0 002-2z"></path></svg>
+        </div>
+        <h3 class="text-xl font-bold text-white mb-3" data-pixel-id="deorj" data-pixel-kind="text">Custom Visualizations</h3>
+        <p class="text-sm text-text-secondary leading-relaxed" data-pixel-id="ffl04" data-pixel-kind="text">
+          Native HTML5 Canvas rendering for zero-latency interactive charts. No heavy external libraries required.
+        </p>
+      </div>
+
+      <!-- Feature 4 -->
+      <div class="glass-card p-8 rounded-2xl border border-white border-opacity-5 hover:border-brand-primary hover:border-opacity-30 transition-all group" data-animation-on-scroll="">
+        <div class="w-12 h-12 bg-brand-primary bg-opacity-10 rounded-xl flex items-center justify-center text-brand-primary mb-6 group-hover:scale-110 transition-transform">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+        </div>
+        <h3 class="text-xl font-bold text-white mb-3" data-pixel-id="nve71" data-pixel-kind="text">ISIN Auto-Discovery</h3>
+        <p class="text-sm text-text-secondary leading-relaxed" data-pixel-id="mrd0q" data-pixel-kind="text">
+          Smart ticker resolution with database persistence. Finds exchange suffixes automatically for global compatibility.
+        </p>
+      </div>
+
+      <!-- Feature 5 -->
+      <div class="glass-card p-8 rounded-2xl border border-white border-opacity-5 hover:border-brand-primary hover:border-opacity-30 transition-all group" data-animation-on-scroll="">
+        <div class="w-12 h-12 bg-brand-primary bg-opacity-10 rounded-xl flex items-center justify-center text-brand-primary mb-6 group-hover:scale-110 transition-transform">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+        </div>
+        <h3 class="text-xl font-bold text-white mb-3" data-pixel-id="62m4q" data-pixel-kind="text">Enterprise Security</h3>
+        <p class="text-sm text-text-secondary leading-relaxed" data-pixel-id="y69g7" data-pixel-kind="text">
+          JWT HMAC-SHA256 user isolation, Bcrypt hashing, SSRF protection, and DoS-safe parsing built-in.
+        </p>
+      </div>
+
+      <!-- Feature 6 -->
+      <div class="glass-card p-8 rounded-2xl border border-white border-opacity-5 hover:border-brand-primary hover:border-opacity-30 transition-all group" data-animation-on-scroll="">
+        <div class="w-12 h-12 bg-brand-primary bg-opacity-10 rounded-xl flex items-center justify-center text-brand-primary mb-6 group-hover:scale-110 transition-transform">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a2 2 0 00-1.96 1.414l-.477 2.387a2 2 0 00.547 1.022l1.428 1.428a2 2 0 002.828 0l1.428-1.428a2 2 0 00.547-1.022l.477-2.387a2 2 0 00-1.414-1.96l-2.387-.477a2 2 0 00-1.022.547l-1.428 1.428a2 2 0 00-2.828 0l-1.428-1.428z"></path></svg>
+        </div>
+        <h3 class="text-xl font-bold text-white mb-3" data-pixel-id="3ftpa" data-pixel-kind="text">Metadata Enrichment</h3>
+        <p class="text-sm text-text-secondary leading-relaxed" data-pixel-id="updnl" data-pixel-kind="text">
+          Heuristic templates provide TER, sector allocation, and geographical exposure for insightful portfolio views.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How It Works Section -->
+<section class="py-24 bg-neutral-background" id="how-it-works">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+      <div class="relative" data-animation-on-scroll="">
+        <div class="glass-card p-6 rounded-2xl border border-white border-opacity-10">
+          <div class="space-y-4">
+            <div class="flex items-center gap-3 p-4 bg-white bg-opacity-5 rounded-xl border border-white border-opacity-5">
+              <div class="w-8 h-8 rounded bg-brand-primary bg-opacity-20 flex items-center justify-center text-brand-primary font-mono text-xs">1</div>
+              <div class="flex-1">
+                <div class="text-sm font-bold text-white" data-pixel-id="u1vd6" data-pixel-kind="text">Input ISIN Code</div>
+                <div class="text-xs text-text-secondary" data-pixel-id="lky75" data-pixel-kind="text">ES0113312003...</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 p-4 bg-white bg-opacity-5 rounded-xl border border-white border-opacity-5">
+              <div class="w-8 h-8 rounded bg-brand-primary bg-opacity-20 flex items-center justify-center text-brand-primary font-mono text-xs">2</div>
+              <div class="flex-1">
+                <div class="text-sm font-bold text-white" data-pixel-id="xvchn" data-pixel-kind="text">System Discovery</div>
+                <div class="text-xs text-text-secondary" data-pixel-id="31h6a" data-pixel-kind="text">Resolving Yahoo Ticker &amp; QueFondos NAV</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 p-4 bg-white bg-opacity-5 rounded-xl border border-white border-opacity-10">
+              <div class="w-8 h-8 rounded bg-brand-primary flex items-center justify-center text-black font-mono text-xs font-bold">3</div>
+              <div class="flex-1">
+                <div class="text-sm font-bold text-white" data-pixel-id="nsrvs" data-pixel-kind="text">Interactive Charting</div>
+                <div class="text-xs text-text-secondary" data-pixel-id="caqgj" data-pixel-kind="text">Real-time Performance Delta Analysis</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
-</section>
 
-<!-- STATS SECTION -->
-<section id="stats" class="py-24 bg-[#0c0c0c] border-y border-white/5">
-  <div class="max-w-[1200px] mx-auto px-6">
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-12 text-center" data-animation-on-scroll="">
-      <div class="space-y-2">
-        <p class="text-brand-green font-primary text-5xl lg:text-7xl tracking-tighter" data-pixel-id="5a6el" data-pixel-kind="text">148+</p>
-        <p class="text-text-secondary text-[10px] uppercase tracking-[0.2em]" data-pixel-id="ylndh" data-pixel-kind="text">Fondos en Catálogo</p>
-      </div>
-      <div class="space-y-2">
-        <p class="text-brand-green font-primary text-5xl lg:text-7xl tracking-tighter" data-pixel-id="3rz14" data-pixel-kind="text">LIVE</p>
-        <p class="text-text-secondary text-[10px] uppercase tracking-[0.2em]" data-pixel-id="ka6xz" data-pixel-kind="text">Yahoo Finance API</p>
-      </div>
-      <div class="space-y-2">
-        <p class="text-brand-green font-primary text-5xl lg:text-7xl tracking-tighter" data-pixel-id="mj7d3" data-pixel-kind="text">Daily</p>
-        <p class="text-text-secondary text-[10px] uppercase tracking-[0.2em]" data-pixel-id="yrccr" data-pixel-kind="text">Alertas WhatsApp</p>
-      </div>
-      <div class="space-y-2">
-        <p class="text-brand-green font-primary text-5xl lg:text-7xl tracking-tighter" data-pixel-id="ece2y" data-pixel-kind="text">AES-256</p>
-        <p class="text-text-secondary text-[10px] uppercase tracking-[0.2em]" data-pixel-id="yqj4p" data-pixel-kind="text">Seguridad de Datos</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- FEATURES SECTION -->
-<section id="features" class="py-32 bg-black relative overflow-hidden">
-  <div class="max-w-[1200px] mx-auto px-6">
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-16 mb-32">
-      <div class="lg:col-span-5" data-animation-on-scroll="">
-        <span class="text-brand-green text-xs font-bold uppercase tracking-[0.3em] mb-8 block" data-pixel-id="iw8fp" data-pixel-kind="text">Capacidades</span>
-        <h2 class="font-primary text-4xl lg:text-6xl text-white leading-tight mb-8" data-pixel-id="cry4q" data-pixel-kind="text">
-          Diseñado para el inversor moderno.
-        </h2>
-        <p class="text-text-secondary text-lg font-light leading-relaxed mb-12" data-pixel-id="f4kew" data-pixel-kind="text">
-          FondTracker no es solo una hoja de cálculo. Es un ecosistema completo para administrar fondos españoles, ETFs internacionales y tu rendimiento histórico con precisión quirúrgica.
+      <div data-animation-on-scroll="">
+        <h2 class="font-heading text-4xl md:text-5xl font-bold text-white mb-6 uppercase" data-pixel-id="6hnqh" data-pixel-kind="text">Unified Analytics</h2>
+        <p class="text-text-secondary text-lg mb-8" data-pixel-id="rwfxf" data-pixel-kind="text">
+          FondTracker bridges the gap between traditional banking data and modern analysis tools. By automating the data retrieval process, you get a clean, actionable view of your net worth without the manual work.
         </p>
-        <div class="space-y-6">
-          <div class="flex items-start gap-4 py-6 border-b border-white/10 group cursor-default">
-            <div class="w-10 h-10 rounded-full border border-brand-green/30 flex items-center justify-center shrink-0 group-hover:bg-brand-green transition-colors" data-pixel-id="50w3a" data-pixel-kind="text">
-              <span class="text-white group-hover:text-black font-primary text-lg">01</span>
+        <ul class="space-y-4">
+          <li class="flex items-start gap-3" data-pixel-id="3etvk" data-pixel-kind="text">
+            <div class="mt-1 text-brand-primary">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
             </div>
             <div>
-              <h4 class="text-white text-xl tracking-wide mb-2" data-pixel-id="rtznu" data-pixel-kind="text">Multiusuario y Privado</h4>
-              <p class="text-white/40 text-sm" data-pixel-id="avywa" data-pixel-kind="text">Crea tu cuenta segura y gestiona tus inversiones de forma aislada y privada.</p>
+              <span class="text-white font-bold">Secure User Isolation</span>
+              <p class="text-sm text-text-secondary">Your data is yours. Every portfolio is isolated with enterprise-grade JWT auth.</p>
             </div>
-          </div>
-          <div class="flex items-start gap-4 py-6 border-b border-white/10 group cursor-default">
-            <div class="w-10 h-10 rounded-full border border-brand-green/30 flex items-center justify-center shrink-0 group-hover:bg-brand-green transition-colors" data-pixel-id="8l49v" data-pixel-kind="text">
-              <span class="text-white group-hover:text-black font-primary text-lg">02</span>
-            </div>
-            <div>
-              <h4 class="text-white text-xl tracking-wide mb-2" data-pixel-id="e3ia1" data-pixel-kind="text">Hybrid Scraper Engine</h4>
-              <p class="text-white/40 text-sm" data-pixel-id="kedk1" data-pixel-kind="text">Integración QueFondos para NAV oficial de fondos españoles cuando Yahoo no tiene datos.</p>
-            </div>
-          </div>
-          <div class="flex items-start gap-4 py-6 border-b border-white/10 group cursor-default">
-            <div class="w-10 h-10 rounded-full border border-brand-green/30 flex items-center justify-center shrink-0 group-hover:bg-brand-green transition-colors" data-pixel-id="scfnh" data-pixel-kind="text">
-              <span class="text-white group-hover:text-black font-primary text-lg">03</span>
+          </li>
+          <li class="flex items-start gap-3" data-pixel-id="9uub1" data-pixel-kind="text">
+            <div class="mt-1 text-brand-primary">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
             </div>
             <div>
-              <h4 class="text-white text-xl tracking-wide mb-2" data-pixel-id="ifduk" data-pixel-kind="text">Reportes vía WhatsApp</h4>
-              <p class="text-white/40 text-sm" data-pixel-id="k8sk0" data-pixel-kind="text">Recibe un resumen diario de tus ganancias y pérdidas directamente en tu móvil.</p>
+              <span class="text-white font-bold">Resilient Price Caching</span>
+              <p class="text-sm text-text-secondary">Historical and current prices are cached locally to ensure speed and availability.</p>
             </div>
-          </div>
-        </div>
-      </div>
-      <div class="lg:col-span-7" data-animation-on-scroll="">
-        <div class="relative w-full aspect-[4/5] rounded-[10px] overflow-hidden grayscale group">
-          <img src="https://images.pexels.com/photos/27396198/pexels-photo-27396198.jpeg?w=800&amp;h=1000&amp;fit=crop" alt="Interface Preview" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-pixel-verified="true" data-pixel-id="ao7kj" data-pixel-kind="image">
-          <div class="absolute inset-0 bg-black/40"></div>
-          <div class="absolute bottom-10 left-10 right-10 p-8 bg-black/80 backdrop-blur-lg border border-white/10 rounded-[5px]">
-            <p class="text-white text-xl font-primary italic leading-relaxed" data-pixel-id="u4tky" data-pixel-kind="text">
-              "En la volatilidad del mercado, la claridad es el activo más valioso. FondTracker es el lente que define el futuro."
-            </p>
-            <p class="text-brand-green text-xs font-bold uppercase tracking-widest mt-6" data-pixel-id="napzl" data-pixel-kind="text">— Wealth Management Insight</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- PRICING SECTION -->
-<section id="pricing" class="py-32 bg-[#0c0c0c] relative">
-  <div class="max-w-[1200px] mx-auto px-6">
-    <div class="text-center mb-20" data-animation-on-scroll="">
-      <span class="text-brand-green text-xs font-bold uppercase tracking-[0.3em] mb-4 block" data-pixel-id="dipz7" data-pixel-kind="text">Suscripción</span>
-      <h2 class="font-primary text-4xl lg:text-6xl text-white" data-pixel-id="iaoix" data-pixel-kind="text">Planes de Inteligencia</h2>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8" data-stagger-container="">
-      <!-- Standard -->
-      <div class="bg-black/40 border border-white/5 p-12 hover:border-brand-green/30 transition-all duration-500 flex flex-col">
-        <h3 class="text-white/60 text-xs font-bold uppercase tracking-widest mb-4" data-pixel-id="zehgq" data-pixel-kind="text">Inversor</h3>
-        <p class="font-primary text-4xl text-white mb-8" data-pixel-id="1vawf" data-pixel-kind="text">Free</p>
-        <ul class="space-y-4 mb-12 text-sm text-white/40 flex-grow">
-          <li class="flex items-center gap-3" data-pixel-id="1vq25" data-pixel-kind="text">
-            <svg class="w-4 h-4 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            Hasta 5 fondos
-          </li>
-          <li class="flex items-center gap-3" data-pixel-id="jm4xa" data-pixel-kind="text">
-            <svg class="w-4 h-4 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            Actualización diaria
-          </li>
-          <li class="flex items-center gap-3" data-pixel-id="naqzw" data-pixel-kind="text">
-            <svg class="w-4 h-4 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            Dashboard web
           </li>
         </ul>
-        <a href="/login" class="w-full py-4 border border-white/10 text-white text-xs font-bold uppercase tracking-widest text-center hover:bg-white/5 transition-colors" data-pixel-id="fhik8" data-pixel-kind="link">Empezar ahora</a>
-      </div>
-
-      <!-- Pro -->
-      <div class="bg-brand-dark/20 border border-brand-green/30 p-12 hover:bg-brand-dark/30 transition-all duration-500 flex flex-col relative">
-        <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-brand-green text-black px-4 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full" data-pixel-id="1yw44" data-pixel-kind="text">Recomendado</div>
-        <h3 class="text-brand-green text-xs font-bold uppercase tracking-widest mb-4" data-pixel-id="ozf6d" data-pixel-kind="text">Profesional</h3>
-        <p class="font-primary text-4xl text-white mb-8" data-pixel-id="6vb9s" data-pixel-kind="text">€12<span class="text-lg text-white/40">/mes</span></p>
-        <ul class="space-y-4 mb-12 text-sm text-white/70 flex-grow">
-          <li class="flex items-center gap-3" data-pixel-id="53wpy" data-pixel-kind="text">
-            <svg class="w-4 h-4 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            Fondos Ilimitados
-          </li>
-          <li class="flex items-center gap-3" data-pixel-id="g86ju" data-pixel-kind="text">
-            <svg class="w-4 h-4 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            Alertas WhatsApp Ilimitadas
-          </li>
-          <li class="flex items-center gap-3" data-pixel-id="4k7s8" data-pixel-kind="text">
-            <svg class="w-4 h-4 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            Gráficos Avanzados (Hybrid)
-          </li>
-          <li class="flex items-center gap-3" data-pixel-id="gaxi0" data-pixel-kind="text">
-            <svg class="w-4 h-4 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            Soporte Prioritario
-          </li>
-        </ul>
-        <a href="/login" class="w-full py-4 bg-brand-green text-black text-xs font-bold uppercase tracking-widest text-center hover:opacity-90 transition-colors" data-pixel-id="2tzjv" data-pixel-kind="link">Seleccionar Pro</a>
-      </div>
-
-      <!-- Enterprise -->
-      <div class="bg-black/40 border border-white/5 p-12 hover:border-brand-green/30 transition-all duration-500 flex flex-col">
-        <h3 class="text-white/60 text-xs font-bold uppercase tracking-widest mb-4" data-pixel-id="1skmq" data-pixel-kind="text">Institucional</h3>
-        <p class="font-primary text-4xl text-white mb-8" data-pixel-id="axc5s" data-pixel-kind="text">Custom</p>
-        <ul class="space-y-4 mb-12 text-sm text-white/40 flex-grow">
-          <li class="flex items-center gap-3" data-pixel-id="8egzf" data-pixel-kind="text">
-            <svg class="w-4 h-4 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            API Access
-          </li>
-          <li class="flex items-center gap-3" data-pixel-id="cqvco" data-pixel-kind="text">
-            <svg class="w-4 h-4 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            Cross-Source Verification
-          </li>
-          <li class="flex items-center gap-3" data-pixel-id="rtmwr" data-pixel-kind="text">
-            <svg class="w-4 h-4 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            Gestión de Cuentas
-          </li>
-        </ul>
-        <a href="mailto:contacto@fondtracker.com" class="w-full py-4 border border-white/10 text-white text-xs font-bold uppercase tracking-widest text-center hover:bg-white/5 transition-colors" data-pixel-id="606zx" data-pixel-kind="link">Contactar</a>
       </div>
     </div>
   </div>
 </section>
 
-<!-- FAQ SECTION -->
-<section id="faq" class="py-32 bg-black">
-  <div class="max-w-[800px] mx-auto px-6">
-    <div class="text-center mb-20" data-animation-on-scroll="">
-      <span class="text-brand-green text-xs font-bold uppercase tracking-[0.3em] mb-4 block" data-pixel-id="8kegx" data-pixel-kind="text">Consultas</span>
-      <h2 class="font-primary text-4xl lg:text-5xl text-white" data-pixel-id="ia5dd" data-pixel-kind="text">Preguntas Frecuentes</h2>
+<!-- Tech Stack -->
+<section class="py-24 bg-neutral-surface border-t border-border-terminal" id="tech-stack">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center mb-16" data-animation-on-scroll="">
+      <h2 class="font-heading text-4xl font-bold text-white mb-4" data-pixel-id="1j8qv" data-pixel-kind="text">Built with Modern Tech</h2>
+      <p class="text-text-secondary" data-pixel-id="o4mnp" data-pixel-kind="text">High-performance stack for reliable financial tracking.</p>
     </div>
-
-    <div class="space-y-4" data-stagger-container="">
-      <details class="group bg-[#0c0c0c] border border-white/5 p-6 rounded-[5px] cursor-pointer">
-        <summary class="flex items-center justify-between font-primary text-xl text-white list-none">
-          ¿Cómo añade FondTracker los datos de mis fondos?
-          <span class="text-brand-green transition-transform group-open:rotate-180">+</span>
-        </summary>
-        <p class="text-white/40 text-sm mt-4 leading-relaxed" data-pixel-id="d40vu" data-pixel-kind="text">
-          Utilizamos el ISIN para buscar en nuestro catálogo de más de 490 fondos españoles y ETFs. Los precios se actualizan mediante Yahoo Finance API o nuestro scraper nativo de QueFondos para fondos no cotizados.
-        </p>
-      </details>
-
-      <details class="group bg-[#0c0c0c] border border-white/5 p-6 rounded-[5px] cursor-pointer">
-        <summary class="flex items-center justify-between font-primary text-xl text-white list-none">
-          ¿Es segura mi información financiera?
-          <span class="text-brand-green transition-transform group-open:rotate-180">+</span>
-        </summary>
-        <p class="text-white/40 text-sm mt-4 leading-relaxed" data-pixel-id="8ufdf" data-pixel-kind="text">
-          Absolutamente. No almacenamos tus credenciales bancarias. Solo registramos los fondos y participaciones que tú nos indiques. Tus datos están protegidos por encriptación AES-256 y un sistema de autenticación JWT.
-        </p>
-      </details>
-
-      <details class="group bg-[#0c0c0c] border border-white/5 p-6 rounded-[5px] cursor-pointer">
-        <summary class="flex items-center justify-between font-primary text-xl text-white list-none">
-          ¿Cómo funciona el servicio de WhatsApp?
-          <span class="text-brand-green transition-transform group-open:rotate-180">+</span>
-        </summary>
-        <p class="text-white/40 text-sm mt-4 leading-relaxed" data-pixel-id="upo2f" data-pixel-kind="text">
-          Integramos el servicio CallMeBot para enviarte un resumen diario a la hora que elijas (por defecto 9:00 y 18:00). Solo necesitas configurar tu número y API key en tu panel de ajustes.
-        </p>
-      </details>
-    </div>
-  </div>
-</section>
-
-<!-- FINAL CTA -->
-<section id="cta" class="py-32 bg-black relative overflow-hidden">
-  <div class="absolute inset-0 z-0">
-    <img src="https://images.pexels.com/photos/19891092/pexels-photo-19891092.jpeg?w=1920&amp;h=1080&amp;fit=crop" alt="Contact BG" class="w-full h-full object-cover opacity-20 grayscale" data-pixel-verified="true" data-pixel-id="mo8ar" data-pixel-kind="image">
-  </div>
-  
-  <div class="max-w-[1200px] mx-auto px-6 relative z-10 text-center">
-    <div class="max-w-4xl mx-auto" data-animation-on-scroll="">
-      <span class="text-brand-green text-xs font-bold uppercase tracking-[0.4em] mb-12 block" data-pixel-id="00en6" data-pixel-kind="text">Inscripción Segura</span>
-      <h2 class="font-primary text-5xl lg:text-8xl text-white leading-[0.9] mb-16 tracking-tighter" data-pixel-id="2w1qx" data-pixel-kind="text">
-        Arquitecta tu <br> soberanía financiera.
-      </h2>
-      
-      <div class="flex flex-col md:flex-row justify-center gap-6" data-pixel-id="18inq" data-pixel-kind="text">
-        <a href="/login" class="bg-brand-green text-brand-dark px-12 py-6 rounded-[5px] text-sm font-bold uppercase tracking-widest hover:bg-white transition-all shadow-[0_0_40px_rgba(200,248,169,0.2)]" data-pixel-id="rzxqu" data-pixel-kind="link">
-          Empezar Protocolo
-        </a>
-        <a href="/dashboard" class="border border-white/20 text-white px-12 py-6 rounded-[5px] text-sm font-bold uppercase tracking-widest hover:bg-white/10 transition-all" data-pixel-id="2sbfq" data-pixel-kind="link">
-          Ver Dashboard Demo
-        </a>
+    
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+      <div class="glass-card p-8 rounded-2xl text-center hover:bg-white hover:bg-opacity-5 transition-colors border border-white border-opacity-5" data-animation-on-scroll="">
+        <div class="text-2xl font-bold text-white mb-2" data-pixel-id="5bx84" data-pixel-kind="text">Bun 1.3</div>
+        <p class="text-xs text-text-secondary font-mono" data-pixel-id="7g6f1" data-pixel-kind="text">Ultra-fast Runtime</p>
       </div>
-      
-      <p class="mt-16 text-white/30 text-xs uppercase tracking-widest" data-pixel-id="iwe84" data-pixel-kind="text">
-        Todas las comunicaciones están encriptadas y son estrictamente confidenciales.
-      </p>
+      <div class="glass-card p-8 rounded-2xl text-center hover:bg-white hover:bg-opacity-5 transition-colors border border-white border-opacity-5" data-animation-on-scroll="">
+        <div class="text-2xl font-bold text-white mb-2" data-pixel-id="bumxo" data-pixel-kind="text">React 19</div>
+        <p class="text-xs text-text-secondary font-mono" data-pixel-id="hlqtk" data-pixel-kind="text">Modern UI Library</p>
+      </div>
+      <div class="glass-card p-8 rounded-2xl text-center hover:bg-white hover:bg-opacity-5 transition-colors border border-white border-opacity-5" data-animation-on-scroll="">
+        <div class="text-2xl font-bold text-white mb-2" data-pixel-id="76acn" data-pixel-kind="text">MySQL 8</div>
+        <p class="text-xs text-text-secondary font-mono" data-pixel-id="utkhh" data-pixel-kind="text">Reliable Data Store</p>
+      </div>
+      <div class="glass-card p-8 rounded-2xl text-center hover:bg-white hover:bg-opacity-5 transition-colors border border-white border-opacity-5" data-animation-on-scroll="">
+        <div class="text-2xl font-bold text-white mb-2" data-pixel-id="38cx9" data-pixel-kind="text">Tailwind 4</div>
+        <p class="text-xs text-text-secondary font-mono" data-pixel-id="klgrn" data-pixel-kind="text">Modern Styling</p>
+      </div>
     </div>
   </div>
 </section>
 
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    // Parallax effect for hero
-    const hero = document.getElementById('hero');
-    if(hero) {
-      const bg = hero.querySelector('.hero-bg-zoom');
-      hero.addEventListener('mousemove', (e) => {
-        const moveX = (e.clientX - window.innerWidth / 2) * 0.01;
-        const moveY = (e.clientY - window.innerHeight / 2) * 0.01;
-        bg.style.transform = `scale(1.05) translate(${moveX}px, ${moveY}px)`;
-      });
-      hero.addEventListener('mouseleave', () => {
-        bg.style.transform = `scale(1) translate(0px, 0px)`;
-      });
-    }
-  });
-</script></main>
+<!-- Final CTA -->
+<section class="py-24 relative overflow-hidden">
+  <div class="absolute inset-0 bg-brand-primary opacity-[0.02] pointer-events-none"></div>
+  <div class="max-w-4xl mx-auto px-6 text-center relative z-10" data-animation-on-scroll="">
+    <h2 class="font-heading text-5xl md:text-6xl font-bold text-white mb-8 leading-tight" data-pixel-id="nof37" data-pixel-kind="text">Start managing your <br> wealth with precision.</h2>
+    <p class="text-text-secondary text-lg mb-12 max-w-2xl mx-auto" data-pixel-id="ex2cv" data-pixel-kind="text">
+      FondTracker is completely open-source. Clone the repository, deploy your own instance, or use our community version.
+    </p>
+    <div class="flex flex-col md:flex-row items-center justify-center gap-6" data-pixel-id="7ok55" data-pixel-kind="text">
+      <a href="/register" target="_blank" rel="noopener noreferrer" class="w-full md:w-auto px-12 py-5 bg-brand-primary text-black font-bold text-xl rounded-2xl shadow-neon hover:shadow-neon-hover transition-all" data-pixel-id="1qbek" data-pixel-kind="link">
+        Launch Your Dashboard
+      </a>
+      <a href="mailto:rubenblascoarmengod@gmail.com" class="w-full md:w-auto px-12 py-5 border border-border-terminal text-text-primary font-semibold text-lg rounded-2xl hover:bg-neutral-surface transition-all" data-pixel-id="54b7a" data-pixel-kind="link">
+        Contact Developer
+      </a>
+    </div>
+    <p class="mt-8 text-xs text-text-light font-mono" data-pixel-id="xao2w" data-pixel-kind="text">No subscription required. Open source under MIT license.</p>
+  </div>
+</section></main>
 
-    <footer class="bg-black border-t border-white/10 pt-24 pb-12">
-      <div class="max-w-[1200px] mx-auto px-6">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-20">
-          <div class="col-span-1 md:col-span-1">
-            <a href="#" class="block mb-6" data-pixel-id="uvzic" data-pixel-kind="link">
-              <span class="font-primary text-2xl text-white tracking-widest uppercase">FondTracker</span>
-            </a>
-            <p class="text-text-secondary text-sm leading-relaxed max-w-xs" data-editable="text" data-path="footer.description" data-pixel-id="s78bk" data-pixel-kind="text">
-              Arquitectando el futuro de tu patrimonio con inteligencia de grado institucional.
+    <!-- Footer -->
+    <footer class="bg-neutral-background border-t border-border-terminal py-16 relative overflow-hidden">
+      <div class="max-w-7xl mx-auto px-6 relative z-10">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+          <div class="space-y-6">
+            <div class="flex items-center gap-2">
+              <div class="w-6 h-6 bg-brand-primary rounded flex items-center justify-center">
+                <svg class="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                </svg>
+              </div>
+              <span class="font-heading text-lg font-bold text-white" data-pixel-id="k1brm" data-pixel-kind="text">FondTracker</span>
+            </div>
+            <p class="text-sm text-text-secondary leading-relaxed" data-pixel-id="h4xdr" data-pixel-kind="text">
+              Open-source investment fund tracking platform. Secure, accurate, and completely free for personal use.
             </p>
           </div>
-          <div data-editable-list="footer.productLinks">
-            <h4 class="text-white text-xs font-bold uppercase tracking-widest mb-6" data-pixel-id="edqy0" data-pixel-kind="text">Producto</h4>
-            <ul class="space-y-4 text-sm text-text-secondary">
-              <li data-pixel-id="vzf5b" data-pixel-kind="text"><a href="#features" class="hover:text-brand-green transition-colors" data-pixel-id="tdg7h" data-pixel-kind="link">Seguimiento Real</a></li>
-              <li data-pixel-id="odg1p" data-pixel-kind="text"><a href="#stats" class="hover:text-brand-green transition-colors" data-pixel-id="6a17r" data-pixel-kind="link">Catálogo de Fondos</a></li>
-              <li data-pixel-id="n449i" data-pixel-kind="text"><a href="#cta" class="hover:text-brand-green transition-colors" data-pixel-id="pn3ym" data-pixel-kind="link">Alertas WhatsApp</a></li>
-            </ul>
-          </div>
-          <div data-editable-list="footer.communityLinks">
-            <h4 class="text-white text-xs font-bold uppercase tracking-widest mb-6" data-pixel-id="to1dv" data-pixel-kind="text">Comunidad</h4>
-            <ul class="space-y-4 text-sm text-text-secondary">
-              <li data-pixel-id="5bw35" data-pixel-kind="text"><a href="#" class="hover:text-brand-green transition-colors" data-pixel-id="tuqpm" data-pixel-kind="link">Blog Financiero</a></li>
-              <li data-pixel-id="2johf" data-pixel-kind="text"><a href="#" class="hover:text-brand-green transition-colors" data-pixel-id="dt67v" data-pixel-kind="link">Inversores Élite</a></li>
-              <li data-pixel-id="jbad3" data-pixel-kind="text"><a href="#" class="hover:text-brand-green transition-colors" data-pixel-id="dxrvt" data-pixel-kind="link">Soporte</a></li>
+          <div>
+            <h4 class="text-xs font-bold uppercase tracking-widest text-text-light mb-6" data-pixel-id="yuyts" data-pixel-kind="text">Product</h4>
+            <ul class="space-y-4">
+              <li data-pixel-id="kais2" data-pixel-kind="text"><a href="#features" class="text-sm text-text-secondary hover:text-brand-primary transition-colors" data-pixel-id="kd50w" data-pixel-kind="link">Features</a></li>
+              <li data-pixel-id="1trhu" data-pixel-kind="text"><a href="#" class="text-sm text-text-secondary hover:text-brand-primary transition-colors" data-pixel-id="r8p0x" data-pixel-kind="link">API Reference</a></li>
+              <li data-pixel-id="29ppk" data-pixel-kind="text"><a href="#" class="text-sm text-text-secondary hover:text-brand-primary transition-colors" data-pixel-id="f5iw8" data-pixel-kind="link">Documentation</a></li>
             </ul>
           </div>
           <div>
-            <h4 class="text-white text-xs font-bold uppercase tracking-widest mb-6" data-pixel-id="uf6sy" data-pixel-kind="text">Contacto</h4>
-            <p class="text-text-secondary text-sm mb-4" data-pixel-id="nmp99" data-pixel-kind="text">Madrid · Barcelona · Global</p>
-            <p class="text-white font-medium" data-pixel-id="c4ahq" data-pixel-kind="text">contacto@fondtracker.com</p>
+            <h4 class="text-xs font-bold uppercase tracking-widest text-text-light mb-6" data-pixel-id="vpoyi" data-pixel-kind="text">Legal</h4>
+            <ul class="space-y-4">
+              <li data-pixel-id="leg1" data-pixel-kind="text"><a href="/legal/privacy-policy" target="_blank" rel="noopener noreferrer" class="text-sm text-text-secondary hover:text-brand-primary transition-colors" data-pixel-id="leg1-link" data-pixel-kind="link">Privacy Policy</a></li>
+              <li data-pixel-id="leg2" data-pixel-kind="text"><a href="/legal/terms-of-service" target="_blank" rel="noopener noreferrer" class="text-sm text-text-secondary hover:text-brand-primary transition-colors" data-pixel-id="leg2-link" data-pixel-kind="link">Terms of Service</a></li>
+            </ul>
           </div>
-        </div>
-        <div class="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p class="text-white/30 text-[10px] uppercase tracking-widest" data-pixel-id="80oha" data-pixel-kind="text">© 2024 FondTracker Global Services. Todos los derechos reservados.</p>
-          <div class="flex gap-8 text-white/30 text-[10px] uppercase tracking-widest" data-pixel-id="wrq70" data-pixel-kind="text">
-            <a href="#" class="hover:text-white transition-colors" data-pixel-id="l1wxz" data-pixel-kind="link">Protocolo de Privacidad</a>
-            <a href="#" class="hover:text-white transition-colors" data-pixel-id="ot3l2" data-pixel-kind="link">Términos de Servicio</a>
+          <div>
+            <h4 class="text-xs font-bold uppercase tracking-widest text-text-light mb-6" data-pixel-id="szdr4" data-pixel-kind="text">Contactar</h4>
+            <div class="flex flex-col gap-3">
+              <p class="text-sm font-bold text-white" data-pixel-id="name" data-pixel-kind="text">Rubén Blasco Armengod</p>
+              <ul class="space-y-3 mt-3">
+                <li data-pixel-id="mail-li" data-pixel-kind="text">
+                  <a href="mailto:rubenblascoarmengod@gmail.com" class="text-sm text-text-secondary hover:text-brand-primary transition-colors flex items-center gap-2 group" data-pixel-id="mail-link" data-pixel-kind="link">
+                    <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                    rubenblascoarmengod@gmail.com
+                  </a>
+                </li>
+                <li data-pixel-id="git-li" data-pixel-kind="text">
+                  <a href="https://github.com/rubenblascoa" class="text-sm text-text-secondary hover:text-brand-primary transition-colors flex items-center gap-2 group" data-pixel-id="git-link" data-pixel-kind="link" target="_blank" rel="noopener noreferrer">
+                    <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.372.79 1.102.79 2.222 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"></path></svg>
+                    GitHub
+                  </a>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
     </footer>
-
   </div>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // Advanced Scroll Reveal Animation
-      const observerOptions = {
-        threshold: 0.15,
-        rootMargin: '0px 0px -50px 0px'
-      };
-
-      const scrollObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            if (entry.target.hasAttribute('data-stagger-container')) {
-              entry.target.classList.add('stagger-visible');
-              const children = entry.target.children;
-              Array.from(children).forEach((child, index) => {
-                child.style.transitionDelay = `${index * 0.15}s`;
-              });
-            } else {
-              entry.target.classList.add('animate-on-scroll-visible');
-            }
-            scrollObserver.unobserve(entry.target);
+      // Mobile menu toggle
+      const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+      const mobileMenu = document.getElementById('mobile-menu');
+      
+      if (mobileMenuBtn && mobileMenu) {
+        mobileMenuBtn.addEventListener('click', () => {
+          mobileMenuBtn.classList.toggle('hamburger-open');
+          mobileMenu.classList.toggle('mobile-menu-hidden');
+          mobileMenu.classList.toggle('mobile-menu-visible');
+        });
+      }
+      
+      // Smooth scroll without changing URL hash
+      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href').substring(1);
+          if (!targetId) return;
+          const targetEl = document.getElementById(targetId);
+          if (targetEl) {
+            targetEl.scrollIntoView({ behavior: 'smooth' });
+          }
+          // Close mobile menu if open
+          if (mobileMenu && mobileMenu.classList.contains('mobile-menu-visible')) {
+            mobileMenuBtn.classList.remove('hamburger-open');
+            mobileMenu.classList.add('mobile-menu-hidden');
+            mobileMenu.classList.remove('mobile-menu-visible');
           }
         });
-      }, observerOptions);
+      });
+      
+      // Scroll reveal observer
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('animate-on-scroll-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.1 });
 
-      document.querySelectorAll('[data-animation-on-scroll], [data-stagger-container]').forEach(el => {
-        if (!el.classList.contains('animate-fade-up') && 
-            !el.classList.contains('animate-slide-left') && 
-            !el.classList.contains('animate-slide-right') &&
-            !el.classList.contains('animate-fade-in') &&
-            !el.hasAttribute('data-stagger-container')) {
-          el.classList.add('animate-fade-up');
-        }
-        scrollObserver.observe(el);
+      document.querySelectorAll('[data-animation-on-scroll]').forEach(el => {
+        el.classList.add('animate-on-scroll-hidden');
+        observer.observe(el);
       });
 
-      // Navbar Scroll Effect
-      const nav = document.getElementById('main-nav');
-      window.addEventListener('scroll', () => {
-        if (window.scrollY > 50) {
-          nav.classList.add('bg-black/95', 'backdrop-blur-xl', 'py-3');
-          nav.querySelector('nav').classList.remove('py-5');
-          nav.querySelector('nav').classList.add('py-3');
-        } else {
-          nav.classList.remove('bg-black/95', 'backdrop-blur-xl', 'py-3');
-          nav.querySelector('nav').classList.add('py-5');
-          nav.querySelector('nav').classList.remove('py-3');
-        }
-      });
+      // Auth detection: show logged-in header when token exists
+      const token = localStorage.getItem('fondtracker_token');
+      if (token) {
+        fetch('/api/auth/me', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        }).then(r => r.ok ? r.json() : null).then(user => {
+          if (!user) return;
+
+          const authHeaders = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+          // Desktop CTA -> user menu (matches dashboard Header.tsx exactly)
+          const desktopCta = document.getElementById('desktop-cta');
+          if (desktopCta) {
+            desktopCta.innerHTML = `
+              <a href="/dashboard" target="_blank" rel="noopener noreferrer" style="padding:8px 16px;background:#121215;color:white;font-weight:600;font-size:13px;border-radius:8px;border:1px solid #1a1a1f;transition:color 0.15s;text-decoration:none;" onmouseover="this.style.color='#39ff88'" onmouseout="this.style.color='white'">Go to Dashboard</a>
+              <div style="position:relative;display:flex;align-items:center;border-left:1px solid #1a1a1f;padding-left:16px;gap:0;" id="user-menu-wrap">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div style="width:28px;height:28px;background:rgba(57,255,136,0.1);border:1px solid rgba(57,255,136,0.3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#39ff88;font-family:'Geist Pixel',monospace;box-shadow:0 0 10px rgba(57,255,136,0.1);">
+                    ${user.username[0].toUpperCase()}
+                  </div>
+                  <span style="font-size:12px;font-weight:500;color:#ffffff;" class="sm-show">${user.username}</span>
+                </div>
+                <button id="gear-btn" style="margin-left:4px;padding:4px;color:#71717a;border:none;background:none;cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;" onmouseover="this.style.color='#39ff88';this.style.background='rgba(57,255,136,0.1)'" onmouseout="this.style.color='#71717a';this.style.background=''" title="Settings">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                  </svg>
+                </button>
+                <div id="user-dropdown" class="hidden" style="position:absolute;right:0;top:100%;margin-top:12px;width:224px;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.7);backdrop-filter:blur(24px);border-radius:16px;box-shadow:0 0 40px rgba(0,0,0,0.5);z-index:50;padding:8px;animation:fadeIn 0.3s ease-out;">
+                  <div style="padding:12px;border-bottom:1px solid rgba(255,255,255,0.05);margin-bottom:8px;">
+                    <p style="font-size:10px;color:#71717a;font-family:monospace;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 4px 0;">Signed in as</p>
+                    <p style="font-size:13px;font-weight:500;color:white;margin:0;overflow:hidden;text-overflow:ellipsis;">${user.email || user.username}</p>
+                  </div>
+                  <button id="dd-email-btn" style="display:flex;align-items:center;gap:12px;padding:8px 12px;font-size:12px;font-weight:500;color:#b0b0b8;border:none;background:none;width:100%;text-align:left;border-radius:12px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.1)';this.style.color='white'" onmouseout="this.style.background='';this.style.color='#b0b0b8'">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                    Change Email
+                  </button>
+                  <button id="dd-password-btn" style="display:flex;align-items:center;gap:12px;padding:8px 12px;font-size:12px;font-weight:500;color:#b0b0b8;border:none;background:none;width:100%;text-align:left;border-radius:12px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.1)';this.style.color='white'" onmouseout="this.style.background='';this.style.color='#b0b0b8'">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    Change Password
+                  </button>
+                  <div style="height:1px;background:rgba(255,255,255,0.05);margin:8px;"></div>
+                  <button id="dd-logout-btn" style="display:flex;align-items:center;gap:12px;padding:8px 12px;font-size:12px;font-weight:500;color:#b0b0b8;border:none;background:none;width:100%;text-align:left;border-radius:12px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.1)';this.style.color='#ff5a4a'" onmouseout="this.style.background='';this.style.color='#b0b0b8'">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    Sign Out
+                  </button>
+                  <button id="dd-delete-btn" style="display:flex;align-items:center;gap:12px;padding:8px 12px;font-size:12px;font-weight:500;color:#ff5a4a;border:none;background:none;width:100%;text-align:left;border-radius:12px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background='rgba(255,90,74,0.1)'" onmouseout="this.style.background=''">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                    Delete Account
+                  </button>
+                </div>
+              </div>
+            `;
+
+            function closeDropdown() {
+              const dd = document.getElementById('user-dropdown');
+              if (dd) dd.classList.add('hidden');
+            }
+
+            function closeAllViews() {
+              const existing = document.getElementById('dd-subview');
+              if (existing) existing.remove();
+            }
+
+            function showError(container, msg) {
+              let errEl = container.querySelector('.dd-error');
+              if (!errEl) { errEl = document.createElement('p'); errEl.className = 'dd-error'; container.appendChild(errEl); }
+              errEl.style.cssText = 'font-size:11px;color:#ff5a4a;background:rgba(255,90,74,0.1);border:1px solid rgba(255,90,74,0.2);padding:6px 8px;border-radius:8px;margin:8px 0;display:flex;align-items:center;gap:6px;';
+              errEl.innerHTML = '<span style="font-weight:bold">!</span>' + msg;
+            }
+
+            function clearError(container) {
+              const errEl = container.querySelector('.dd-error');
+              if (errEl) errEl.remove();
+            }
+
+            const inputStyle = 'width:100%;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.1);padding:10px 12px;border-radius:12px;font-size:13px;color:white;outline:none;font-family:inherit;';
+            const saveBtnStyle = 'width:100%;background:#39ff88;color:#0a0a0a;font-weight:600;font-size:12px;padding:10px;border-radius:12px;border:none;cursor:pointer;box-shadow:0 0 15px rgba(57,255,136,0.2);font-family:inherit;';
+            const backArrow = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>';
+
+            document.getElementById('gear-btn').addEventListener('click', function(e) {
+              e.stopPropagation();
+              const dd = document.getElementById('user-dropdown');
+              if (dd) dd.classList.toggle('hidden');
+            });
+
+            document.getElementById('dd-logout-btn').addEventListener('click', function() {
+              localStorage.removeItem('fondtracker_token');
+              window.location.href = '/login';
+            });
+
+            document.getElementById('dd-email-btn').addEventListener('click', function() {
+              closeAllViews();
+              const dd = document.getElementById('user-dropdown');
+              const subview = document.createElement('div');
+              subview.id = 'dd-subview';
+              subview.style.cssText = 'position:absolute;left:0;top:0;width:100%;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.7);backdrop-filter:blur(24px);border-radius:16px;box-shadow:0 0 40px rgba(0,0,0,0.5);z-index:50;padding:20px;animation:fadeIn 0.3s ease-out;';
+              subview.innerHTML = '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;"><button id="dd-back-email" style="color:#71717a;border:none;background:none;cursor:pointer;padding:0;display:flex;transition:color 0.15s;" onmouseover="this.style.color=\'white\'" onmouseout="this.style.color=\'#71717a\'">' + backArrow + '</button><h3 style="font-size:13px;font-weight:600;color:white;margin:0;">Change Email</h3></div><input id="dd-email-input" type="email" placeholder="New email address" style="' + inputStyle + 'margin-bottom:12px;" /><button id="dd-email-save" style="' + saveBtnStyle + '">Save Changes</button>';
+              dd.appendChild(subview);
+
+              document.getElementById('dd-back-email').addEventListener('click', closeAllViews);
+              document.getElementById('dd-email-save').addEventListener('click', function() {
+                const email = document.getElementById('dd-email-input').value.trim();
+                if (!email.includes('@') || !email.includes('.')) { showError(subview, 'Invalid email'); return; }
+                clearError(subview);
+                this.textContent = 'Saving...';
+                fetch('/api/auth/me', { method: 'PUT', headers: authHeaders, body: JSON.stringify({ email }) })
+                  .then(r => r.json()).then(d => { if (d.error) { showError(subview, d.error); document.getElementById('dd-email-save').textContent = 'Save Changes'; } else { closeAllViews(); } })
+                  .catch(() => { showError(subview, 'Error'); document.getElementById('dd-email-save').textContent = 'Save Changes'; });
+              });
+            });
+
+            document.getElementById('dd-password-btn').addEventListener('click', function() {
+              closeAllViews();
+              const dd = document.getElementById('user-dropdown');
+              const subview = document.createElement('div');
+              subview.id = 'dd-subview';
+              subview.style.cssText = 'position:absolute;left:0;top:0;width:100%;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.7);backdrop-filter:blur(24px);border-radius:16px;box-shadow:0 0 40px rgba(0,0,0,0.5);z-index:50;padding:20px;animation:fadeIn 0.3s ease-out;';
+              subview.innerHTML = '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;"><button id="dd-back-pw" style="color:#71717a;border:none;background:none;cursor:pointer;padding:0;display:flex;transition:color 0.15s;" onmouseover="this.style.color=\'white\'" onmouseout="this.style.color=\'#71717a\'">' + backArrow + '</button><h3 style="font-size:13px;font-weight:600;color:white;margin:0;">Change Password</h3></div><input id="dd-cur-pw" type="password" placeholder="Current password" style="' + inputStyle + '" /><div style="height:8px;"></div><input id="dd-new-pw" type="password" placeholder="New password (min. 8)" style="' + inputStyle + 'margin-bottom:12px;" /><button id="dd-pw-save" style="' + saveBtnStyle + '">Update Password</button>';
+              dd.appendChild(subview);
+
+              document.getElementById('dd-back-pw').addEventListener('click', closeAllViews);
+              document.getElementById('dd-pw-save').addEventListener('click', function() {
+                const cur = document.getElementById('dd-cur-pw').value;
+                const nw = document.getElementById('dd-new-pw').value;
+                if (!cur || !nw) { showError(subview, 'Fill in both fields'); return; }
+                if (nw.length < 8) { showError(subview, 'New password must be at least 8 characters'); return; }
+                clearError(subview);
+                this.textContent = 'Updating...';
+                fetch('/api/auth/me', { method: 'PUT', headers: authHeaders, body: JSON.stringify({ currentPassword: cur, newPassword: nw }) })
+                  .then(r => r.json()).then(d => { if (d.error) { showError(subview, d.error); document.getElementById('dd-pw-save').textContent = 'Update Password'; } else { closeAllViews(); } })
+                  .catch(() => { showError(subview, 'Error'); document.getElementById('dd-pw-save').textContent = 'Update Password'; });
+              });
+            });
+
+            document.getElementById('dd-delete-btn').addEventListener('click', function() {
+              closeAllViews();
+              const dd = document.getElementById('user-dropdown');
+              const subview = document.createElement('div');
+              subview.id = 'dd-subview';
+              subview.style.cssText = 'position:absolute;left:0;top:0;width:100%;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.7);backdrop-filter:blur(24px);border-radius:16px;box-shadow:0 0 40px rgba(0,0,0,0.5);z-index:50;padding:20px;animation:fadeIn 0.3s ease-out;';
+              subview.innerHTML = '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;"><button id="dd-back-del" style="color:#71717a;border:none;background:none;cursor:pointer;padding:0;display:flex;transition:color 0.15s;" onmouseover="this.style.color=\'white\'" onmouseout="this.style.color=\'#71717a\'">' + backArrow + '</button><h3 style="font-size:13px;font-weight:600;color:#ff5a4a;margin:0;">Delete Account</h3></div><p style="font-size:11px;color:#9ca3af;line-height:1.6;margin:0 0 12px 0;background:rgba(255,90,74,0.05);border:1px solid rgba(255,90,74,0.1);padding:10px 12px;border-radius:12px;">This action is <strong style="color:#ff5a4a;">irreversible</strong>. All your portfolio data, history, and settings will be permanently deleted.</p><input id="dd-del-pw" type="password" placeholder="Confirm your password" style="' + inputStyle + 'border-color:rgba(255,90,74,0.3);margin-bottom:12px;" /><button id="dd-del-save" style="width:100%;background:#ff5a4a;color:white;font-weight:600;font-size:12px;padding:10px;border-radius:12px;border:none;cursor:pointer;box-shadow:0 0 15px rgba(255,90,74,0.2);font-family:inherit;">Permanently Delete</button>';
+              dd.appendChild(subview);
+
+              document.getElementById('dd-back-del').addEventListener('click', closeAllViews);
+              document.getElementById('dd-del-save').addEventListener('click', function() {
+                const pw = document.getElementById('dd-del-pw').value;
+                if (!pw) { showError(subview, 'Enter your password'); return; }
+                clearError(subview);
+                this.textContent = 'Deleting...';
+                fetch('/api/auth/me', { method: 'DELETE', headers: authHeaders, body: JSON.stringify({ password: pw }) })
+                  .then(r => r.json()).then(d => { if (d.error) { showError(subview, d.error); document.getElementById('dd-del-save').textContent = 'Permanently Delete'; } else { localStorage.removeItem('fondtracker_token'); window.location.replace('/login'); } })
+                  .catch(() => { showError(subview, 'Error'); document.getElementById('dd-del-save').textContent = 'Permanently Delete'; });
+              });
+            });
+
+            document.addEventListener('click', function(e) {
+              const wrap = document.getElementById('user-menu-wrap');
+              const dd = document.getElementById('user-dropdown');
+              if (wrap && dd && !wrap.contains(e.target)) { dd.classList.add('hidden'); closeAllViews(); }
+            });
+          }
+
+          // Mobile CTA -> simplified
+          const mobileCta = document.querySelector('#mobile-menu .flex.flex-col.gap-4');
+          if (mobileCta) {
+            mobileCta.innerHTML = `
+              <a href="/dashboard" class="text-center py-3 bg-brand-primary text-black font-bold rounded-lg">Go to Dashboard</a>
+              <button onclick="localStorage.removeItem('fondtracker_token');window.location.reload();" class="text-center py-3 text-text-secondary font-semibold">Sign Out</button>
+            `;
+          }
+        }).catch(() => {});
+      }
     });
   </script>
 
-
-    <script id="lh-website-form-handler" data-lh-form-handler="true">
-    (function() {
-      if (window.__lhWebsiteFormHandlerInitialized) return;
-      window.__lhWebsiteFormHandlerInitialized = true;
-
-      var PROJECT_ID = "ufIbbzVCvNqW5EzjhSBg";
-      var DEFAULT_SUCCESS_MESSAGE = 'Thanks. Your message has been sent.';
-      var DEFAULT_ERROR_MESSAGE = 'Could not submit the form. Please try again.';
-
-      function isLocalHostname(hostname) {
-        var normalized = String(hostname || '').trim().toLowerCase();
-        return normalized === 'localhost' || normalized === '127.0.0.1';
-      }
-
-      function readHostnameFromUrl(url) {
-        if (!url) return '';
-
-        try {
-          return String(new URL(url).hostname || '').trim().toLowerCase();
-        } catch (_) {
-          return '';
-        }
-      }
-
-      function detectApiBaseUrl() {
-        try {
-          var hostname = window.location.hostname || '';
-          if (isLocalHostname(hostname)) {
-            return 'http://localhost:8080/api';
-          }
-        } catch (_) {}
-
-        try {
-          var baseHostname = readHostnameFromUrl(document.baseURI || '');
-          if (isLocalHostname(baseHostname)) {
-            return 'http://localhost:8080/api';
-          }
-        } catch (_) {}
-
-        try {
-          var parentHostname =
-            window.parent && window.parent !== window && window.parent.location
-              ? String(window.parent.location.hostname || '').trim().toLowerCase()
-              : '';
-          if (isLocalHostname(parentHostname)) {
-            return 'http://localhost:8080/api';
-          }
-        } catch (_) {}
-
-        return 'https://api.landinghero.ai/api';
-      }
-
-      var API_BASE_URL = detectApiBaseUrl();
-
-      function getFeedbackNode(form) {
-        var feedback = form.nextElementSibling;
-        if (
-          feedback &&
-          feedback.nodeType === 1 &&
-          feedback.getAttribute('data-lh-form-feedback') === 'true'
-        ) {
-          return feedback;
-        }
-
-        feedback = document.createElement('div');
-        feedback.setAttribute('data-lh-form-feedback', 'true');
-        feedback.setAttribute('aria-live', 'polite');
-        feedback.style.marginTop = '12px';
-        feedback.style.padding = '12px 14px';
-        feedback.style.borderRadius = '10px';
-        feedback.style.fontSize = '14px';
-        feedback.style.lineHeight = '1.5';
-        feedback.style.display = 'none';
-        form.insertAdjacentElement('afterend', feedback);
-        return feedback;
-      }
-
-      function setFeedback(form, kind, message) {
-        var feedback = getFeedbackNode(form);
-        feedback.textContent = message || '';
-        feedback.style.display = message ? 'block' : 'none';
-        feedback.style.border = kind === 'success'
-          ? '1px solid rgba(16, 185, 129, 0.25)'
-          : '1px solid rgba(239, 68, 68, 0.25)';
-        feedback.style.background = kind === 'success'
-          ? 'rgba(16, 185, 129, 0.08)'
-          : 'rgba(239, 68, 68, 0.08)';
-        feedback.style.color = kind === 'success' ? '#065f46' : '#991b1b';
-      }
-
-      function isElementVisible(element) {
-        if (!element) return false;
-        if (element.type === 'hidden') return false;
-
-        try {
-          var style = window.getComputedStyle(element);
-          if (
-            style.display === 'none' ||
-            style.visibility === 'hidden' ||
-            Number(style.opacity || '1') === 0
-          ) {
-            return false;
-          }
-        } catch (_) {}
-
-        if (typeof element.getClientRects === 'function') {
-          return element.getClientRects().length > 0;
-        }
-
-        return true;
-      }
-
-      function getFieldLabel(form, element) {
-        var ariaLabel = String(element.getAttribute('aria-label') || '').trim();
-        if (ariaLabel) return ariaLabel;
-
-        var labels = element.labels;
-        if (labels && labels.length > 0) {
-          var joined = Array.prototype.map.call(labels, function(label) {
-            return String(label.textContent || '').trim();
-          }).filter(Boolean).join(' ');
-          if (joined) return joined;
-        }
-
-        var id = String(element.id || '').trim();
-        if (id) {
-          try {
-            var escapedId =
-              typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
-                ? CSS.escape(id)
-                : id.replace(/"/g, '\"');
-            var explicitLabel = form.querySelector('label[for="' + escapedId + '"]');
-            if (explicitLabel) {
-              var explicitText = String(explicitLabel.textContent || '').trim();
-              if (explicitText) return explicitText;
-            }
-          } catch (_) {}
-        }
-
-        var parentLabel = typeof element.closest === 'function'
-          ? element.closest('label')
-          : null;
-        if (parentLabel) {
-          var parentText = String(parentLabel.textContent || '').trim();
-          if (parentText) return parentText;
-        }
-
-        var parentElement = element.parentElement;
-        if (parentElement) {
-          var siblingLabel = parentElement.querySelector('label');
-          if (siblingLabel) {
-            var siblingLabelText = String(siblingLabel.textContent || '').trim();
-            if (siblingLabelText) return siblingLabelText;
-          }
-        }
-
-        var previousSibling = element.previousElementSibling;
-        while (previousSibling) {
-          if (String(previousSibling.tagName || '').toLowerCase() === 'label') {
-            var previousSiblingText = String(previousSibling.textContent || '').trim();
-            if (previousSiblingText) return previousSiblingText;
-          }
-          previousSibling = previousSibling.previousElementSibling;
-        }
-
-        var placeholder = String(element.getAttribute('placeholder') || '').trim();
-        if (placeholder) return placeholder;
-
-        return String(element.name || element.id || element.type || 'field').trim();
-      }
-
-      function addDataValue(data, name, value) {
-        if (!name) return;
-
-        if (Object.prototype.hasOwnProperty.call(data, name)) {
-          if (Array.isArray(data[name])) {
-            data[name].push(value);
-          } else {
-            data[name] = [data[name], value];
-          }
-          return;
-        }
-
-        data[name] = value;
-      }
-
-      function normalizeFieldType(element) {
-        var tagName = String(element.tagName || '').toLowerCase();
-        if (tagName === 'textarea') return 'textarea';
-        if (tagName === 'select') return 'select';
-        return String(element.type || tagName || 'text').toLowerCase();
-      }
-
-      function getFieldValue(element) {
-        var type = normalizeFieldType(element);
-
-        if (type === 'checkbox' || type === 'radio') {
-          return element.checked ? 'true' : '';
-        }
-
-        if (type === 'file') {
-          if (!element.files || !element.files.length) return '';
-          return Array.prototype.map.call(element.files, function(file) {
-            return file && file.name ? file.name : '';
-          }).filter(Boolean).join(', ');
-        }
-
-        if (element.tagName && String(element.tagName).toLowerCase() === 'select' && element.multiple) {
-          return Array.prototype.map.call(element.selectedOptions || [], function(option) {
-            return option && option.value ? option.value : '';
-          }).filter(Boolean).join(', ');
-        }
-
-        return String(element.value || '').trim();
-      }
-
-      function collectFormPayload(form) {
-        var fields = [];
-        var data = {};
-        var elements = form.querySelectorAll('input, textarea, select');
-
-        Array.prototype.forEach.call(elements, function(element, index) {
-          if (!element || element.disabled) return;
-          if (!isElementVisible(element)) return;
-
-          var type = normalizeFieldType(element);
-          if (
-            type === 'submit' ||
-            type === 'button' ||
-            type === 'reset' ||
-            type === 'image'
-          ) {
-            return;
-          }
-
-          if ((type === 'checkbox' || type === 'radio') && !element.checked) {
-            return;
-          }
-
-          var value = getFieldValue(element);
-          if (!value) return;
-
-          var name = String(element.name || element.id || ('field_' + index)).trim();
-          if (!name) return;
-
-          fields.push({
-            name: name,
-            label: getFieldLabel(form, element),
-            type: type,
-            value: value
-          });
-          addDataValue(data, name, value);
-        });
-
-        return { fields: fields, data: data };
-      }
-
-      function getPageUrl() {
-        try {
-          if (window.location.href && window.location.href !== 'about:srcdoc') {
-            return window.location.href;
-          }
-        } catch (_) {}
-
-        try {
-          return String(document.baseURI || '').trim();
-        } catch (_) {
-          return '';
-        }
-      }
-
-      function setSubmittingState(form, isSubmitting) {
-        var submitControls = form.querySelectorAll(
-          'button[type="submit"], input[type="submit"], input[type="image"], [data-pixel-form-submit="true"]'
-        );
-
-        Array.prototype.forEach.call(submitControls, function(control) {
-          if (!(control instanceof HTMLElement)) return;
-
-          if (isSubmitting) {
-            if (!control.hasAttribute('data-lh-original-disabled')) {
-              control.setAttribute(
-                'data-lh-original-disabled',
-                control.hasAttribute('disabled') ? 'true' : 'false'
-              );
-            }
-            control.setAttribute('disabled', 'disabled');
-          } else if (control.getAttribute('data-lh-original-disabled') === 'false') {
-            control.removeAttribute('disabled');
-          }
-
-          if (control.tagName.toLowerCase() === 'button') {
-            if (isSubmitting) {
-              if (!control.hasAttribute('data-lh-original-label')) {
-                control.setAttribute(
-                  'data-lh-original-label',
-                  String(control.textContent || '')
-                );
-              }
-              control.textContent = 'Sending...';
-            } else if (control.hasAttribute('data-lh-original-label')) {
-              control.textContent = control.getAttribute('data-lh-original-label') || '';
-              control.removeAttribute('data-lh-original-label');
-            }
-          } else if (control.tagName.toLowerCase() === 'input') {
-            if (isSubmitting) {
-              if (!control.hasAttribute('data-lh-original-label')) {
-                control.setAttribute(
-                  'data-lh-original-label',
-                  String(control.getAttribute('value') || '')
-                );
-              }
-              control.setAttribute('value', 'Sending...');
-            } else if (control.hasAttribute('data-lh-original-label')) {
-              control.setAttribute(
-                'value',
-                control.getAttribute('data-lh-original-label') || ''
-              );
-              control.removeAttribute('data-lh-original-label');
-            }
-          }
-
-          if (!isSubmitting) {
-            control.removeAttribute('data-lh-original-disabled');
-          }
-        });
-      }
-
-      async function handleLandingHeroSubmit(payload) {
-        return fetch(API_BASE_URL + '/projects/forms/submit', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
-      }
-
-      async function handleBrandsLiveProductEnquirySubmit(payload) {
-        return fetch(API_BASE_URL + '/brands-live/product-enquiry', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
-      }
-
-      async function handleWebhookSubmit(url, payload) {
-        return fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
-      }
-
-      function normalizeFormMode(value) {
-        return String(value || '')
-          .trim()
-          .toLowerCase()
-          .replace(/[_\s]+/g, '-');
-      }
-
-      function isBrandsLiveProductEnquiryForm(form) {
-        return (
-          form.getAttribute('data-lh-brands-live-product-enquiry') === 'true' ||
-          normalizeFormMode(form.getAttribute('data-lh-form-mode')) === 'brands-live-product-enquiry'
-        );
-      }
-
-      document.addEventListener('submit', async function(event) {
-        var form = event.target;
-        if (!(form instanceof HTMLFormElement)) return;
-        if (!PROJECT_ID) return;
-        if (form.__lhFormSubmitting) return;
-
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation();
-
-        var payload = collectFormPayload(form);
-        if (!payload.fields.length) {
-          setFeedback(form, 'error', 'Please complete the form before submitting.');
-          return;
-        }
-
-        form.__lhFormSubmitting = true;
-        setSubmittingState(form, true);
-        setFeedback(form, 'success', '');
-
-        var mode = String(form.getAttribute('data-lh-form-mode') || 'landinghero')
-          .trim()
-          .toLowerCase() === 'webhook'
-          ? 'webhook'
-          : 'landinghero';
-        var isBrandsLiveProductEnquiry = isBrandsLiveProductEnquiryForm(form);
-
-        var requestPayload = {
-          project_id: PROJECT_ID,
-          projectId: PROJECT_ID,
-          websiteId: String(form.getAttribute('data-lh-brands-live-website-id') || '').trim(),
-          submittedAt: new Date().toISOString(),
-          pageUrl: getPageUrl(),
-          form: {
-            pixelId: String(form.getAttribute('data-pixel-id') || '').trim(),
-            mode: String(form.getAttribute('data-lh-form-mode') || '').trim(),
-            businessProductId: String(form.getAttribute('data-lh-business-product-id') || '').trim(),
-            productName: String(form.getAttribute('data-lh-product-name') || '').trim()
-          },
-          businessProductId: String(form.getAttribute('data-lh-business-product-id') || '').trim(),
-          productId: String(form.getAttribute('data-lh-product-id') || '').trim(),
-          productName: String(form.getAttribute('data-lh-product-name') || '').trim(),
-          fields: payload.fields,
-          data: payload.data
-        };
-
-        try {
-          var response;
-
-          if (isBrandsLiveProductEnquiry) {
-            response = await handleBrandsLiveProductEnquirySubmit(requestPayload);
-          } else if (mode === 'webhook') {
-            var webhookUrl = String(form.getAttribute('data-lh-form-webhook-url') || '').trim();
-            if (!webhookUrl) {
-              throw new Error('Webhook URL is not configured for this form.');
-            }
-            response = await handleWebhookSubmit(webhookUrl, requestPayload);
-          } else {
-            requestPayload.recipientEmail = String(
-              form.getAttribute('data-lh-form-recipient-email') || ''
-            ).trim();
-            response = await handleLandingHeroSubmit(requestPayload);
-          }
-
-          if (!response.ok) {
-            var errorMessage = DEFAULT_ERROR_MESSAGE;
-            try {
-              var errorBody = await response.json();
-              if (errorBody && errorBody.error) {
-                errorMessage = String(errorBody.error);
-              }
-            } catch (_) {}
-            throw new Error(errorMessage);
-          }
-
-          setFeedback(form, 'success', DEFAULT_SUCCESS_MESSAGE);
-          form.reset();
-        } catch (error) {
-          setFeedback(
-            form,
-            'error',
-            error && error.message ? error.message : DEFAULT_ERROR_MESSAGE
-          );
-        } finally {
-          form.__lhFormSubmitting = false;
-          setSubmittingState(form, false);
-        }
-      }, true);
-    })();
-  </script>
 </body></html>

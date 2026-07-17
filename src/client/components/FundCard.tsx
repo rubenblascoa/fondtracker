@@ -2,6 +2,13 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { api, getBankUrl, getSpecificFundUrl, type Investment, type YahooChartData } from "../api";
 import { formatCurrency, formatPct, profitColor, formatRelative } from "../utils";
 
+/** Safely extract "YYYY-MM-DD" from a date that might be a string, ISO string, or Date */
+function fmtDate(d: string | Date | null | undefined): string {
+  if (!d) return "";
+  if (typeof d === "string") return d.slice(0, 10);
+  return (d as Date).toISOString().slice(0, 10);
+}
+
 type Props = {
   fund: Investment;
   onChange: () => void;
@@ -322,8 +329,8 @@ export function FundCard({ fund, onChange }: Props) {
     : `https://finance.yahoo.com/quote/${encodeURIComponent(fund.ticker || "")}/`;
 
   return (
-    <div className="border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] hover:border-[var(--color-ink-4)] transition-colors slide-up">
-      <div className="flex items-center gap-4 px-5 py-4">
+    <div className={`border border-white/5 bg-black/20 backdrop-blur-sm transition-all duration-300 relative overflow-hidden hover:border-[var(--color-accent)]/50 shadow-sm hover:shadow-[0_0_15px_rgba(57,255,136,0.1)] ${deleting ? "opacity-50" : ""} group`}>
+        <div className={`flex flex-col sm:flex-row sm:items-start sm:justify-between px-4 py-4 sm:p-6 ${hasTicker ? "" : "pb-4"}`}>
         <div className="flex-1 min-w-0">
           {editing ? (
             <div className="pt-2">
@@ -339,8 +346,8 @@ export function FundCard({ fund, onChange }: Props) {
                 <span className="text-[var(--color-ink-4)]">·</span>
                 <span className="text-[11px] text-[var(--color-fg-4)]">{fund.category}</span>
               </div>
-              <div className="flex gap-4 items-center border-b border-[var(--color-ink-3)] pb-2 mb-2">
-                <div className="flex gap-1">
+              <div className="flex gap-4 items-center border-b border-[var(--color-ink-3)] pb-2 mb-2 flex-wrap">
+                <div className="flex gap-1 flex-wrap">
                   <button type="button" onClick={() => setEditMode("amount")} className={`text-[9px] uppercase tracking-wider font-mono px-2 py-0.5 border transition-all ${editMode === "amount" ? "border-[var(--color-accent)] text-[var(--color-accent)] bg-[var(--color-accent)]/5" : "border-transparent text-[var(--color-fg-4)] hover:text-[var(--color-fg-3)]"}`}>Por Importe (€)</button>
                   <button type="button" onClick={() => setEditMode("shares")} className={`text-[9px] uppercase tracking-wider font-mono px-2 py-0.5 border transition-all ${editMode === "shares" ? "border-[var(--color-accent)] text-[var(--color-accent)] bg-[var(--color-accent)]/5" : "border-transparent text-[var(--color-fg-4)] hover:text-[var(--color-fg-3)]"}`}>Por Participaciones</button>
                 </div>
@@ -349,7 +356,7 @@ export function FundCard({ fund, onChange }: Props) {
                   <button onClick={cancelEditing} disabled={editLoading} className="font-pixel text-[8px] uppercase tracking-wider px-2 py-1 border border-[var(--color-ink-3)] text-[var(--color-fg-4)] hover:text-[var(--color-fg-2)] transition-colors disabled:opacity-40">cancelar</button>
                 </div>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {editMode === "amount" ? (
                   <div>
                     <label className="block text-[9px] uppercase tracking-[0.15em] text-[var(--color-fg-4)] mb-1">importe invertido</label>
@@ -452,6 +459,7 @@ return (
                 {hasPrice && chartData?.isStale && (
                   <span className="flex items-center gap-1 text-[8px] px-1.5 py-0.5 border border-amber-500/40 text-amber-400 font-mono shrink-0 bg-amber-500/5 tracking-wider" title={chartData.staleWarning}>
                     ⚠ {chartData.dataDate ? fmtDataDate(chartData.dataDate) : "desactualizado"}
+                    ⚠ {chartData.dataDate ? fmtDataDate(chartData.dataDate) : "outdated"}
                   </span>
                 )}
                 {hasPrice && chartData?.verificationLog && (
@@ -459,12 +467,12 @@ return (
                     className="flex items-center gap-1 text-[8px] px-1.5 py-0.5 border border-[var(--color-accent)]/30 text-[var(--color-accent)] font-mono shrink-0 bg-[var(--color-accent)]/5 tracking-wider cursor-help"
                     title={chartData.verificationLog}
                   >
-                    ✓ VERIFICADO
+                    ✓ VERIFIED
                   </span>
                 )}
                 {hasPrice && !chartData && (
                   <span className="flex items-center gap-1 text-[8px] px-1.5 py-0.5 border border-[var(--color-ink-3)] text-[var(--color-fg-4)] font-mono shrink-0 tracking-wider">
-                    precio cargado
+                    price loaded
                   </span>
                 )}
               </div>
@@ -488,7 +496,7 @@ return (
                 <span className="text-[var(--color-ink-4)]">·</span>
                 <span className="text-[11px] text-[var(--color-fg-4)]">{fund.category}</span>
               </div>
-              <div className="flex items-center gap-2 text-[11px] text-[var(--color-fg-3)] mt-1.5 font-mono">
+              <div className="flex items-center gap-2 text-[11px] text-[var(--color-fg-3)] mt-1.5 font-mono flex-wrap">
                 <span>
                   {fund.shares.toLocaleString("es", { minimumFractionDigits: 2, maximumFractionDigits: 6 })} ×{" "}
                   <span className="text-[var(--color-fg-2)]">
@@ -499,10 +507,10 @@ return (
                 <span className="text-[var(--color-fg-4)]">
                   {formatCurrency(fund.total_invested, fund.currency)}
                 </span>
-                {fund.purchase_date && (
+                {fund.purchase_date && fmtDate(fund.purchase_date) && (
                   <>
                     <span className="text-[var(--color-ink-4)]">·</span>
-                    <span className="text-[10px] text-[var(--color-fg-4)]">{fund.purchase_date.slice(0, 10)}</span>
+                    <span className="text-[10px] text-[var(--color-fg-4)]">{fmtDate(fund.purchase_date)}</span>
                   </>
                 )}
                 {fund.notes && (
@@ -524,11 +532,11 @@ return (
           )}
         </div>
 
-        <div className={`text-right shrink-0 ${editing ? "pt-7" : ""}`}>
+        <div className={`text-left sm:text-right shrink-0 flex sm:block items-center gap-4 sm:gap-0 border-t sm:border-t-0 border-[var(--color-ink-3)] pt-3 sm:pt-0 mt-1 sm:mt-0 ${editing ? "pt-0 sm:pt-7" : ""}`}>
           <div className="text-[10px] text-[var(--color-fg-4)] mb-0.5 font-mono">
             {hasPrice
-              ? `ahora ${currentPrice!.toFixed(4)}${fund.currency === "EUR" ? "€" : " " + fund.currency}`
-              : `invertido ${formatCurrency(fund.total_invested, fund.currency)}`}
+              ? `now ${currentPrice!.toFixed(4)}${fund.currency === "EUR" ? "€" : " " + fund.currency}`
+              : `invested ${formatCurrency(fund.total_invested, fund.currency)}`}
           </div>
           <div className={`font-pixel text-lg leading-tight ${profitColor(fund.profit_loss)}`}>
             {fund.profit_loss >= 0 ? "+" : ""}{formatCurrency(fund.profit_loss, fund.currency)}
@@ -538,18 +546,18 @@ return (
           </div>
           {hasPrice && (
             <div className="text-[10px] text-[var(--color-fg-4)] mt-1 font-mono">
-              valor {formatCurrency(fund.current_value, fund.currency)}
+              value {formatCurrency(fund.current_value, fund.currency)}
             </div>
           )}
         </div>
 
-        <div className="flex flex-col items-center gap-1 shrink-0">
+        <div className="flex sm:flex-col items-center gap-2 sm:gap-1 shrink-0">
           {!editing && (
             <>
               <button
                 onClick={startEditing}
-                className="text-[var(--color-fg-4)] hover:text-[var(--color-accent)] transition-colors p-1.5"
-                title="editar"
+                className="text-[var(--color-fg-4)] hover:text-[var(--color-accent)] transition-colors p-2 sm:p-1.5 min-w-[36px] sm:min-w-0 flex items-center justify-center"
+                title="edit"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
                   <path d="M8.5 1.5L10.5 3.5L4.5 9.5L1.5 10.5L2.5 7.5L8.5 1.5Z" />
@@ -560,7 +568,7 @@ return (
                 href={fundUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[var(--color-fg-4)] hover:text-[var(--color-accent)] transition-colors p-1.5"
+                className="text-[var(--color-fg-4)] hover:text-[var(--color-accent)] transition-colors p-2 sm:p-1.5 min-w-[36px] sm:min-w-0 flex items-center justify-center"
                 title={isQueFondos ? "Ver en QueFondos" : "Ver en Yahoo Finance"}
               >
                 <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -571,7 +579,7 @@ return (
               <button
                 onClick={remove}
                 disabled={deleting}
-                className={`transition-all p-1.5 ${
+                className={`transition-all p-2 sm:p-1.5 min-w-[36px] sm:min-w-0 flex items-center justify-center ${
                   confirmDelete
                     ? "text-[var(--color-danger)] bg-[var(--color-danger)]/10"
                     : "text-[var(--color-fg-4)] hover:text-[var(--color-danger)]"
@@ -593,9 +601,9 @@ return (
       </div>
 
       {hasTicker && (
-        <div className="border-t border-[var(--color-ink-3)] p-4 fade-in">
-          <div className="flex items-center justify-between mb-4 border-b border-[var(--color-ink-3)] pb-2">
-            <div className="flex gap-1">
+        <div className="border-t border-[var(--color-ink-3)] px-4 py-4 sm:p-4 fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-4 border-b border-[var(--color-ink-3)] pb-2">
+            <div className="flex gap-1 flex-wrap">
               {(["chart", "composition", "details"] as const).map((t) => (
                 <button
                   key={t}
@@ -606,12 +614,12 @@ return (
                       : "border-transparent text-[var(--color-fg-4)] hover:text-[var(--color-fg-3)]"
                   }`}
                 >
-                  {t === "chart" ? "Gráfica" : t === "composition" ? "Composición" : "Ficha"}
+                  {t === "chart" ? "Chart" : t === "composition" ? "Composition" : "Details"}
                 </button>
               ))}
             </div>
             {activeTab === "chart" && (
-              <div className="flex gap-0.5">
+              <div className="flex gap-0.5 flex-wrap">
                 {(["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "max"] as const).map((r) => (
                   <button
                     key={r}
@@ -634,13 +642,13 @@ return (
               <div className="w-1 h-1 bg-[var(--color-accent)] rounded-full animate-pulse" />
               <div className="w-1 h-1 bg-[var(--color-accent)] rounded-full animate-pulse" style={{ animationDelay: "200ms" }} />
               <div className="w-1 h-1 bg-[var(--color-accent)] rounded-full animate-pulse" style={{ animationDelay: "400ms" }} />
-              <span className="ml-1">cargando datos de mercado</span>
+              <span className="ml-1">loading market data</span>
             </div>
           ) : chartError || !chartData || chartData.dataPoints < 2 ? (
             <div className="text-xs text-[var(--color-fg-4)] text-center py-6 border border-dashed border-[var(--color-ink-3)]">
               {chartError
-                ? "datos históricos no disponibles para este fondo"
-                : "no hay datos de cotización disponibles"}
+                ? "historical data not available for this fund"
+                : "no quote data available"}
             </div>
           ) : (
             <>
@@ -702,13 +710,13 @@ return (
                         ))}
                       </div>
                     ) : (
-                      <span className="text-[10px] text-[var(--color-fg-4)] italic">No disponible para este tipo de activo</span>
+                      <span className="text-[10px] text-[var(--color-fg-4)] italic">Not available for this asset type</span>
                     )}
                   </div>
 
                   {/* Sectors */}
                   <div>
-                    <h4 className="text-[10px] uppercase tracking-wider text-[var(--color-fg-4)] mb-2.5 font-bold border-b border-[var(--color-ink-3)] pb-1.5">Sectores</h4>
+                    <h4 className="text-[10px] uppercase tracking-wider text-[var(--color-fg-4)] mb-2.5 font-bold border-b border-[var(--color-ink-3)] pb-1.5">Sectors</h4>
                     {chartData.sectors && chartData.sectors.length > 0 ? (
                       <div className="flex flex-col gap-1.5">
                         {chartData.sectors.map((s, i) => (
@@ -719,13 +727,13 @@ return (
                         ))}
                       </div>
                     ) : (
-                      <span className="text-[10px] text-[var(--color-fg-4)] italic">No disponible para este tipo de activo</span>
+                      <span className="text-[10px] text-[var(--color-fg-4)] italic">Not available for this asset type</span>
                     )}
                   </div>
 
                   {/* Geography */}
                   <div>
-                    <h4 className="text-[10px] uppercase tracking-wider text-[var(--color-fg-4)] mb-2.5 font-bold border-b border-[var(--color-ink-3)] pb-1.5">Geografía</h4>
+                    <h4 className="text-[10px] uppercase tracking-wider text-[var(--color-fg-4)] mb-2.5 font-bold border-b border-[var(--color-ink-3)] pb-1.5">Geography</h4>
                     {chartData.geography && chartData.geography.length > 0 ? (
                       <div className="flex flex-col gap-1.5">
                         {chartData.geography.map((g, i) => (
@@ -736,7 +744,7 @@ return (
                         ))}
                       </div>
                     ) : (
-                      <span className="text-[10px] text-[var(--color-fg-4)] italic">No disponible para este tipo de activo</span>
+                      <span className="text-[10px] text-[var(--color-fg-4)] italic">Not available for this asset type</span>
                     )}
                   </div>
                 </div>
@@ -746,7 +754,7 @@ return (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs font-mono py-2 fade-in">
                   {/* General Info */}
                   <div className="flex flex-col gap-2.5 text-[10px] text-[var(--color-fg-3)]">
-                    <h4 className="text-[9px] uppercase tracking-wider text-[var(--color-fg-4)] border-b border-[var(--color-ink-3)] pb-1.5 mb-1 font-semibold">Información General</h4>
+                    <h4 className="text-[9px] uppercase tracking-wider text-[var(--color-fg-4)] border-b border-[var(--color-ink-3)] pb-1.5 mb-1 font-semibold">General Information</h4>
                     <div className="flex justify-between">
                       <span className="text-[var(--color-fg-4)]">ISIN:</span>
                       <span>{fund.isin}</span>
@@ -788,27 +796,27 @@ return (
 
                   {/* Returns */}
                   <div className="flex flex-col gap-2.5 text-[10px] text-[var(--color-fg-3)]">
-                    <h4 className="text-[9px] uppercase tracking-wider text-[var(--color-fg-4)] border-b border-[var(--color-ink-3)] pb-1.5 mb-1 font-semibold">Rentabilidad Acumulada</h4>
+                    <h4 className="text-[9px] uppercase tracking-wider text-[var(--color-fg-4)] border-b border-[var(--color-ink-3)] pb-1.5 mb-1 font-semibold">Cumulative Returns</h4>
                     <div className="flex justify-between">
-                      <span className="text-[var(--color-fg-4)]">Rentabilidad 1 Año (1A):</span>
+                      <span className="text-[var(--color-fg-4)]">1 Year Return (1Y):</span>
                       <span className={chartData.return1Y != null && chartData.return1Y >= 0 ? "text-[var(--color-accent)]" : "text-[var(--color-danger)]"}>
                         {chartData.return1Y != null ? `${chartData.return1Y >= 0 ? "+" : ""}${chartData.return1Y.toFixed(2)}%` : "+12.50%"}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-[var(--color-fg-4)]">Rentabilidad 3 Años (3A):</span>
+                      <span className="text-[var(--color-fg-4)]">3 Year Return (3Y):</span>
                       <span className={chartData.return3Y != null && chartData.return3Y >= 0 ? "text-[var(--color-accent)]" : "text-[var(--color-danger)]"}>
                         {chartData.return3Y != null ? `${chartData.return3Y >= 0 ? "+" : ""}${chartData.return3Y.toFixed(2)}%` : "+28.40%"}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-[var(--color-fg-4)]">Rentabilidad 5 Años (5A):</span>
+                      <span className="text-[var(--color-fg-4)]">5 Year Return (5Y):</span>
                       <span className={chartData.return5Y != null && chartData.return5Y >= 0 ? "text-[var(--color-accent)]" : "text-[var(--color-danger)]"}>
                         {chartData.return5Y != null ? `${chartData.return5Y >= 0 ? "+" : ""}${chartData.return5Y.toFixed(2)}%` : "+45.20%"}
                       </span>
                     </div>
                     <div className="text-[8px] text-[var(--color-fg-4)] mt-3 italic leading-normal">
-                      * Las rentabilidades y costes mostrados son acumulados e informativos de la gestora oficial.
+                      * Returns and costs shown are cumulative and informative from the official manager.
                     </div>
                   </div>
                 </div>

@@ -142,7 +142,7 @@ export function AddFundForm({ onAdded }: Props) {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!selectedFund) {
-      setError("Selecciona un fondo de la lista");
+      setError("Select a fund from the list");
       return;
     }
     const priceVal = parseFloat(purchasePrice);
@@ -151,27 +151,27 @@ export function AddFundForm({ onAdded }: Props) {
     if (mode === "amount") {
       const amountVal = parseFloat(amount);
       if (!Number.isFinite(amountVal) || amountVal <= 0) {
-        setError("El importe invertido debe ser un número positivo");
+        setError("Invested amount must be a positive number");
         return;
       }
       if (!Number.isFinite(priceVal) || priceVal <= 0) {
-        setError("El precio de compra debe ser un número positivo");
+        setError("Price per share must be a positive number");
         return;
       }
       sharesVal = amountVal / priceVal;
     } else {
       sharesVal = parseFloat(shares);
       if (!Number.isFinite(sharesVal) || sharesVal <= 0) {
-        setError("Las participaciones deben ser un número positivo");
+        setError("Shares must be a positive number");
         return;
       }
       if (!Number.isFinite(priceVal) || priceVal <= 0) {
-        setError("El precio de compra debe ser un número positivo");
+        setError("Price per share must be a positive number");
         return;
       }
     }
     if (!purchaseDate) {
-      setError("Selecciona una fecha de compra");
+      setError("Select a purchase date");
       return;
     }
 
@@ -195,7 +195,7 @@ export function AddFundForm({ onAdded }: Props) {
       setPurchaseDate(new Date().toISOString().slice(0, 10));
       setNotes("");
       setSearchQuery("");
-      setSuccess(`${fundName} · añadido`);
+      setSuccess(`${fundName} · added`);
       setTimeout(() => setSuccess(null), 3000);
       onAdded();
     } catch (err) {
@@ -220,11 +220,11 @@ export function AddFundForm({ onAdded }: Props) {
   return (
     <form
       onSubmit={submit}
-      className="border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] slide-up"
+      className="border border-white/5 bg-black/20 backdrop-blur-sm slide-up"
     >
       {!selectedFund ? (
         <div className="p-4 space-y-3" ref={resultsRef}>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
               <input
                 ref={inputRef}
@@ -232,8 +232,8 @@ export function AddFundForm({ onAdded }: Props) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => searchResults && setShowResults(true)}
-                placeholder="buscar fondo por nombre, ISIN o entidad..."
-                className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] px-3 py-2.5 text-[var(--color-fg-1)] font-mono text-sm outline-none transition-colors placeholder:text-[var(--color-fg-4)]"
+                placeholder="search fund by name, ISIN or entity..."
+                className="w-full bg-transparent border border-white/10 focus:border-[var(--color-accent)]/50 px-3 py-1.5 text-[var(--color-fg-1)] font-mono text-xs outline-none transition-colors placeholder:text-[var(--color-fg-4)]"
                 spellCheck={false}
               />
               {searching && (
@@ -245,9 +245,9 @@ export function AddFundForm({ onAdded }: Props) {
             <select
               value={bankFilter}
               onChange={(e) => setBankFilter(e.target.value)}
-              className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] px-3 py-2 text-[var(--color-fg-2)] font-mono text-xs outline-none transition-colors shrink-0"
+              className="bg-transparent border border-white/10 focus:border-[var(--color-accent)]/50 px-3 py-1.5 text-[var(--color-fg-2)] font-mono text-xs outline-none transition-colors shrink-0"
             >
-              <option value="">todos</option>
+              <option value="">all</option>
               {searchResults?.banks.map((b) => (
                 <option key={b} value={b}>
                   {b}
@@ -302,13 +302,13 @@ export function AddFundForm({ onAdded }: Props) {
 
           {searchResults && showResults && searchResults.results.length === 0 && searchQuery.length > 0 && !searching && (
             <div className="text-xs text-[var(--color-fg-4)] text-center py-4 border border-dashed border-[var(--color-ink-3)]">
-              nada para "{searchQuery}" — prueba con otro término
+              nothing found for "{searchQuery}" — try another term
             </div>
           )}
 
           {!searchQuery && !bankFilter && searchResults && searchResults.results.length > 0 && (
             <div className="text-[10px] text-[var(--color-fg-4)] text-center">
-              {searchResults.total} fondos disponibles — escribe para filtrar
+              {searchResults.total} funds available — type to filter
             </div>
           )}
         </div>
@@ -335,7 +335,7 @@ export function AddFundForm({ onAdded }: Props) {
                   <>
                     <span className="text-[var(--color-ink-4)]">·</span>
                     <span className="text-[9px] text-[var(--color-accent)] font-mono">
-                      precio en vivo
+                      live price
                     </span>
                   </>
                 )}
@@ -346,7 +346,7 @@ export function AddFundForm({ onAdded }: Props) {
               onClick={deselectFund}
               className="text-[var(--color-fg-4)] hover:text-[var(--color-danger)] text-[10px] uppercase tracking-wider font-mono transition-colors shrink-0 px-2 py-1 border border-[var(--color-ink-3)] hover:border-[var(--color-danger)]/30"
             >
-              cambiar
+              change
             </button>
           </div>
             {/* Mode Switcher */}
@@ -360,7 +360,7 @@ export function AddFundForm({ onAdded }: Props) {
                   : "border-transparent text-[var(--color-fg-4)] hover:text-[var(--color-fg-3)]"
               }`}
             >
-              Por Importe (€)
+              By Amount (€)
             </button>
             <button
               type="button"
@@ -371,15 +371,15 @@ export function AddFundForm({ onAdded }: Props) {
                   : "border-transparent text-[var(--color-fg-4)] hover:text-[var(--color-fg-3)]"
               }`}
             >
-              Por Participaciones
+              By Shares
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {mode === "amount" ? (
               <div>
                 <label className="block text-[10px] uppercase tracking-[0.18em] text-[var(--color-fg-4)] mb-1.5">
-                  importe invertido
+                  invested amount
                 </label>
                 <input
                   type="number"
@@ -394,7 +394,7 @@ export function AddFundForm({ onAdded }: Props) {
             ) : (
               <div>
                 <label className="block text-[10px] uppercase tracking-[0.18em] text-[var(--color-fg-4)] mb-1.5">
-                  participaciones
+                  shares
                 </label>
                 <input
                   type="number"
@@ -409,7 +409,7 @@ export function AddFundForm({ onAdded }: Props) {
             )}
             <div>
               <label className="block text-[10px] uppercase tracking-[0.18em] text-[var(--color-fg-4)] mb-1.5">
-                precio por participacion ({selectedFund.currency})
+                price per share ({selectedFund.currency})
               </label>
               <input
                 type="number"
@@ -423,7 +423,7 @@ export function AddFundForm({ onAdded }: Props) {
             </div>
             <div>
               <label className="block text-[10px] uppercase tracking-[0.18em] text-[var(--color-fg-4)] mb-1.5">
-                fecha de compra
+                purchase date
               </label>
               <input
                 type="date"
@@ -436,13 +436,13 @@ export function AddFundForm({ onAdded }: Props) {
 
           <div>
             <label className="block text-[10px] uppercase tracking-[0.18em] text-[var(--color-fg-4)] mb-1.5">
-              notas <span className="text-[var(--color-ink-5)]">(opcional)</span>
+              notes <span className="text-[var(--color-ink-5)]">(optional)</span>
             </label>
             <input
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="ahorro mensual, plan de pensiones, etc."
+              placeholder="monthly savings, pension plan, etc."
               className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] px-3 py-2.5 text-[var(--color-fg-1)] font-mono text-sm outline-none transition-colors placeholder:text-[var(--color-fg-4)]"
             />
           </div>
@@ -450,14 +450,14 @@ export function AddFundForm({ onAdded }: Props) {
           {totalEstimate && (
             <div className="flex flex-col gap-1 border-t border-[var(--color-ink-3)] pt-3 text-[10px] font-mono">
               <div className="flex items-center justify-between">
-                <span className="text-[var(--color-fg-4)]">total invertido</span>
+                <span className="text-[var(--color-fg-4)]">total invested</span>
                 <span className="text-[var(--color-fg-1)] text-xs font-semibold">
                   {totalEstimate}{selectedFund.currency === "EUR" ? "€" : " " + selectedFund.currency}
                 </span>
               </div>
               {calculatedShares && (
                 <div className="flex items-center justify-between text-[9px] text-[var(--color-fg-4)]">
-                  <span>participaciones estimadas</span>
+                  <span>estimated shares</span>
                   <span>{calculatedShares}</span>
                 </div>
               )}
@@ -469,7 +469,7 @@ export function AddFundForm({ onAdded }: Props) {
             disabled={loading || (mode === "amount" ? !amount : !shares) || !purchasePrice}
             className="font-pixel uppercase text-[11px] tracking-widest px-5 py-2.5 border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-ink-0)] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            {loading ? "guardando..." : "añadir a mi cartera"}
+            {loading ? "saving......" : "add to my portfolio"}
           </button>
         </div>
       )}

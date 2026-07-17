@@ -1,8 +1,32 @@
-import { queries, type InvestmentRow, type InvestmentWithStats } from "./db";
 import { fetchCurrentPrice, tryDiscoverTicker } from "./yahoo";
+import { queries, type InvestmentRow, type InvestmentWithStats } from "./db";
+
+// ─── In-memory price cache ────────────────────────────────────────────────────
+// Avoids calling Yahoo Finance on every 10-second dashboard refresh.
+// Prices refresh automatically after TTL expires.
+const PRICE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+type CacheEntry = { price: number; currency: string; fetchedAt: number };
+const priceCache = new Map<string, CacheEntry>();
+
+function getCachedPrice(isin: string): CacheEntry | null {
+  const entry = priceCache.get(isin);
+  if (entry && Date.now() - entry.fetchedAt < PRICE_TTL_MS) return entry;
+  return null;
+}
+
+function setCachedPrice(isin: string, price: number, currency: string) {
+  priceCache.set(isin, { price, currency, fetchedAt: Date.now() });
+}
+
+export function invalidatePriceCache(isin?: string) {
+  if (isin) priceCache.delete(isin);
+  else priceCache.clear();
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function now(): string {
-  // MySQL DATETIME espera 'YYYY-MM-DD HH:MM:SS', no el formato ISO con 'T'/'Z'/milisegundos
   return new Date().toISOString().slice(0, 19).replace("T", " ");
 }
 
@@ -32,58 +56,65 @@ function computeInvestmentStats(
   };
 }
 
+// ─── Core function ─────────────────────────────────────────────────────────────
+
 export async function listInvestments(userId: number): Promise<InvestmentWithStats[]> {
   const investments = await queries.listInvestments(userId);
-  const results: InvestmentWithStats[] = [];
+  if (investments.length === 0) return [];
 
-  const metaPromises = investments.map(async (inv) => {
-    const catalog = await queries.getFundCatalogByIsin(inv.isin);
-    let ticker = inv.ticker ?? catalog?.yahoo_ticker ?? null;
-    return {
-      ticker,
-      category: catalog?.category ?? inv.category,
-      purchasePrice: Number(inv.purchase_price),
-    };
-  });
-  const metaList = await Promise.all(metaPromises);
+  // ① Batch-load all catalog entries in ONE query instead of N individual queries
+  const isins = [...new Set(investments.map((i) => i.isin))];
+  const catalogMap = await queries.getFundCatalogByIsins(isins);
 
-  const pricePromises = metaList.map(async (meta, i) => {
-    let ticker = meta.ticker;
+  // ② Resolve tickers — DB first, then catalog, then discover (persisted back)
+  const tickers: (string | null)[] = await Promise.all(
+    investments.map(async (inv) => {
+      let ticker = inv.ticker ?? catalogMap.get(inv.isin)?.yahoo_ticker ?? null;
+      if (!ticker) {
+        ticker = await tryDiscoverTicker(inv.isin);
+        if (ticker) {
+          try { await queries.updateInvestmentTicker(inv.id, ticker); } catch {}
+        }
+      }
+      return ticker;
+    })
+  );
 
-    if (!ticker) {
-      ticker = await tryDiscoverTicker(investments[i].isin);
+  // ③ Resolve prices — in-memory cache → DB cache → Yahoo (sets both caches)
+  const prices: (number | null)[] = await Promise.all(
+    investments.map(async (inv, i) => {
+      const isin = inv.isin;
+      const ticker = tickers[i];
+
+      // Fast path: in-memory cache hit (avoids DB + network)
+      const mem = getCachedPrice(isin);
+      if (mem) return mem.price;
+
+      // Slow path: try Yahoo, then DB fallback
       if (ticker) {
-        meta.ticker = ticker; // Save the discovered ticker in meta
-        // Persist to DB so next load doesn't need to re-discover
-        try {
-          await queries.updateInvestmentTicker(investments[i].id, ticker);
-        } catch {}
-      }
-    }
-
-    if (ticker) {
-      const quote = await fetchCurrentPrice(ticker);
-      if (quote?.price) {
-        await queries.setFundPrice(investments[i].isin, quote.price, quote.currency);
-        return quote.price;
+        const quote = await fetchCurrentPrice(ticker).catch(() => null);
+        if (quote?.price) {
+          // Write to both caches
+          setCachedPrice(isin, quote.price, quote.currency);
+          await queries.setFundPrice(isin, quote.price, quote.currency);
+          return quote.price;
+        }
       }
 
-      const cached = await queries.getFundPrice(investments[i].isin);
-      if (cached && cached.price > 0) return cached.price;
-    }
+      // DB fallback (no network)
+      const cached = await queries.getFundPrice(isin);
+      if (cached && cached.price > 0) {
+        setCachedPrice(isin, cached.price, cached.currency);
+        return cached.price;
+      }
 
-    const cached = await queries.getFundPrice(investments[i].isin);
-    if (cached && cached.price > 0) return cached.price;
+      return null;
+    })
+  );
 
-    return null;
-  });
-  const prices = await Promise.all(pricePromises);
-
-  for (let i = 0; i < investments.length; i++) {
-    results.push(computeInvestmentStats(investments[i], prices[i], metaList[i].ticker));
-  }
-
-  return results;
+  return investments.map((inv, i) =>
+    computeInvestmentStats(inv, prices[i], tickers[i])
+  );
 }
 
 export async function getInvestmentWithStats(
@@ -98,40 +129,43 @@ export async function getInvestmentWithStats(
 
   if (!ticker) {
     ticker = await tryDiscoverTicker(inv.isin);
-    // Persist the resolved ticker back to DB
     if (ticker) {
       try { await queries.updateInvestmentTicker(inv.id, ticker); } catch {}
     }
   }
 
+  // Bust per-investment cache when loading single fund (used after edit/add)
+  invalidatePriceCache(inv.isin);
+
   let currentPrice: number | null = null;
   if (ticker) {
     const quote = await fetchCurrentPrice(ticker).catch(() => null);
     currentPrice = quote?.price ?? null;
+    if (currentPrice) {
+      setCachedPrice(inv.isin, currentPrice, quote!.currency);
+      await queries.setFundPrice(inv.isin, currentPrice, quote!.currency);
+    }
   }
-
   if (!currentPrice) {
-    const cached = await queries.getFundPrice(inv.isin);
-    if (cached && cached.price > 0) currentPrice = cached.price;
+    const db = await queries.getFundPrice(inv.isin);
+    if (db && db.price > 0) currentPrice = db.price;
   }
 
   return computeInvestmentStats(inv, currentPrice, ticker);
 }
 
-export async function getPortfolioTotals(userId: number) {
-  const investments = await listInvestments(userId);
+// ─── Portfolio totals — computed from already-loaded investments ──────────────
+
+export function computePortfolioTotals(investments: InvestmentWithStats[]) {
   let totalInvested = 0;
   let totalCurrent = 0;
-
   for (const inv of investments) {
     totalInvested += inv.total_invested;
     totalCurrent += inv.current_value;
   }
-
   const totalProfitLoss = totalCurrent - totalInvested;
   const totalProfitLossPct =
     totalInvested > 0 ? (totalProfitLoss / totalInvested) * 100 : 0;
-
   return {
     total_initial: totalInvested,
     total_current: totalCurrent,
@@ -139,6 +173,11 @@ export async function getPortfolioTotals(userId: number) {
     total_profit_loss_pct: totalProfitLossPct,
     fund_count: investments.length,
   };
+}
+
+/** @deprecated Use computePortfolioTotals(investments) instead to avoid double listInvestments call */
+export async function getPortfolioTotals(userId: number) {
+  return computePortfolioTotals(await listInvestments(userId));
 }
 
 export async function addInvestment(
@@ -153,7 +192,6 @@ export async function addInvestment(
   if (!catalog) throw new Error(`ISIN ${isin} no encontrado en el catálogo`);
 
   const ts = now();
-  // Try to resolve a ticker immediately (Yahoo or ISIN fallback via QueFondos)
   let resolvedTicker: string | null = catalog.yahoo_ticker ?? null;
   if (!resolvedTicker) {
     try { resolvedTicker = await tryDiscoverTicker(catalog.isin); } catch {}
@@ -176,12 +214,15 @@ export async function addInvestment(
     ts
   );
 
+  // Bust cache so the new fund gets a fresh price on next load
+  invalidatePriceCache(catalog.isin);
   return getInvestmentWithStats(investment.id, userId).then((s) => s!);
 }
 
 export async function deleteInvestment(id: number, userId: number): Promise<boolean> {
   const inv = await queries.getInvestment(id, userId);
   if (!inv) return false;
+  invalidatePriceCache(inv.isin);
   await queries.deleteInvestment(id, userId);
   return true;
 }

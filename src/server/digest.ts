@@ -22,15 +22,11 @@ type CronJobHandle = {
   stop(): CronJobHandle;
 };
 
-type LocalTime = {
-  hour: number;
-};
-
 let digestJob: CronJobHandle | null = null;
 let activeDigest: Promise<DigestRunResult> | null = null;
 let activeDigestStartedAt: string | null = null;
 
-function localTimeInTimezone(timezone: string): LocalTime {
+function localTimeInTimezone(timezone: string): { hour: number } {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: timezone,
     hour: "2-digit",
@@ -40,9 +36,7 @@ function localTimeInTimezone(timezone: string): LocalTime {
   const get = (type: string) =>
     parts.find((p) => p.type === type)?.value ?? "00";
 
-  return {
-    hour: Number(get("hour")),
-  };
+  return { hour: Number(get("hour")) };
 }
 
 function currentDigestSlot(timezone: string): DigestContext["slot"] {
@@ -54,12 +48,17 @@ function positiveInt(value: string | undefined, fallback: number): number {
   return Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : fallback;
 }
 
+/**
+ * Scheduled digest: sends one combined message for ALL users.
+ * Called automatically by Bun.cron.
+ */
 async function runScheduledDigest(): Promise<void> {
   const cfg = await whatsappConfig();
   if (!cfg.enabled || !cfg.configured) return;
 
   const slot = currentDigestSlot(cfg.timezone);
   try {
+    // No userId → buildFundReport will iterate all users internally
     const result = await runDigest({ slot, timezone: cfg.timezone });
     console.log(
       `[digest] ${new Date().toISOString()} enviado=${result.sent} cron="${cfg.cron}"`
@@ -70,14 +69,14 @@ async function runScheduledDigest(): Promise<void> {
   }
 }
 
-async function executeDigest(ctx: DigestContext): Promise<DigestRunResult> {
-  const message = await buildFundReport(ctx);
-  await sendWhatsApp(message);
+async function executeDigest(ctx: DigestContext, userId?: number): Promise<DigestRunResult> {
+  const message = await buildFundReport(ctx, userId);
+  const sent = await sendWhatsApp(message);
   await queries.setSetting(LAST_SENT_AT_KEY, new Date().toISOString());
-  return { message, sent: 1 };
+  return { message, sent };
 }
 
-export async function runDigest(ctx: DigestContext): Promise<DigestRunResult> {
+export async function runDigest(ctx: DigestContext, userId?: number): Promise<DigestRunResult> {
   if (activeDigest) {
     console.warn(
       `[digest] ejecución ya en curso desde ${activeDigestStartedAt}; reutilizando resultado`
@@ -86,7 +85,7 @@ export async function runDigest(ctx: DigestContext): Promise<DigestRunResult> {
   }
 
   activeDigestStartedAt = new Date().toISOString();
-  activeDigest = executeDigest(ctx).finally(() => {
+  activeDigest = executeDigest(ctx, userId).finally(() => {
     activeDigest = null;
     activeDigestStartedAt = null;
   });
@@ -94,8 +93,8 @@ export async function runDigest(ctx: DigestContext): Promise<DigestRunResult> {
   return activeDigest;
 }
 
-export async function previewDigest(ctx: DigestContext): Promise<string> {
-  return buildFundReport(ctx);
+export async function previewDigest(ctx: DigestContext, userId?: number): Promise<string> {
+  return buildFundReport(ctx, userId);
 }
 
 export async function startDigestScheduler(): Promise<void> {

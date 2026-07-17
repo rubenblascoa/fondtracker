@@ -35,14 +35,14 @@ export function ApiDocsModal({ isOpen, onClose }: Props) {
           <div className="flex items-center gap-2">
             <span className="font-pixel text-xs text-[var(--color-accent)]">&gt;_</span>
             <h2 className="font-pixel uppercase text-xs tracking-wider text-[var(--color-fg-1)]">
-              Documentación de la API (FONDTRACKER)
+              API Documentation (FONDTRACKER)
             </h2>
           </div>
           <button
             onClick={onClose}
             className="text-[10px] uppercase font-mono tracking-wider text-[var(--color-fg-4)] hover:text-[var(--color-danger)] transition-colors"
           >
-            cerrar
+            close
           </button>
         </div>
 
@@ -51,48 +51,47 @@ export function ApiDocsModal({ isOpen, onClose }: Props) {
           {/* Introduction */}
           <div className="text-xs text-[var(--color-fg-3)] leading-relaxed space-y-2">
             <p>
-              Fondtracker expone una API REST completa para consultar inversiones, historiales de cotización, 
-              costes y composiciones de cartera. Todas las peticiones requieren autenticación vía Bearer Token.
+              Fondtracker exposes a complete REST API to query investments, price history, costs, and portfolio composition. All requests require authentication via Bearer Token.
             </p>
             <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] p-3 text-[10px] font-mono text-[var(--color-fg-4)]">
-              <strong>Header de Autenticación:</strong> Authorization: Bearer {token.slice(0, 15)}...
+              <strong>Authentication Header:</strong> Authorization: Bearer {token.slice(0, 15)}...
             </div>
           </div>
 
           {/* Checklist */}
           <div>
             <h3 className="font-pixel text-[10px] text-[var(--color-accent)] uppercase tracking-wider mb-2.5">
-              Características & Datos Soportados
+              Features & Supported Data
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px] font-mono text-[var(--color-fg-3)] bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] p-3.5">
-              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> Fondos de Inversión</div>
+              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> Mutual Funds</div>
               <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> ETFs</div>
-              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> Acciones</div>
-              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> Índices</div>
-              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> ISIN Completo</div>
-              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> Histórico de precios</div>
-              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> Rentabilidad (1A, 3A, 5A)</div>
-              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> TER (Comisiones)</div>
-              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> Sectores</div>
-              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> Distribución Geográfica</div>
+              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> Stocks</div>
+              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> Indices</div>
+              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> Full ISIN</div>
+              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> Price History</div>
+              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> Returns (1Y, 3Y, 5Y)</div>
+              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> TER (Fees)</div>
+              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> Sectors</div>
+              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> Geographic Distribution</div>
               <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> Top Holdings</div>
-              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> Divisas (EUR, USD, etc.)</div>
-              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> Info del Fondo</div>
-              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> API Documentada</div>
+              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> Currencies (EUR, USD, etc.)</div>
+              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> Fund Info</div>
+              <div className="flex items-center gap-1.5"><span className="text-[var(--color-accent)]">✓</span> Documented API</div>
             </div>
           </div>
 
           {/* Endpoints */}
           <div className="space-y-4">
             <h3 className="font-pixel text-[10px] text-[var(--color-accent)] uppercase tracking-wider mb-2 border-b border-[var(--color-ink-3)] pb-1">
-              Endpoints de la API
+              API Endpoints
             </h3>
 
             {/* List Investments */}
             <div className="space-y-2">
               <div className="flex justify-between items-center text-[10px] font-mono">
                 <span className="text-[var(--color-accent)] font-bold">GET /api/funds</span>
-                <span className="text-[var(--color-fg-4)]">Listado de inversiones del usuario</span>
+                <span className="text-[var(--color-fg-4)]">List of user investments</span>
               </div>
               <div className="relative">
                 <pre className="bg-[var(--color-bg-1)] border border-[var(--color-ink-3)] p-3 text-[9px] text-[var(--color-fg-3)] font-mono overflow-x-auto rounded">
@@ -102,7 +101,7 @@ export function ApiDocsModal({ isOpen, onClose }: Props) {
                   onClick={() => copyToClipboard(curlList, "list")}
                   className="absolute right-2 top-2 bg-[var(--color-ink-3)] border border-[var(--color-ink-4)] text-[8px] text-[var(--color-fg-4)] px-1.5 py-0.5 rounded hover:text-[var(--color-accent)]"
                 >
-                  {copied === "list" ? "copiado" : "copiar"}
+                  {copied === "list" ? "copied" : "copy"}
                 </button>
               </div>
             </div>
@@ -111,7 +110,7 @@ export function ApiDocsModal({ isOpen, onClose }: Props) {
             <div className="space-y-2">
               <div className="flex justify-between items-center text-[10px] font-mono">
                 <span className="text-[var(--color-accent)] font-bold">GET /api/funds/catalog?q=:query</span>
-                <span className="text-[var(--color-fg-4)]">Buscador en el catálogo de fondos (490+ activos)</span>
+                <span className="text-[var(--color-fg-4)]">Search the fund catalog (490+ assets)</span>
               </div>
               <div className="relative">
                 <pre className="bg-[var(--color-bg-1)] border border-[var(--color-ink-3)] p-3 text-[9px] text-[var(--color-fg-3)] font-mono overflow-x-auto rounded">
@@ -121,7 +120,7 @@ export function ApiDocsModal({ isOpen, onClose }: Props) {
                   onClick={() => copyToClipboard(curlCatalog, "catalog")}
                   className="absolute right-2 top-2 bg-[var(--color-ink-3)] border border-[var(--color-ink-4)] text-[8px] text-[var(--color-fg-4)] px-1.5 py-0.5 rounded hover:text-[var(--color-accent)]"
                 >
-                  {copied === "catalog" ? "copiado" : "copiar"}
+                  {copied === "catalog" ? "copied" : "copy"}
                 </button>
               </div>
             </div>
@@ -130,7 +129,7 @@ export function ApiDocsModal({ isOpen, onClose }: Props) {
             <div className="space-y-2">
               <div className="flex justify-between items-center text-[10px] font-mono">
                 <span className="text-[var(--color-accent)] font-bold">GET /api/funds/chart/:ticker</span>
-                <span className="text-[var(--color-fg-4)]">Histórico de precios, TER, Sectores, Geografía, Holdings y Rentabilidades</span>
+                <span className="text-[var(--color-fg-4)]">Price history, TER, Sectors, Geography, Holdings and Returns</span>
               </div>
               <div className="relative">
                 <pre className="bg-[var(--color-bg-1)] border border-[var(--color-ink-3)] p-3 text-[9px] text-[var(--color-fg-3)] font-mono overflow-x-auto rounded">
@@ -140,7 +139,7 @@ export function ApiDocsModal({ isOpen, onClose }: Props) {
                   onClick={() => copyToClipboard(curlChart, "chart")}
                   className="absolute right-2 top-2 bg-[var(--color-ink-3)] border border-[var(--color-ink-4)] text-[8px] text-[var(--color-fg-4)] px-1.5 py-0.5 rounded hover:text-[var(--color-accent)]"
                 >
-                  {copied === "chart" ? "copiado" : "copiar"}
+                  {copied === "chart" ? "copied" : "copy"}
                 </button>
               </div>
               <div className="text-[9px] text-[var(--color-fg-4)] leading-normal bg-[var(--color-ink-1)] p-2 border border-[var(--color-ink-3)] mt-1.5 font-mono">

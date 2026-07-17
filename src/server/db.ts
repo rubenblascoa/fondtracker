@@ -15,6 +15,9 @@ export const pool = await mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   charset: "utf8mb4",
+  // Return DATE/DATETIME/TIMESTAMP as strings (e.g. "2024-01-15") instead of
+  // JavaScript Date objects. Prevents ".slice is not a function" errors.
+  dateStrings: true,
 });
 
 async function createIndexIfNotExists(indexName: string, table: string, columns: string) {
@@ -33,12 +36,27 @@ export async function ensureSchema() {
       id INT AUTO_INCREMENT PRIMARY KEY,
       username VARCHAR(100) NOT NULL,
       email VARCHAR(255) NOT NULL,
-      password_hash VARCHAR(255) NOT NULL,
+      password_hash VARCHAR(255) DEFAULT NULL,
+      google_id VARCHAR(255) DEFAULT NULL,
+      github_id VARCHAR(255) DEFAULT NULL,
       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       UNIQUE KEY unique_email (email),
-      UNIQUE KEY unique_username (username)
+      UNIQUE KEY unique_username (username),
+      UNIQUE KEY unique_google (google_id),
+      UNIQUE KEY unique_github (github_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
+  
+  // Safe migrations for existing tables
+  try {
+    await pool.query(`ALTER TABLE users MODIFY password_hash VARCHAR(255) DEFAULT NULL`);
+  } catch (e) {} // Ignore if already nullable or fails
+  try {
+    await pool.query(`ALTER TABLE users ADD COLUMN google_id VARCHAR(255) DEFAULT NULL UNIQUE`);
+  } catch (e) {} // Ignore if already exists
+  try {
+    await pool.query(`ALTER TABLE users ADD COLUMN github_id VARCHAR(255) DEFAULT NULL UNIQUE`);
+  } catch (e) {} // Ignore if already exists
   await pool.query(`
     CREATE TABLE IF NOT EXISTS investments (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -348,6 +366,20 @@ export const queries = {
     return rows[0] ?? null;
   },
 
+  /** Batch version — fetches ALL catalog entries for a list of ISINs in one query.
+   *  Returns a Map<isin, entry> for O(1) per-fund lookups. */
+  async getFundCatalogByIsins(isins: string[]): Promise<Map<string, any>> {
+    if (isins.length === 0) return new Map();
+    const placeholders = isins.map(() => "?").join(", ");
+    const [rows] = await pool.query<any[]>(
+      `SELECT * FROM fund_catalog WHERE isin IN (${placeholders})`,
+      isins
+    );
+    const map = new Map<string, any>();
+    for (const row of rows) map.set(row.isin, row);
+    return map;
+  },
+
   async getFundCatalogBanks(): Promise<string[]> {
     const [rows] = await pool.query<{ bank: string }[]>(
       "SELECT DISTINCT bank FROM fund_catalog ORDER BY bank ASC"
@@ -393,5 +425,13 @@ export const queries = {
       "SELECT isin FROM fund_catalog"
     );
     return rows.map((r) => r.isin);
+  },
+
+  /** Returns the ID of every registered user. Used by the digest scheduler. */
+  async getAllUserIds(): Promise<number[]> {
+    const [rows] = await pool.query<{ id: number }[]>(
+      "SELECT id FROM users ORDER BY id ASC"
+    );
+    return rows.map((r) => r.id);
   },
 };
