@@ -96,11 +96,11 @@ function securityHeaders(extra?: Record<string, string>): Record<string, string>
   const nonce = cachedNonce;
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' https://cdn.tailwindcss.com https://cloud.umami.is`,
+    `script-src 'self' 'nonce-${nonce}' https://cdn.tailwindcss.com https://static.cloudflareinsights.com`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https://assets.landinghero.app",
-    "connect-src 'self' https://cloud.umami.is https://gateway.umami.is",
+    "connect-src 'self' https://cloudflareinsights.com",
     "frame-ancestors 'none'",
   ].join("; ");
 
@@ -258,13 +258,13 @@ function serveStatic(req: Request) {
   });
 }
 
-/** Serve index.html with nonce injection for CSP and dynamic Umami analytics */
+/** Serve index.html with nonce injection for CSP and dynamic Cloudflare analytics */
 function serveIndexHtml(): Response {
   let html = cachedIndexHtml?.replace(/\{nonce\}/g, cachedNonce) ?? "";
-  const umamiId = process.env.UMAMI_WEBSITE_ID;
-  if (umamiId) {
-    const umamiScript = `<script defer src="https://cloud.umami.is/script.js" data-website-id="${umamiId}" nonce="${cachedNonce}"></script>`;
-    html = html.replace("</head>", `${umamiScript}\n</head>`);
+  const cfToken = process.env.CLOUDFLARE_BEACON_TOKEN;
+  if (cfToken) {
+    const cfScript = `<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "${cfToken}"}' nonce="${cachedNonce}"></script>`;
+    html = html.replace("</head>", `${cfScript}\n</head>`);
   }
   return new Response(html, {
     headers: {
@@ -341,7 +341,7 @@ const server = serve({
         return json({
           ok: true,
           uptime: Math.round((Date.now() - STARTED_AT) / 1000),
-          umamiWebsiteId: process.env.UMAMI_WEBSITE_ID || null,
+          cloudflareBeaconToken: process.env.CLOUDFLARE_BEACON_TOKEN || null,
           ...(showDetails ? {
             pid: process.pid,
             

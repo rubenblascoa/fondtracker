@@ -21,15 +21,15 @@ const root = import.meta.hot
 
 root.render(tree);
 
-// ── Umami Cloud Analytics Integration ──────────────────────────────────────
+// ── Cloudflare Web Analytics Integration ───────────────────────────────────
 fetch("/api/health")
   .then((res) => res.json())
   .then((data: any) => {
-    if (data?.umamiWebsiteId) {
+    if (data?.cloudflareBeaconToken) {
       const script = document.createElement("script");
-      script.defer = true;
-      script.src = "https://cloud.umami.is/script.js";
-      script.setAttribute("data-website-id", data.umamiWebsiteId);
+      script.type = "module";
+      script.src = "https://static.cloudflareinsights.com/beacon.min.js";
+      script.setAttribute("data-cf-beacon", JSON.stringify({ token: data.cloudflareBeaconToken }));
       document.head.appendChild(script);
     }
   })
