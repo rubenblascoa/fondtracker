@@ -20,6 +20,7 @@
 
 **La plataforma definitiva para el seguimiento personal de fondos de inversión y ETFs.**
 
+![Views](https://komarev.com/ghpvc/?username=rubenblascoa&repo=fondtracker&label=Views&icon=0&color=121011&style=flat-square)
 [![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 [![Runtime](https://img.shields.io/badge/Runtime-Bun-black?style=flat-square)](#)
 [![Database](https://img.shields.io/badge/Database-MySQL-orange?style=flat-square)](#)
