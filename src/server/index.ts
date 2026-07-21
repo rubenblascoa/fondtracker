@@ -100,7 +100,7 @@ function securityHeaders(extra?: Record<string, string>): Record<string, string>
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https://assets.landinghero.app",
-    "connect-src 'self' https://cloud.umami.is",
+    "connect-src 'self' https://cloud.umami.is https://gateway.umami.is",
     "frame-ancestors 'none'",
   ].join("; ");
 
