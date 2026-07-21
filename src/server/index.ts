@@ -17,6 +17,7 @@ import {
   digestStatus,
   previewDigest,
   runDigest,
+  runScheduledDigest,
   startDigestScheduler,
   stopDigestScheduler,
 } from "./digest";
@@ -914,6 +915,50 @@ const server = serve({
       },
     },
 
+    "/api/digest/trigger": {
+      async POST(req) {
+        // External cron trigger — authenticated via shared secret, not JWT
+        const secret = process.env.CRON_SECRET;
+        if (!secret) {
+          return json({ error: "CRON_SECRET not configured" }, { status: 500 });
+        }
+        const provided = req.headers.get("x-cron-secret") ?? req.headers.get("authorization")?.replace("Bearer ", "");
+        if (!provided || provided !== secret) {
+          return json({ error: "Unauthorized" }, { status: 401 });
+        }
+        try {
+          const before = Date.now();
+          await runScheduledDigest();
+          const elapsed = Date.now() - before;
+          return json({ ok: true, elapsed_ms: elapsed });
+        } catch (err) {
+          console.error("[digest] trigger error:", err);
+          return json({ error: "Digest execution failed" }, { status: 500 });
+        }
+      },
+      // Also accept GET for simple cron services (UptimeRobot, etc.)
+      async GET(req) {
+        const secret = process.env.CRON_SECRET;
+        if (!secret) {
+          return json({ error: "CRON_SECRET not configured" }, { status: 500 });
+        }
+        const url = new URL(req.url);
+        const provided = url.searchParams.get("secret") ?? req.headers.get("x-cron-secret");
+        if (!provided || provided !== secret) {
+          return json({ error: "Unauthorized" }, { status: 401 });
+        }
+        try {
+          const before = Date.now();
+          await runScheduledDigest();
+          const elapsed = Date.now() - before;
+          return json({ ok: true, elapsed_ms: elapsed });
+        } catch (err) {
+          console.error("[digest] trigger error:", err);
+          return json({ error: "Digest execution failed" }, { status: 500 });
+        }
+      },
+    },
+
     "/*": () => serveIndexHtml(),
   },
 
@@ -924,6 +969,19 @@ const server = serve({
 });
 
 await startDigestScheduler();
+
+// ── Render deployment warnings ─────────────────────────────────────────────
+if (!process.env.NODE_ENV) {
+  console.warn("[tracker] ⚠️  NODE_ENV no está definido. El keep-alive y los headers de seguridad de producción están DESACTIVADOS.");
+  console.warn("[tracker]     Configura NODE_ENV=production en las variables de Render.");
+}
+if (!process.env.CRON_SECRET) {
+  console.warn("[tracker] ⚠️  CRON_SECRET no está definido. El endpoint /api/digest/trigger no funcionará.");
+  console.warn("[tracker]     Genera un secret con: openssl rand -hex 32");
+}
+if (IS_PROD && !process.env.RENDER_EXTERNAL_URL && !process.env.OAUTH_REDIRECT_BASE) {
+  console.warn("[tracker] ⚠️  RENDER_EXTERNAL_URL no está definido. El keep-alive interno está DESACTIVADO.");
+}
 
 // Data retention: purge soft-deleted records older than 7 days
 (async () => {

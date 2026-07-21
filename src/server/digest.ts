@@ -17,7 +17,7 @@ type DigestRunResult = {
 };
 
 type CronJobHandle = {
-  stop(): CronJobHandle;
+  stop(): void;
 };
 
 let digestJob: CronJobHandle | null = null;
@@ -33,7 +33,7 @@ function localTimeInTimezone(timezone: string): { hour: number } {
   return { hour: Number(get("hour")) };
 }
 
-async function runScheduledDigest(): Promise<void> {
+export async function runScheduledDigest(): Promise<void> {
   const userIds = await queries.getAllUserIds();
   for (const userId of userIds) {
     try {
@@ -93,8 +93,20 @@ export async function previewDigest(ctx: DigestContext, userId: number): Promise
 export async function startDigestScheduler(): Promise<void> {
   if (digestJob) return;
   try {
-    digestJob = Bun.cron("*/15 * * * *", runScheduledDigest);
-    console.log("[digest] activo · revisa cada 15 minutos");
+    // ── Catch-up: run immediately on startup to recover missed slots while asleep ──
+    console.log("[digest] ejecutando catch-up de slots perdidos…");
+    void runScheduledDigest().catch((err) =>
+      console.error("[digest] error en catch-up:", err instanceof Error ? err.message : err)
+    );
+
+    const timer = setInterval(() => {
+      void runScheduledDigest();
+    }, 15 * 60 * 1000); // 15 minutes
+    
+    digestJob = {
+      stop: () => clearInterval(timer),
+    };
+    console.log("[digest] activo · revisa cada 15 minutos (setInterval)");
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`[digest] error creando scheduler: ${msg}`);
