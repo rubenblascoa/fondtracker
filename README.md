@@ -20,12 +20,9 @@
 
 **La plataforma definitiva para el seguimiento personal de fondos de inversión y ETFs.**
 
-![Views](https://komarev.com/ghpvc/?username=rubenblascoa&repo=fondtracker&label=Views&icon=0&color=121011&style=flat-square)
 [![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 [![Runtime](https://img.shields.io/badge/Runtime-Bun-black?style=flat-square)](#)
 [![Database](https://img.shields.io/badge/Database-MySQL-orange?style=flat-square)](#)
-[![Live Site](https://img.shields.io/badge/Live-Online-brightgreen?style=flat-square)](#)
-
 
 **FondTracker** es una aplicación web full-stack diseñada para el seguimiento en tiempo real de una cartera personal de fondos de inversión, ETFs y acciones. Permite registrar aportaciones, calcular rentabilidad histórica frente a precios de mercado en vivo (vía Yahoo Finance), gestionar múltiples usuarios de forma aislada y segura, y recibir resúmenes automáticos de cartera por WhatsApp según un horario configurable.
 

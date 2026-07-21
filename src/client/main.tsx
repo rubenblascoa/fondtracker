@@ -20,3 +20,17 @@ const root = import.meta.hot
   : createRoot(elem);
 
 root.render(tree);
+
+// ── Umami Cloud Analytics Integration ──────────────────────────────────────
+fetch("/api/health")
+  .then((res) => res.json())
+  .then((data: any) => {
+    if (data?.umamiWebsiteId) {
+      const script = document.createElement("script");
+      script.defer = true;
+      script.src = "https://cloud.umami.is/script.js";
+      script.setAttribute("data-website-id", data.umamiWebsiteId);
+      document.head.appendChild(script);
+    }
+  })
+  .catch(() => {});
