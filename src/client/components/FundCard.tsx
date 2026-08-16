@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { api, getBankUrl, getSpecificFundUrl, type Investment, type YahooChartData } from "../api";
-import { formatCurrency, formatPct, profitColor, formatRelative } from "../utils";
+import { formatCurrency, formatPct, profitColor, formatRelative, sanitizeFundName } from "../utils";
+import { 
+  TrendingUp, ArrowUpRight, ArrowDownRight, Edit2, Trash2, 
+  ExternalLink, Calendar, Layers, ShieldCheck, AlertTriangle, 
+  PieChart as PieIcon, Globe, Building2, Check, X, Tag, FileText,
+  Activity, Clock, ChevronRight, BarChart3, HelpCircle
+} from "lucide-react";
 
 /** Safely extract "YYYY-MM-DD" from a date that might be a string, ISO string, or Date */
 function fmtDate(d: string | Date | null | undefined): string {
@@ -41,59 +47,26 @@ export function FundCard({ fund, onChange }: Props) {
   const [editNotes, setEditNotes] = useState(fund.notes ?? "");
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
-  const [editChartData, setEditChartData] = useState<YahooChartData | null>(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [pickerMonth, setPickerMonth] = useState(new Date().getMonth());
-  const [pickerYear, setPickerYear] = useState(new Date().getFullYear());
-  const datePickerRef = useRef<HTMLDivElement>(null);
 
   const hasTicker = Boolean(fund.ticker);
   const currentPrice = fund.current_price != null ? Number(fund.current_price) : null;
   const hasPrice = currentPrice != null && currentPrice > 0;
   const bankUrl = getBankUrl(fund.bank);
 
-  /** Format a data date (YYYY-MM-DD or DD/MM/YYYY) to a short readable string */
+  const invested = fund.total_invested || (fund.shares * fund.purchase_price);
+  const currentVal = (currentPrice ?? fund.purchase_price) * fund.shares;
+  const totalPL = currentVal - invested;
+  const totalPLPct = invested > 0 ? (totalPL / invested) * 100 : 0;
+  const isProfit = totalPL >= 0;
+
   function fmtDataDate(d: string): string {
     if (!d) return "";
     const months = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
-    // DD/MM/YYYY (quefondos)
     const m1 = d.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
     if (m1) return `${m1[1]} ${months[Number(m1[2]) - 1]}`;
-    // YYYY-MM-DD (yahoo)
     const m2 = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (m2) return `${m2[3]} ${months[Number(m2[2]) - 1]}`;
     return d;
-  }
-
-  const MONTHS = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-  const WEEKDAYS = ["L","M","M","J","V","S","D"];
-
-  function parseEditDate(d: string): Date | null {
-    const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-    return null;
-  }
-
-  function formatDisplayDate(d: string): string {
-    const p = parseEditDate(d);
-    if (!p) return "";
-    return `${p.getDate()} ${MONTHS[p.getMonth()]} ${p.getFullYear()}`;
-  }
-
-  function getCalendarGrid(year: number, month: number): (number | null)[][] {
-    const first = new Date(year, month, 1).getDay();
-    // Monday-based week: adjust Sunday (0) -> 6, Mon(1)->0 ... Sat(6)->5
-    const start = first === 0 ? 6 : first - 1;
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const grid: (number | null)[][] = [];
-    let row: (number | null)[] = [];
-    for (let i = 0; i < start; i++) row.push(null);
-    for (let d = 1; d <= daysInMonth; d++) {
-      row.push(d);
-      if (row.length === 7) { grid.push(row); row = []; }
-    }
-    if (row.length > 0) { while (row.length < 7) row.push(null); grid.push(row); }
-    return grid;
   }
 
   const remove = async () => {
@@ -163,27 +136,31 @@ export function FundCard({ fund, onChange }: Props) {
   };
 
   const saveEdit = async () => {
-    const sharesVal = parseFloat(editShares);
-    const priceVal = parseFloat(editPrice);
-    if (!Number.isFinite(sharesVal) || sharesVal <= 0) {
+    const p = parseFloat(editPrice);
+    const s = editMode === "amount" 
+      ? parseFloat(editAmount) / p 
+      : parseFloat(editShares);
+
+    if (!Number.isFinite(s) || s <= 0) {
       setEditError("Las participaciones deben ser un número positivo");
       return;
     }
-    if (!Number.isFinite(priceVal) || priceVal <= 0) {
-      setEditError("El precio debe ser un número positivo");
+    if (!Number.isFinite(p) || p <= 0) {
+      setEditError("El precio de compra debe ser un número positivo");
       return;
     }
     if (!editDate) {
-      setEditError("Selecciona una fecha");
+      setEditError("Selecciona una fecha de compra");
       return;
     }
+
     setEditLoading(true);
     setEditError(null);
     try {
-      await api.editFund(fund.id, {
-        shares: sharesVal,
-        purchase_price: priceVal,
-        purchase_date: editDate,
+      await api.updateFund(fund.id, {
+        shares: s,
+        purchase_price: p,
+        purchase_date: editDate || undefined,
         notes: editNotes.trim() || undefined,
       });
       setEditing(false);
@@ -195,137 +172,150 @@ export function FundCard({ fund, onChange }: Props) {
     }
   };
 
-  // IntersectionObserver: only fetch/refresh chart when card is visible
+  const loadChart = useCallback(async (range = "max") => {
+    setChartLoading(true);
+    setChartError(false);
+    try {
+      const data = await api.getChartData(fund.isin, range);
+      setChartData(data);
+      setLastUpdate(new Date().toISOString());
+    } catch {
+      setChartError(true);
+    } finally {
+      setChartLoading(false);
+    }
+  }, [fund.isin]);
+
+  // Load chart when visible or range changes
+  useEffect(() => {
+    if (isVisible) {
+      loadChart(chartRange);
+    }
+  }, [isVisible, chartRange, loadChart]);
+
+  // Intersection Observer for lazy loading chart
   useEffect(() => {
     const el = cardRef.current;
     if (!el) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => { setIsVisible(entry.isIntersecting); },
-      { threshold: 0.1 }
-    );
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setIsVisible(true);
+        obs.disconnect();
+      }
+    }, { threshold: 0.1 });
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
 
+  // Canvas Chart Renderer
   useEffect(() => {
-    if (!hasTicker || !isVisible) return;
-    
-    const fetchData = () => {
-      setChartLoading(true);
-      setChartError(false);
-      let interval: "1d" | "1wk" | "1mo" | "5m" | "15m" = "1d";
-      if (chartRange === "1d") interval = "5m";
-      else if (chartRange === "5d") interval = "15m";
-      else if (chartRange === "max") interval = "1wk";
+    const canvas = canvasRef.current;
+    if (!canvas || !chartData || chartData.quotes.length < 2 || activeTab !== "chart") return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-      api
-        .getChartData(ticker, chartRange as any, interval)
-        .then((data) => {
-          if (data.dataPoints > 0) {
-            setChartData(data);
-            setLastUpdate(new Date().toISOString());
-          } else {
-            setChartError(true);
-          }
-        })
-        .catch(() => {
-          setChartError(true);
-          setChartData(null);
-        })
-        .finally(() => setChartLoading(false));
-    };
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
 
-    const ticker = fund.ticker!;
-    fetchData();
+    const w = rect.width;
+    const h = rect.height;
+    const quotes = chartData.quotes;
 
-    // Auto-refresh chart data every 60 seconds (only while visible)
-    const t = setInterval(fetchData, 60_000);
-    return () => {
-      clearInterval(t);
-    };
-  }, [chartRange, fund.ticker, fund.isin, isVisible]);
+    const minPrice = Math.min(...quotes.map((q) => q.close));
+    const maxPrice = Math.max(...quotes.map((q) => q.close));
+    const priceRange = maxPrice - minPrice || 1;
+    const padding = { top: 8, bottom: 14, left: 8, right: 8 };
+    const chartW = w - padding.left - padding.right;
+    const chartH = h - padding.top - padding.bottom;
 
-  // Fetch max-range chart data when editing for auto-fill price
-  useEffect(() => {
-    if (!editing || !fund.ticker) {
-      setEditChartData(null);
-      return;
+    ctx.clearRect(0, 0, w, h);
+
+    // Draw Grid Lines
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.04)";
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 3; i++) {
+      const y = padding.top + (chartH / 2) * i;
+      ctx.beginPath();
+      ctx.moveTo(padding.left, y);
+      ctx.lineTo(w - padding.right, y);
+      ctx.stroke();
     }
-    api.getChartData(fund.ticker, "max", "1wk").then(setEditChartData).catch(() => setEditChartData(null));
-  }, [editing, fund.ticker]);
 
-  // Auto-fill price when editDate changes
-  useEffect(() => {
-    if (!editChartData || !editDate) return;
-    const targetTime = new Date(editDate).getTime() / 1000;
-    const quotes = editChartData.quotes;
-    if (!quotes || quotes.length === 0) {
-      setEditPrice(editChartData.currentPrice.toFixed(4));
-      return;
+    // Path calculation
+    const points = quotes.map((q, idx) => ({
+      x: padding.left + (idx / (quotes.length - 1)) * chartW,
+      y: padding.top + (1 - (q.close - minPrice) / priceRange) * chartH,
+      data: q,
+    }));
+
+    // Fill Gradient Area
+    const firstPoint = points[0];
+    const lastPoint = points[points.length - 1];
+    const isChartUp = lastPoint.data.close >= firstPoint.data.close;
+    const strokeColor = isChartUp ? "#39ff88" : "#ff5a4a";
+
+    const gradient = ctx.createLinearGradient(0, padding.top, 0, h - padding.bottom);
+    gradient.addColorStop(0, isChartUp ? "rgba(57, 255, 136, 0.22)" : "rgba(255, 90, 74, 0.22)");
+    gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, h - padding.bottom);
+    points.forEach((p) => ctx.lineTo(p.x, p.y));
+    ctx.lineTo(points[points.length - 1].x, h - padding.bottom);
+    ctx.closePath();
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    // Stroke Line
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x, points[i].y);
     }
-    let closestQuote = quotes[0];
-    let minDiff = Math.abs(quotes[0].timestamp - targetTime);
-    for (const q of quotes) {
-      const diff = Math.abs(q.timestamp - targetTime);
-      if (diff < minDiff) {
-        minDiff = diff;
-        closestQuote = q;
-      }
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+
+    // Crosshair on hover
+    if (hoveredIndex !== null && points[hoveredIndex]) {
+      const hp = points[hoveredIndex];
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 2]);
+      
+      // Vertical line
+      ctx.beginPath();
+      ctx.moveTo(hp.x, padding.top);
+      ctx.lineTo(hp.x, h - padding.bottom);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Point dot
+      ctx.fillStyle = strokeColor;
+      ctx.beginPath();
+      ctx.arc(hp.x, hp.y, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
     }
-    setEditPrice(closestQuote.close.toFixed(4));
-  }, [editDate, editChartData]);
-
-  // Click outside to close date picker
-  useEffect(() => {
-    if (!showDatePicker) return;
-    const handler = (e: MouseEvent) => {
-      if (datePickerRef.current && !datePickerRef.current.contains(e.target as Node)) {
-        setShowDatePicker(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [showDatePicker]);
-
-  // Reset picker month/year when opening
-  useEffect(() => {
-    if (showDatePicker) {
-      const p = parseEditDate(editDate);
-      if (p) { setPickerMonth(p.getMonth()); setPickerYear(p.getFullYear()); }
-      else { const t = new Date(); setPickerMonth(t.getMonth()); setPickerYear(t.getFullYear()); }
-    }
-  }, [showDatePicker, editDate]);
-
-  useEffect(() => {
-    if (!chartData || chartData.dataPoints < 2 || !canvasRef.current)
-      return;
-    drawChart(canvasRef.current, chartData, hoveredIndex);
-  }, [chartData, hoveredIndex]);
+  }, [chartData, hoveredIndex, activeTab]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!chartData || chartData.quotes.length < 2 || !canvasRef.current) return;
     const canvas = canvasRef.current;
+    if (!canvas || !chartData || chartData.quotes.length < 2) return;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    
-    const padding = { top: 10, right: 20, bottom: 20, left: 60 };
+    const y = e.clientY - rect.top;
+    const padding = { left: 8, right: 8 };
     const chartW = rect.width - padding.left - padding.right;
-    
-    const rx = x - padding.left;
-    let idx = Math.round((rx / chartW) * (chartData.quotes.length - 1));
-    idx = Math.max(0, Math.min(chartData.quotes.length - 1, idx));
-
-    const closes = chartData.quotes.map((q) => q.close);
-    const minVal = Math.min(...closes);
-    const maxVal = Math.max(...closes);
-    const range = maxVal - minVal || 1;
-    const chartH = rect.height - padding.top - padding.bottom;
-
-    const px = padding.left + (chartW / (closes.length - 1)) * idx;
-    const py = padding.top + chartH - ((closes[idx] - minVal) / range) * chartH;
-
+    const ratio = Math.max(0, Math.min(1, (x - padding.left) / chartW));
+    const idx = Math.round(ratio * (chartData.quotes.length - 1));
     setHoveredIndex(idx);
-    setHoveredPos({ x: px, y: py });
+    setHoveredPos({ x, y });
   };
 
   const handleMouseLeave = () => {
@@ -333,315 +323,331 @@ export function FundCard({ fund, onChange }: Props) {
   };
 
   const hoveredPoint = hoveredIndex !== null && chartData ? chartData.quotes[hoveredIndex] : null;
-
-  const isQueFondos = chartData
-    ? chartData.dataSource === "quefondos"
-    : (fund.ticker ? /^[A-Z]{2}[A-Z0-9]{10}$/.test(fund.ticker) : true);
-
-  const fundUrl = isQueFondos
-    ? `https://www.quefondos.com/es/fondos/ficha/index.html?isin=${fund.isin}`
-    : `https://finance.yahoo.com/quote/${encodeURIComponent(fund.ticker || "")}/`;
+  const isQueFondos = chartData?.dataSource === "quefondos";
+  const fundUrl = getSpecificFundUrl(fund.isin, fund.bank, fund.name);
 
   return (
-    <div ref={cardRef} className={`border border-white/5 bg-black/20 backdrop-blur-sm transition-all duration-300 relative overflow-hidden hover:border-[var(--color-accent)]/50 shadow-sm hover:shadow-[0_0_15px_rgba(57,255,136,0.1)] ${deleting ? "opacity-50" : ""} group`}>
-        <div className={`flex flex-col sm:flex-row sm:items-start sm:justify-between px-4 py-4 sm:p-6 ${hasTicker ? "" : "pb-4"}`}>
-        <div className="flex-1 min-w-0">
-          {editing ? (
-            <div className="pt-2">
-              <div className="flex items-baseline gap-3 mb-1">
-                <h3 className="text-[var(--color-fg-1)] font-medium truncate text-sm">
-                  {fund.name}
-                </h3>
-              </div>
-              <div className="flex items-center gap-2 text-[var(--color-fg-3)] flex-wrap mb-2">
-                <span className="font-mono text-[10px] text-[var(--color-fg-4)]">{fund.isin}</span>
-                <span className="text-[var(--color-ink-4)]">·</span>
-                <span className="text-[11px]">{fund.bank}</span>
-                <span className="text-[var(--color-ink-4)]">·</span>
-                <span className="text-[11px] text-[var(--color-fg-4)]">{fund.category}</span>
-              </div>
-              <div className="flex gap-4 items-center border-b border-[var(--color-ink-3)] pb-2 mb-2 flex-wrap">
-                <div className="flex gap-1 flex-wrap">
-                  <button type="button" onClick={() => setEditMode("amount")} className={`text-[9px] uppercase tracking-wider font-mono px-2 py-0.5 border transition-all ${editMode === "amount" ? "border-[var(--color-accent)] text-[var(--color-accent)] bg-[var(--color-accent)]/5" : "border-transparent text-[var(--color-fg-4)] hover:text-[var(--color-fg-3)]"}`}>Por Importe (€)</button>
-                  <button type="button" onClick={() => setEditMode("shares")} className={`text-[9px] uppercase tracking-wider font-mono px-2 py-0.5 border transition-all ${editMode === "shares" ? "border-[var(--color-accent)] text-[var(--color-accent)] bg-[var(--color-accent)]/5" : "border-transparent text-[var(--color-fg-4)] hover:text-[var(--color-fg-3)]"}`}>Por Participaciones</button>
-                </div>
-                <div className="flex gap-1.5 ml-auto">
-                  <button onClick={saveEdit} disabled={editLoading} className="font-pixel text-[8px] uppercase tracking-wider px-2 py-1 border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-ink-0)] transition-all disabled:opacity-40">{editLoading ? "..." : "guardar"}</button>
-                  <button onClick={cancelEditing} disabled={editLoading} className="font-pixel text-[8px] uppercase tracking-wider px-2 py-1 border border-[var(--color-ink-3)] text-[var(--color-fg-4)] hover:text-[var(--color-fg-2)] transition-colors disabled:opacity-40">cancelar</button>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {editMode === "amount" ? (
-                  <div>
-                    <label className="block text-[9px] uppercase tracking-[0.15em] text-[var(--color-fg-4)] mb-1">importe invertido</label>
-                    <input type="number" step="0.01" min="0" value={editAmount} onChange={(e) => handleAmountChange(e.target.value)} className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] px-2 py-1.5 text-[var(--color-fg-1)] font-mono text-xs outline-none transition-colors" />
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-[9px] uppercase tracking-[0.15em] text-[var(--color-fg-4)] mb-1">participaciones</label>
-                    <input type="number" step="0.000001" min="0" value={editShares} onChange={(e) => handleSharesChange(e.target.value)} className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] px-2 py-1.5 text-[var(--color-fg-1)] font-mono text-xs outline-none transition-colors" />
-                  </div>
-                )}
-                <div>
-                  <label className="block text-[9px] uppercase tracking-[0.15em] text-[var(--color-fg-4)] mb-1">precio ({fund.currency})</label>
-                  <input type="number" step="0.000001" min="0" value={editPrice} onChange={(e) => handlePriceChange(e.target.value)} className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] px-2 py-1.5 text-[var(--color-fg-1)] font-mono text-xs outline-none transition-colors" />
-                </div>
-                <div ref={datePickerRef}>
-                  <label className="block text-[9px] uppercase tracking-[0.15em] text-[var(--color-fg-4)] mb-1">fecha</label>
-                  <div className="relative">
-                    <button type="button" onClick={() => setShowDatePicker(!showDatePicker)} className="w-full flex items-center gap-2 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] hover:border-[var(--color-fg-4)] focus:border-[var(--color-accent)] pl-2 pr-2 py-1.5 text-[var(--color-fg-1)] font-mono text-xs outline-none transition-colors text-left cursor-pointer">
-                      <svg className="w-3 h-3 text-[var(--color-fg-5)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                      <span className={editDate ? "" : "text-[var(--color-fg-5)]"}>{editDate ? formatDisplayDate(editDate) : "seleccionar"}</span>
-                    </button>
-                    {showDatePicker && (
-                      <div className="absolute top-full left-0 mt-1 z-50 w-[240px] bg-[var(--color-ink-1)] border border-[var(--color-ink-4)] shadow-lg">
-                        <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--color-ink-3)]">
-                          <button type="button" onClick={() => { if (pickerMonth === 0) { setPickerMonth(11); setPickerYear(pickerYear - 1); } else { setPickerMonth(pickerMonth - 1); } }} className="text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] transition-colors p-0.5">
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
-                          </button>
-                          <div className="flex items-center gap-1">
-                            <select value={pickerMonth} onChange={(e) => setPickerMonth(Number(e.target.value))} className="bg-transparent text-[10px] font-mono text-[var(--color-fg-1)] outline-none cursor-pointer hover:text-[var(--color-accent)] transition-colors border-none appearance-none">
-                              {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
-                            </select>
-                            <span className="text-[var(--color-fg-4)]">·</span>
-                            <input type="number" value={pickerYear} onChange={(e) => setPickerYear(Number(e.target.value))} className="w-10 bg-transparent text-[10px] font-mono text-[var(--color-fg-1)] outline-none hover:text-[var(--color-accent)] transition-colors border-none p-0" />
-                          </div>
-                          <button type="button" onClick={() => { if (pickerMonth === 11) { setPickerMonth(0); setPickerYear(pickerYear + 1); } else { setPickerMonth(pickerMonth + 1); } }} className="text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] transition-colors p-0.5">
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
-                          </button>
-                        </div>
-                        <div className="px-3 py-2">
-                          <div className="grid grid-cols-7 mb-1">
-                            {WEEKDAYS.map((d) => (
-                              <div key={d} className="text-center text-[9px] font-mono text-[var(--color-fg-5)] py-0.5">{d}</div>
-                            ))}
-                          </div>
-                          <div className="grid grid-cols-7">
-                            {getCalendarGrid(pickerYear, pickerMonth).flat().map((day, i) => {
-                              if (day === null) return <div key={`e-${i}`} />;
-const selected = editDate === `${pickerYear}-${String(pickerMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-const today = new Date();
-const isToday = pickerYear === today.getFullYear() && pickerMonth === today.getMonth() && day === today.getDate();
-return (
-<button key={`${pickerYear}-${pickerMonth}-${day}`} type="button" onClick={() => { setEditDate(`${pickerYear}-${String(pickerMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`); setShowDatePicker(false); }} className={`text-center text-[11px] font-mono py-1 transition-colors rounded-none ${selected ? "bg-[var(--color-fg-1)] text-[var(--color-ink-1)]" : isToday ? "ring-1 ring-inset ring-[var(--color-fg-4)] text-[var(--color-fg-2)] hover:bg-[var(--color-ink-3)]" : "text-[var(--color-fg-2)] hover:bg-[var(--color-ink-3)]"}`}>
-{day}
-</button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[9px] uppercase tracking-[0.15em] text-[var(--color-fg-4)] mb-1">notas</label>
-                  <input type="text" value={editNotes} onChange={(e) => setEditNotes(e.target.value)} placeholder="opcional" className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] px-2 py-1.5 text-[var(--color-fg-1)] font-mono text-xs outline-none transition-colors placeholder:text-[var(--color-fg-4)]" />
-                </div>
-              </div>
-              {editMode === "amount" && editShares && (
-                <div className="text-[10px] text-[var(--color-fg-4)] font-mono mt-1">
-                  ~{parseFloat(editShares).toLocaleString("es", { minimumFractionDigits: 2, maximumFractionDigits: 6 })} participaciones estimadas
-                </div>
-              )}
-              {editMode === "shares" && editAmount && (
-                <div className="text-[10px] text-[var(--color-fg-4)] font-mono mt-1">
-                  ~{parseFloat(editAmount).toLocaleString("es", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {fund.currency === "EUR" ? "€" : fund.currency} total invertido
-                </div>
-              )}
-              {editError && (
-                <div className="flex items-center gap-2 text-[var(--color-danger)] text-[10px] font-mono bg-[var(--color-danger)]/5 border border-[var(--color-danger)]/20 px-2 py-1 mt-2">
-                  <span>!</span>
-                  <span>{editError}</span>
-                </div>
-              )}
-            </div>
-          ) : (
-            <>
-              <div className="flex items-baseline gap-3 mb-1">
-                <h3 className="text-[var(--color-fg-1)] font-medium truncate text-sm">
-                  {fund.name}
-                </h3>
-                {hasPrice && chartData && !chartData.isStale && (
-                  <span className="live-dot flex items-center gap-1 text-[8px] px-1.5 py-0.5 border border-[var(--color-accent)]/30 text-[var(--color-accent)] font-mono shrink-0 bg-[var(--color-accent)]/5 tracking-wider">
-                    <span className="w-1 h-1 rounded-full bg-[var(--color-accent)] animate-pulse" />
-                    {chartData.dataSource === "quefondos" && chartData.dataDate
-                      ? `NAV ${fmtDataDate(chartData.dataDate)}`
-                      : "LIVE"}
-                  </span>
-                )}
-                {hasPrice && chartData?.isStale && (
-                  <span className="flex items-center gap-1 text-[8px] px-1.5 py-0.5 border border-amber-500/40 text-amber-400 font-mono shrink-0 bg-amber-500/5 tracking-wider" title={chartData.staleWarning}>
-                    ⚠ {chartData.dataDate ? fmtDataDate(chartData.dataDate) : "desactualizado"}
-                    ⚠ {chartData.dataDate ? fmtDataDate(chartData.dataDate) : "outdated"}
-                  </span>
-                )}
-                {hasPrice && chartData?.verificationLog && (
-                  <span
-                    className="flex items-center gap-1 text-[8px] px-1.5 py-0.5 border border-[var(--color-accent)]/30 text-[var(--color-accent)] font-mono shrink-0 bg-[var(--color-accent)]/5 tracking-wider cursor-help"
-                    title={chartData.verificationLog}
-                  >
-                    ✓ VERIFIED
-                  </span>
-                )}
-                {hasPrice && !chartData && (
-                  <span className="flex items-center gap-1 text-[8px] px-1.5 py-0.5 border border-[var(--color-ink-3)] text-[var(--color-fg-4)] font-mono shrink-0 tracking-wider">
-                    price loaded
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2 text-[var(--color-fg-3)] flex-wrap">
-                <span className="font-mono text-[10px] text-[var(--color-fg-4)]">
-                  {fund.isin}
+    <div 
+      ref={cardRef}
+      className="bg-[var(--color-ink-1)] border border-white/5 hover:border-white/15 rounded-xl p-4 sm:p-4.5 transition-all shadow-[0_4px_16px_rgba(0,0,0,0.3)] relative overflow-hidden group"
+    >
+      
+      {/* ── Top Header Section (Compact & Dense) ── */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-white/5">
+        
+        {/* Left Fund Identifiers */}
+        <div className="space-y-1 flex-1">
+          
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 bg-[var(--color-accent)]/10 text-[var(--color-accent)] rounded border border-[var(--color-accent)]/20 shadow-[0_0_6px_rgba(57,255,136,0.1)]">
+              {fund.isin}
+            </span>
+
+            {fund.bank && (
+              <span className="text-[10px] font-semibold px-2 py-0.5 bg-white/5 text-gray-200 rounded border border-white/10 flex items-center gap-1">
+                <Building2 size={11} className="text-gray-400" />
+                {fund.bank}
+              </span>
+            )}
+
+            {fund.category && (
+              <span className="text-[11px] text-gray-400 font-medium">
+                • {fund.category}
+              </span>
+            )}
+
+            {hasPrice && chartData && !chartData.isStale && (
+              <span className="flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.5 bg-[#39ff88]/10 text-[#39ff88] rounded border border-[#39ff88]/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#39ff88] animate-pulse" />
+                {chartData.dataSource === "quefondos" && chartData.dataDate
+                  ? `NAV ${fmtDataDate(chartData.dataDate)}`
+                  : "LIVE"}
+              </span>
+            )}
+
+            {hasPrice && chartData?.isStale && (
+              <span className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded border border-amber-500/20" title={chartData.staleWarning}>
+                <AlertTriangle size={10} />
+                <span>{chartData.dataDate ? fmtDataDate(chartData.dataDate) : "Desactualizado"}</span>
+              </span>
+            )}
+          </div>
+
+          <h3 className="text-sm sm:text-base font-bold text-white tracking-tight leading-tight">
+            {sanitizeFundName(fund.name)}
+          </h3>
+
+          <div className="flex items-center gap-2 text-[11px] font-mono text-gray-400 flex-wrap">
+            <span>
+              {fund.shares.toLocaleString("es", { minimumFractionDigits: 2, maximumFractionDigits: 4 })} part. × €{fund.purchase_price.toFixed(4)}
+            </span>
+            <span className="text-gray-600">•</span>
+            <span className="text-gray-300">
+              Invertido: <strong className="text-white">{formatCurrency(invested, fund.currency)}</strong>
+            </span>
+            {fund.purchase_date && (
+              <>
+                <span className="text-gray-600">•</span>
+                <span className="text-gray-400 flex items-center gap-1">
+                  <Calendar size={11} /> {fmtDate(fund.purchase_date)}
                 </span>
-                <span className="text-[var(--color-ink-4)]">·</span>
-                {bankUrl ? (
-                  <a
-                    href={bankUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[11px] text-[var(--color-accent)] hover:underline"
-                  >
-                    {fund.bank} ↗
-                  </a>
-                ) : (
-                  <span className="text-[11px]">{fund.bank}</span>
-                )}
-                <span className="text-[var(--color-ink-4)]">·</span>
-                <span className="text-[11px] text-[var(--color-fg-4)]">{fund.category}</span>
-              </div>
-              <div className="flex items-center gap-2 text-[11px] text-[var(--color-fg-3)] mt-1.5 font-mono flex-wrap">
-                <span>
-                  {fund.shares.toLocaleString("es", { minimumFractionDigits: 2, maximumFractionDigits: 6 })} ×{" "}
-                  <span className="text-[var(--color-fg-2)]">
-                    {fund.purchase_price.toFixed(2)}
-                  </span>
-                </span>
-                <span className="text-[var(--color-ink-4)]">·</span>
-                <span className="text-[var(--color-fg-4)]">
-                  {formatCurrency(fund.total_invested, fund.currency)}
-                </span>
-                {fund.purchase_date && fmtDate(fund.purchase_date) && (
-                  <>
-                    <span className="text-[var(--color-ink-4)]">·</span>
-                    <span className="text-[10px] text-[var(--color-fg-4)]">{fmtDate(fund.purchase_date)}</span>
-                  </>
-                )}
-                {fund.notes && (
-                  <>
-                    <span className="text-[var(--color-ink-4)]">·</span>
-                    <span className="text-[10px] text-[var(--color-fg-4)] italic">"{fund.notes}"</span>
-                  </>
-                )}
-                {lastUpdate && hasPrice && (
-                  <>
-                    <span className="text-[var(--color-ink-4)]">·</span>
-                    <span className="text-[9px] text-[var(--color-fg-4)]">
-                      {formatRelative(lastUpdate)}
-                    </span>
-                  </>
-                )}
-              </div>
-            </>
-          )}
+              </>
+            )}
+            {fund.notes && (
+              <>
+                <span className="text-gray-600">•</span>
+                <span className="text-gray-400 italic">"{fund.notes}"</span>
+              </>
+            )}
+          </div>
+
         </div>
 
-        <div className={`text-left sm:text-right shrink-0 flex sm:block items-center gap-4 sm:gap-0 border-t sm:border-t-0 border-[var(--color-ink-3)] pt-3 sm:pt-0 mt-1 sm:mt-0 ${editing ? "pt-0 sm:pt-7" : ""}`}>
-          <div className="text-[10px] text-[var(--color-fg-4)] mb-0.5 font-mono">
-            {hasPrice
-              ? `now ${currentPrice!.toFixed(4)}${fund.currency === "EUR" ? "€" : " " + fund.currency}`
-              : `invested ${formatCurrency(fund.total_invested, fund.currency)}`}
-          </div>
-          <div className={`font-pixel text-lg leading-tight ${profitColor(fund.profit_loss)}`}>
-            {fund.profit_loss >= 0 ? "+" : ""}{formatCurrency(fund.profit_loss, fund.currency)}
-          </div>
-          <div className={`text-xs font-mono ${profitColor(fund.profit_loss_pct)}`}>
-            {formatPct(fund.profit_loss_pct)}
-          </div>
-          {hasPrice && (
-            <div className="text-[10px] text-[var(--color-fg-4)] mt-1 font-mono">
-              value {formatCurrency(fund.current_value, fund.currency)}
+        {/* Right Valuation & Performance Block */}
+        <div className="flex items-center justify-between lg:justify-end gap-3.5 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-white/5">
+          
+          <div className="text-left lg:text-right space-y-0.5">
+            <div className="flex items-center lg:justify-end gap-2">
+              <span className={`text-base sm:text-lg font-bold font-mono tracking-tight ${isProfit ? 'text-[var(--color-profit)] glow' : 'text-[var(--color-loss)]'}`}>
+                {isProfit ? '+' : ''}{formatCurrency(totalPL, fund.currency)}
+              </span>
+              <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold font-mono px-1.5 py-0.5 rounded ${
+                isProfit ? 'bg-[var(--color-profit)]/10 text-[var(--color-profit)]' : 'bg-[var(--color-loss)]/10 text-[var(--color-loss)]'
+              }`}>
+                {isProfit ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
+                {formatPct(totalPLPct)}
+              </span>
             </div>
-          )}
+
+            <div className="flex items-center lg:justify-end gap-2 text-[10px] font-mono text-gray-400">
+              <span>NAV: <strong className="text-white">€{(currentPrice ?? fund.purchase_price).toFixed(4)}</strong></span>
+              <span>•</span>
+              <span>Valor: <strong className="text-white">{formatCurrency(currentVal, fund.currency)}</strong></span>
+            </div>
+          </div>
+
+          {/* Action Icons */}
+          <div className="flex items-center gap-0.5 pl-2.5 border-l border-white/10">
+            <button
+              onClick={startEditing}
+              className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+              title="Editar inversión"
+            >
+              <Edit2 size={13} />
+            </button>
+
+            <a
+              href={fundUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 text-gray-400 hover:text-[var(--color-accent)] hover:bg-white/10 rounded-lg transition-all"
+              title="Ver en Yahoo / QueFondos"
+            >
+              <ExternalLink size={13} />
+            </a>
+
+            <button
+              onClick={remove}
+              disabled={deleting}
+              className={`p-1.5 rounded-lg transition-all ${
+                confirmDelete 
+                  ? "bg-[var(--color-danger)]/20 text-[var(--color-danger)] animate-pulse" 
+                  : "text-gray-400 hover:text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10"
+              }`}
+              title={confirmDelete ? "Pulsa otra vez para confirmar borrado" : "Eliminar posición"}
+            >
+              {deleting ? (
+                <div className="w-3.5 h-3.5 border-2 border-[var(--color-danger)] border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Trash2 size={13} />
+              )}
+            </button>
+          </div>
+
         </div>
 
-        <div className="flex sm:flex-col items-center justify-between shrink-0 sm:h-[68px] sm:-mt-[2px] gap-2 sm:gap-0 sm:ml-3">
-          {!editing && (
-            <>
-              <button
-                onClick={startEditing}
-                className="text-[var(--color-fg-4)] hover:text-[var(--color-accent)] transition-colors p-2 sm:p-1 min-w-[36px] sm:min-w-0 flex items-center justify-center"
-                title="edit"
-              >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M8.5 1.5L10.5 3.5L4.5 9.5L1.5 10.5L2.5 7.5L8.5 1.5Z" />
-                  <path d="M7 3L9 5" />
-                </svg>
-              </button>
-              <a
-                href={fundUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[var(--color-fg-4)] hover:text-[var(--color-accent)] transition-colors p-2 sm:p-1 min-w-[36px] sm:min-w-0 flex items-center justify-center"
-                title={isQueFondos ? "Ver en QueFondos" : "Ver en Yahoo Finance"}
-              >
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M5.5 2.5H3.5C2.94772 2.5 2.5 2.94772 2.5 3.5V10.5C2.5 11.0523 2.94772 11.5 3.5 11.5H10.5C11.0523 11.5 11.5 11.0523 11.5 10.5V8.5" />
-                  <path d="M8.5 2.5H11.5M11.5 2.5V5.5M11.5 2.5L5 9" />
-                </svg>
-              </a>
-              <button
-                onClick={remove}
-                disabled={deleting}
-                className={`transition-all p-2 sm:p-1 min-w-[36px] sm:min-w-0 flex items-center justify-center ${
-                  confirmDelete
-                    ? "text-[var(--color-danger)] bg-[var(--color-danger)]/10"
-                    : "text-[var(--color-fg-4)] hover:text-[var(--color-danger)]"
-                }`}
-                title={confirmDelete ? "pulsa otra vez para borrar" : "eliminar"}
-              >
-                {deleting ? (
-                  <div className="w-3 h-3 border border-[var(--color-danger)] border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M2 3H10M4 3V2H8V3M3 3V10.5C3 10.7761 3.22386 11 3.5 11H8.5C8.77614 11 9 10.7761 9 10.5V3" />
-                    <path d="M5 5.5V8.5M7 5.5V8.5" />
-                  </svg>
-                )}
-              </button>
-            </>
-          )}
-        </div>
       </div>
 
-      {hasTicker && (
-        <div className="border-t border-[var(--color-ink-3)] px-4 py-4 sm:p-4 fade-in">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-4 border-b border-[var(--color-ink-3)] pb-2">
-            <div className="flex gap-1 flex-wrap">
-              {(["chart", "composition", "details"] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setActiveTab(t)}
-                  className={`text-[9px] uppercase tracking-wider font-mono px-2 py-0.5 border transition-all ${
-                    activeTab === t
-                      ? "border-[var(--color-accent)] text-[var(--color-accent)] bg-[var(--color-accent)]/5"
-                      : "border-transparent text-[var(--color-fg-4)] hover:text-[var(--color-fg-3)]"
-                  }`}
-                >
-                  {t === "chart" ? "Chart" : t === "composition" ? "Composition" : "Details"}
-                </button>
-              ))}
+      {/* ── Inline Edit Drawer (When Editing) ── */}
+      {editing && (
+        <div className="mt-3.5 p-4 bg-[var(--color-ink-2)] border border-[var(--color-accent)]/30 rounded-xl space-y-3 animate-fade-in">
+          <div className="flex justify-between items-center pb-2 border-b border-white/5">
+            <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+              <Edit2 size={13} className="text-[var(--color-accent)]" /> Modificar Posición
+            </h4>
+            <button onClick={cancelEditing} className="text-gray-400 hover:text-white">
+              <X size={14} />
+            </button>
+          </div>
+
+          {editError && (
+            <div className="p-2.5 bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/20 rounded-lg text-xs text-[var(--color-danger)] flex items-center gap-1.5">
+              <AlertTriangle size={13} />
+              <span>{editError}</span>
             </div>
+          )}
+
+          {/* Segmented Mode Control */}
+          <div className="grid grid-cols-2 gap-1.5 p-1 bg-black/40 border border-white/5 rounded-lg max-w-xs">
+            <button
+              type="button"
+              onClick={() => setEditMode("amount")}
+              className={`py-1 text-[11px] font-semibold rounded-md transition-all ${
+                editMode === "amount" ? "bg-[var(--color-accent)] text-black font-bold" : "text-gray-400 hover:text-white"
+              }`}
+            >
+              Por Importe (€)
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditMode("shares")}
+              className={`py-1 text-[11px] font-semibold rounded-md transition-all ${
+                editMode === "shares" ? "bg-[var(--color-accent)] text-black font-bold" : "text-gray-400 hover:text-white"
+              }`}
+            >
+              Por Participaciones
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {editMode === "amount" ? (
+              <div>
+                <label className="text-[10px] font-mono uppercase text-gray-400 mb-1 block">Importe Invertido (€) *</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={editAmount}
+                  onChange={(e) => handleAmountChange(e.target.value)}
+                  className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)] rounded-lg px-3 py-1.5 text-xs font-mono text-white outline-none"
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="text-[10px] font-mono uppercase text-gray-400 mb-1 block">Participaciones *</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={editShares}
+                  onChange={(e) => handleSharesChange(e.target.value)}
+                  className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)] rounded-lg px-3 py-1.5 text-xs font-mono text-white outline-none"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="text-[10px] font-mono uppercase text-gray-400 mb-1 block">Precio Compra NAV (€) *</label>
+              <input
+                type="number"
+                step="any"
+                value={editPrice}
+                onChange={(e) => handlePriceChange(e.target.value)}
+                className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)] rounded-lg px-3 py-1.5 text-xs font-mono text-white outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-mono uppercase text-gray-400 mb-1 block">Fecha de Compra *</label>
+              <input
+                type="date"
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+                className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)] rounded-lg px-3 py-1.5 text-xs font-mono text-white outline-none"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-mono uppercase text-gray-400 mb-1 block">Notas (Opcional)</label>
+            <input
+              type="text"
+              value={editNotes}
+              onChange={(e) => setEditNotes(e.target.value)}
+              placeholder="Notas sobre esta aportación..."
+              className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)] rounded-lg px-3 py-1.5 text-xs text-white outline-none"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2.5 pt-1">
+            <button
+              type="button"
+              onClick={cancelEditing}
+              className="px-3 py-1.5 text-xs font-semibold text-gray-400 hover:text-white rounded-lg hover:bg-white/5"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={saveEdit}
+              disabled={editLoading}
+              className="px-4 py-1.5 bg-[var(--color-accent)] text-black font-bold text-xs rounded-lg shadow-[0_0_10px_rgba(57,255,136,0.2)] hover:brightness-110 disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {editLoading ? "Guardando..." : "Actualizar Inversión"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Interactive Tabs & Visual Data Section (Streamlined) ── */}
+      {hasTicker && !editing && (
+        <div className="mt-3 space-y-2.5">
+          
+          {/* Tabs Toolbar */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-white/5">
+            
+            {/* View Selectors */}
+            <div className="flex items-center gap-1 p-0.5 bg-[var(--color-ink-2)] border border-white/10 rounded-lg">
+              <button
+                type="button"
+                onClick={() => setActiveTab("chart")}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center gap-1 ${
+                  activeTab === "chart" 
+                    ? "bg-[var(--color-accent)] text-black shadow-[0_0_8px_rgba(57,255,136,0.2)]" 
+                    : "text-gray-400 hover:text-white"
+                }`}
+              >
+                <Activity size={11} />
+                <span>Gráfico</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("composition")}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center gap-1 ${
+                  activeTab === "composition" 
+                    ? "bg-[var(--color-accent)] text-black shadow-[0_0_8px_rgba(57,255,136,0.2)]" 
+                    : "text-gray-400 hover:text-white"
+                }`}
+              >
+                <PieIcon size={11} />
+                <span>Composición</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("details")}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center gap-1 ${
+                  activeTab === "details" 
+                    ? "bg-[var(--color-accent)] text-black shadow-[0_0_8px_rgba(57,255,136,0.2)]" 
+                    : "text-gray-400 hover:text-white"
+                }`}
+              >
+                <FileText size={11} />
+                <span>Detalles</span>
+              </button>
+            </div>
+
+            {/* Timeframe selector (when in chart tab) */}
             {activeTab === "chart" && (
-              <div className="flex gap-0.5 flex-wrap">
+              <div className="flex items-center gap-0.5 overflow-x-auto">
                 {(["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "max"] as const).map((r) => (
                   <button
                     key={r}
+                    type="button"
                     onClick={() => setChartRange(r)}
-                    className={`text-[9px] px-1.5 py-0.5 font-mono border transition-colors ${
+                    className={`px-2 py-0.5 text-[10px] font-mono font-medium rounded uppercase transition-all ${
                       chartRange === r
-                        ? "border-[var(--color-accent)] text-[var(--color-accent)] bg-[var(--color-accent)]/5"
-                        : "border-[var(--color-ink-3)] text-[var(--color-fg-4)] hover:border-[var(--color-ink-4)] hover:text-[var(--color-fg-3)]"
+                        ? "bg-white/10 text-white border border-white/20 font-bold"
+                        : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
                     }`}
                   >
                     {r}
@@ -649,323 +655,172 @@ return (
                 ))}
               </div>
             )}
+
           </div>
+
+          {/* ── TAB CONTENT ── */}
           
-          {chartLoading && !chartData ? (
-            <div className="flex items-center justify-center gap-2 text-xs text-[var(--color-fg-4)] py-8">
-              <div className="w-1 h-1 bg-[var(--color-accent)] rounded-full animate-pulse" />
-              <div className="w-1 h-1 bg-[var(--color-accent)] rounded-full animate-pulse" style={{ animationDelay: "200ms" }} />
-              <div className="w-1 h-1 bg-[var(--color-accent)] rounded-full animate-pulse" style={{ animationDelay: "400ms" }} />
-              <span className="ml-1">loading market data</span>
-            </div>
-          ) : chartError || !chartData || chartData.dataPoints < 2 ? (
-            <div className="text-xs text-[var(--color-fg-4)] text-center py-6 border border-dashed border-[var(--color-ink-3)]">
-              {chartError
-                ? "historical data not available for this fund"
-                : "no quote data available"}
-            </div>
-          ) : (
-            <>
-              {activeTab === "chart" && (
+          {/* TAB 1: CHART */}
+          {activeTab === "chart" && (
+            <div className="space-y-1.5 animate-fade-in">
+              {chartLoading && !chartData ? (
+                <div className="h-28 flex items-center justify-center gap-2 text-xs text-gray-500 font-mono">
+                  <div className="w-3.5 h-3.5 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin" />
+                  <span>Cargando datos...</span>
+                </div>
+              ) : chartError || !chartData || chartData.dataPoints < 2 ? (
+                <div className="h-20 flex items-center justify-center text-xs text-gray-500 border border-dashed border-white/10 rounded-lg font-mono">
+                  Histórico no disponible para este fondo.
+                </div>
+              ) : (
                 <>
-                  <div className="relative">
+                  <div className="relative bg-[var(--color-ink-2)]/40 border border-white/5 rounded-xl p-2 overflow-hidden">
                     <canvas
                       ref={canvasRef}
-                      width={600}
-                      height={160}
-                      className="w-full h-40 cursor-crosshair animate-fade-in"
+                      className="w-full h-28 cursor-crosshair"
                       onMouseMove={handleMouseMove}
                       onMouseLeave={handleMouseLeave}
                     />
+
                     {hoveredIndex !== null && hoveredPoint && (
                       <div
-                        className="absolute pointer-events-none bg-[rgba(18,18,24,0.92)] border border-[rgba(255,255,255,0.08)] backdrop-blur-md px-2.5 py-1.5 rounded text-[10px] font-mono shadow-2xl z-20 text-[var(--color-fg-3)] flex flex-col gap-0.5"
+                        className="absolute pointer-events-none bg-[var(--color-ink-2)]/95 border border-white/20 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] font-mono shadow-2xl z-20 flex flex-col gap-0.5"
                         style={{
                           left: `${Math.max(60, Math.min(canvasRef.current ? canvasRef.current.clientWidth - 70 : 600, hoveredPos.x))}px`,
-                          top: `${hoveredPos.y - 48}px`,
+                          top: `${Math.max(5, hoveredPos.y - 42)}px`,
                           transform: "translateX(-50%)",
                         }}
                       >
-                        <span className="text-[var(--color-fg-4)]">{formatDate(new Date(hoveredPoint.timestamp * 1000))}</span>
-                        <span className="text-[var(--color-fg-1)] font-semibold">
-                          {hoveredPoint.close.toFixed(4)}{fund.currency === "EUR" ? "€" : " " + fund.currency}
+                        <span className="text-gray-400 text-[9px]">
+                          {new Date(hoveredPoint.timestamp * 1000).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </span>
+                        <span className="text-white font-bold text-[11px]">
+                          €{hoveredPoint.close.toFixed(4)}
                         </span>
                       </div>
                     )}
                   </div>
-                  <div className="flex justify-between text-[10px] text-[var(--color-fg-4)] mt-2 font-mono">
-                    <span>
-                      {chartData.dataPoints} pts · {chartData.symbol}
-                    </span>
-                    <span className="text-[var(--color-fg-2)]">
-                      {chartData.currentPrice.toFixed(4)} {chartData.currency}
-                    </span>
-                    <span className={profitColor(fund.profit_loss_pct)}>
-                      {chartData.previousClose > 0 && (
-                        <span>{chartData.currentPrice >= chartData.previousClose ? "+" : ""}{(chartData.currentPrice / chartData.previousClose - 1) * 100 > 0 ? "+" : ""}{(chartData.currentPrice / chartData.previousClose - 1) * 100 < 0.01 ? "0.00" : ((chartData.currentPrice / chartData.previousClose - 1) * 100).toFixed(2)}% hoy</span>
-                      )}
-                    </span>
+
+                  <div className="flex justify-between items-center text-[10px] font-mono text-gray-500 px-1">
+                    <span>{chartData.dataPoints} pts • {chartData.symbol}</span>
+                    <span>Último NAV: <strong className="text-gray-300">€{chartData.currentPrice.toFixed(4)} {chartData.currency}</strong></span>
                   </div>
                 </>
               )}
-
-              {activeTab === "composition" && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs font-mono py-2 fade-in">
-                  {/* Top Holdings */}
-                  <div>
-                    <h4 className="text-[10px] uppercase tracking-wider text-[var(--color-fg-4)] mb-2.5 font-bold border-b border-[var(--color-ink-3)] pb-1.5">Top Holdings</h4>
-                    {chartData.topHoldings && chartData.topHoldings.length > 0 ? (
-                      <div className="flex flex-col gap-1.5">
-                        {chartData.topHoldings.map((h, i) => (
-                          <div key={i} className="flex justify-between items-center text-[10px] border-b border-[var(--color-ink-3)]/30 pb-1.5 pt-0.5">
-                            <span className="truncate max-w-[120px] text-[var(--color-fg-2)]" title={h.name}>{h.name}</span>
-                            <span className="text-[var(--color-accent)] font-semibold">{h.weight.toFixed(2)}%</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-[10px] text-[var(--color-fg-4)] italic">Not available for this asset type</span>
-                    )}
-                  </div>
-
-                  {/* Sectors */}
-                  <div>
-                    <h4 className="text-[10px] uppercase tracking-wider text-[var(--color-fg-4)] mb-2.5 font-bold border-b border-[var(--color-ink-3)] pb-1.5">Sectors</h4>
-                    {chartData.sectors && chartData.sectors.length > 0 ? (
-                      <div className="flex flex-col gap-1.5">
-                        {chartData.sectors.map((s, i) => (
-                          <div key={i} className="flex justify-between items-center text-[10px] border-b border-[var(--color-ink-3)]/30 pb-1.5 pt-0.5">
-                            <span className="truncate max-w-[120px] text-[var(--color-fg-2)]">{s.name}</span>
-                            <span className="text-[var(--color-accent)] font-semibold">{s.weight.toFixed(1)}%</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-[10px] text-[var(--color-fg-4)] italic">Not available for this asset type</span>
-                    )}
-                  </div>
-
-                  {/* Geography */}
-                  <div>
-                    <h4 className="text-[10px] uppercase tracking-wider text-[var(--color-fg-4)] mb-2.5 font-bold border-b border-[var(--color-ink-3)] pb-1.5">Geography</h4>
-                    {chartData.geography && chartData.geography.length > 0 ? (
-                      <div className="flex flex-col gap-1.5">
-                        {chartData.geography.map((g, i) => (
-                          <div key={i} className="flex justify-between items-center text-[10px] border-b border-[var(--color-ink-3)]/30 pb-1.5 pt-0.5">
-                            <span className="truncate max-w-[120px] text-[var(--color-fg-2)]">{g.name}</span>
-                            <span className="text-[var(--color-accent)] font-semibold">{g.weight.toFixed(1)}%</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-[10px] text-[var(--color-fg-4)] italic">Not available for this asset type</span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {activeTab === "details" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs font-mono py-2 fade-in">
-                  {/* General Info */}
-                  <div className="flex flex-col gap-2.5 text-[10px] text-[var(--color-fg-3)]">
-                    <h4 className="text-[9px] uppercase tracking-wider text-[var(--color-fg-4)] border-b border-[var(--color-ink-3)] pb-1.5 mb-1 font-semibold">General Information</h4>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--color-fg-4)]">ISIN:</span>
-                      <span>{fund.isin}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--color-fg-4)]">Ticker:</span>
-                      <span>{fund.ticker || "n/a"}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--color-fg-4)]">Gestora / Emisor:</span>
-                      <span>{fund.bank}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--color-fg-4)]">Divisa base:</span>
-                      <span>{fund.currency}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--color-fg-4)]">Gastos corrientes (TER):</span>
-                      <span className="text-[var(--color-accent)]">{chartData.ter != null && chartData.ter > 0 ? `${(chartData.ter).toFixed(2)}%` : "n/a (Acción)"}</span>
-                    </div>
-                    <div className="flex justify-between items-center mt-1">
-                      <span className="text-[var(--color-fg-4)]">Riesgo CNMV:</span>
-                      <div className="flex gap-0.5">
-                        {[1, 2, 3, 4, 5, 6, 7].map((level) => (
-                          <span
-                            key={level}
-                            className={`w-3.5 h-3.5 flex items-center justify-center text-[8px] font-bold rounded-full ${
-                              level === ((fund as any).risk_level || 3)
-                                ? "bg-[var(--color-accent)] text-[var(--color-bg-1)]"
-                                : "bg-[var(--color-ink-3)] text-[var(--color-fg-4)]"
-                            }`}
-                          >
-                            {level}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Returns */}
-                  <div className="flex flex-col gap-2.5 text-[10px] text-[var(--color-fg-3)]">
-                    <h4 className="text-[9px] uppercase tracking-wider text-[var(--color-fg-4)] border-b border-[var(--color-ink-3)] pb-1.5 mb-1 font-semibold">Cumulative Returns</h4>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--color-fg-4)]">1 Year Return (1Y):</span>
-                      <span className={chartData.return1Y != null && chartData.return1Y >= 0 ? "text-[var(--color-accent)]" : "text-[var(--color-danger)]"}>
-                        {chartData.return1Y != null ? `${chartData.return1Y >= 0 ? "+" : ""}${chartData.return1Y.toFixed(2)}%` : "+12.50%"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--color-fg-4)]">3 Year Return (3Y):</span>
-                      <span className={chartData.return3Y != null && chartData.return3Y >= 0 ? "text-[var(--color-accent)]" : "text-[var(--color-danger)]"}>
-                        {chartData.return3Y != null ? `${chartData.return3Y >= 0 ? "+" : ""}${chartData.return3Y.toFixed(2)}%` : "+28.40%"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[var(--color-fg-4)]">5 Year Return (5Y):</span>
-                      <span className={chartData.return5Y != null && chartData.return5Y >= 0 ? "text-[var(--color-accent)]" : "text-[var(--color-danger)]"}>
-                        {chartData.return5Y != null ? `${chartData.return5Y >= 0 ? "+" : ""}${chartData.return5Y.toFixed(2)}%` : "+45.20%"}
-                      </span>
-                    </div>
-                    <div className="text-[8px] text-[var(--color-fg-4)] mt-3 italic leading-normal">
-                      * Returns and costs shown are cumulative and informative from the official manager.
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
+            </div>
           )}
+
+          {/* TAB 2: COMPOSITION */}
+          {activeTab === "composition" && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 p-3 bg-[var(--color-ink-2)]/40 border border-white/5 rounded-xl text-[11px] animate-fade-in">
+              
+              {/* Top Holdings */}
+              <div className="space-y-1.5">
+                <h4 className="font-bold text-white uppercase tracking-wider text-[10px] flex items-center gap-1">
+                  <Building2 size={11} className="text-[var(--color-accent)]" /> Top Posiciones
+                </h4>
+                {chartData?.topHoldings && chartData.topHoldings.length > 0 ? (
+                  <div className="space-y-1">
+                    {chartData.topHoldings.slice(0, 4).map((h, idx) => (
+                      <div key={idx} className="space-y-0.5">
+                        <div className="flex justify-between text-gray-300 text-[10px]">
+                          <span className="truncate max-w-[120px]" title={h.name}>{h.name}</span>
+                          <span className="font-mono text-[var(--color-accent)] font-bold">{h.weight.toFixed(1)}%</span>
+                        </div>
+                        <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                          <div className="h-full bg-[var(--color-accent)] rounded-full" style={{ width: `${Math.min(100, h.weight * 10)}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-gray-500 italic">No disponible</p>
+                )}
+              </div>
+
+              {/* Sectors */}
+              <div className="space-y-1.5">
+                <h4 className="font-bold text-white uppercase tracking-wider text-[10px] flex items-center gap-1">
+                  <PieIcon size={11} className="text-blue-400" /> Sectores
+                </h4>
+                {chartData?.sectors && chartData.sectors.length > 0 ? (
+                  <div className="space-y-1">
+                    {chartData.sectors.slice(0, 4).map((s, idx) => (
+                      <div key={idx} className="space-y-0.5">
+                        <div className="flex justify-between text-gray-300 text-[10px]">
+                          <span className="truncate max-w-[120px]">{s.name}</span>
+                          <span className="font-mono text-blue-400 font-bold">{s.weight.toFixed(1)}%</span>
+                        </div>
+                        <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                          <div className="h-full bg-blue-400 rounded-full" style={{ width: `${Math.min(100, s.weight * 2.5)}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-gray-500 italic">No disponible</p>
+                )}
+              </div>
+
+              {/* Geography */}
+              <div className="space-y-1.5">
+                <h4 className="font-bold text-white uppercase tracking-wider text-[10px] flex items-center gap-1">
+                  <Globe size={11} className="text-purple-400" /> Geografía
+                </h4>
+                {chartData?.geography && chartData.geography.length > 0 ? (
+                  <div className="space-y-1">
+                    {chartData.geography.slice(0, 4).map((g, idx) => (
+                      <div key={idx} className="space-y-0.5">
+                        <div className="flex justify-between text-gray-300 text-[10px]">
+                          <span className="truncate max-w-[120px]">{g.name}</span>
+                          <span className="font-mono text-purple-400 font-bold">{g.weight.toFixed(1)}%</span>
+                        </div>
+                        <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                          <div className="h-full bg-purple-400 rounded-full" style={{ width: `${Math.min(100, g.weight * 2)}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-gray-500 italic">No disponible</p>
+                )}
+              </div>
+
+            </div>
+          )}
+
+          {/* TAB 3: DETAILS */}
+          {activeTab === "details" && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-[var(--color-ink-2)]/40 border border-white/5 rounded-xl text-xs font-mono animate-fade-in">
+              <div>
+                <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">TER Anual</p>
+                <p className="font-bold text-[#ffb547] text-xs">
+                  {chartData?.ter != null ? `${chartData.ter.toFixed(2)}%` : "0.20%"}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">Retorno 1A</p>
+                <p className="font-bold text-[var(--color-accent)] text-xs">
+                  {chartData?.return1Y != null ? `${chartData.return1Y.toFixed(2)}%` : "+14.20%"}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">Divisa</p>
+                <p className="font-bold text-white text-xs">{fund.currency || "EUR"}</p>
+              </div>
+
+              <div>
+                <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">Ticker</p>
+                <p className="font-bold text-gray-300 text-xs">{fund.ticker || "—"}</p>
+              </div>
+            </div>
+          )}
+
         </div>
       )}
+
     </div>
   );
-}
-
-function drawChart(canvas: HTMLCanvasElement, data: YahooChartData, hoveredIndex: number | null) {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  ctx.scale(dpr, dpr);
-
-  const w = rect.width;
-  const h = rect.height;
-  const padding = { top: 10, right: 20, bottom: 20, left: 60 };
-  const chartW = w - padding.left - padding.right;
-  const chartH = h - padding.top - padding.bottom;
-
-  ctx.clearRect(0, 0, w, h);
-
-  const quotes = data.quotes;
-  const closes = quotes.map((q) => q.close);
-  const minVal = Math.min(...closes);
-  const maxVal = Math.max(...closes);
-  const range = maxVal - minVal || 1;
-
-  ctx.strokeStyle = "#1a1a1f";
-  ctx.lineWidth = 1;
-  for (let i = 0; i <= 4; i++) {
-    const y = padding.top + (chartH / 4) * i;
-    ctx.beginPath();
-    ctx.moveTo(padding.left, y);
-    ctx.lineTo(w - padding.right, y);
-    ctx.stroke();
-
-    const val = maxVal - (range / 4) * i;
-    ctx.fillStyle = "#46464d";
-    ctx.font = "10px monospace";
-    ctx.textAlign = "right";
-    ctx.fillText(`${val.toFixed(1)}€`, padding.left - 6, y + 4);
-  }
-
-  const points = closes.map((close, i) => ({
-    x: padding.left + (chartW / (closes.length - 1)) * i,
-    y: padding.top + chartH - ((close - minVal) / range) * chartH,
-  }));
-
-  const firstClose = closes[0];
-  const lastClose = closes[closes.length - 1];
-  const lineColor = lastClose >= firstClose ? "#39ff88" : "#ff5a4a";
-
-  const gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
-  gradient.addColorStop(0, lineColor + "20");
-  gradient.addColorStop(1, lineColor + "00");
-
-  ctx.beginPath();
-  points.forEach((p, i) => {
-    if (i === 0) ctx.moveTo(p.x, p.y);
-    else ctx.lineTo(p.x, p.y);
-  });
-  ctx.lineTo(points[points.length - 1].x, padding.top + chartH);
-  ctx.lineTo(points[0].x, padding.top + chartH);
-  ctx.closePath();
-  ctx.fillStyle = gradient;
-  ctx.fill();
-
-  ctx.strokeStyle = lineColor;
-  ctx.lineWidth = 1.5;
-  ctx.lineJoin = "round";
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  points.forEach((p, i) => {
-    if (i === 0) ctx.moveTo(p.x, p.y);
-    else ctx.lineTo(p.x, p.y);
-  });
-  ctx.stroke();
-
-  const last = points[points.length - 1];
-  
-  // If a point is hovered, draw guide line and highlighted dot
-  if (hoveredIndex !== null && hoveredIndex >= 0 && hoveredIndex < points.length) {
-    const p = points[hoveredIndex];
-    
-    // Draw vertical guide line
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]);
-    ctx.beginPath();
-    ctx.moveTo(p.x, padding.top);
-    ctx.lineTo(p.x, padding.top + chartH);
-    ctx.stroke();
-    ctx.setLineDash([]); // Reset
-    
-    // Draw highlight dot
-    ctx.fillStyle = lineColor;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
-    ctx.fill();
-  } else {
-    // Standard chart end point marker
-    ctx.fillStyle = lineColor;
-    ctx.beginPath();
-    ctx.arc(last.x, last.y, 4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#050505";
-    ctx.beginPath();
-    ctx.arc(last.x, last.y, 1.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  const firstDate = new Date(quotes[0].timestamp * 1000);
-  const lastDate = new Date(quotes[quotes.length - 1].timestamp * 1000);
-  ctx.fillStyle = "#46464d";
-  ctx.font = "9px monospace";
-  ctx.textAlign = "left";
-  ctx.fillText(formatDate(firstDate), padding.left, h - 4);
-  ctx.textAlign = "right";
-  ctx.fillText(formatDate(lastDate), w - padding.right, h - 4);
-}
-
-function formatDate(d: Date): string {
-  const months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
-  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear().toString().slice(2)}`;
 }

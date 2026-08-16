@@ -34,6 +34,19 @@ import {
   getGithubAuthUrl,
   handleGithubCallback,
 } from "./auth";
+import { validatePassword } from "./validation";
+import {
+  getAdminOverview,
+  getAdminUsers,
+  adminSoftDeleteUser,
+  adminRestoreUser,
+  adminSetAdmin,
+  getAdminCatalogStats,
+  adminSearchCatalog,
+  adminUpdateTicker,
+  adminInvalidatePrice,
+  getAdminNotificationStats,
+} from "./admin";
 
 const PORT = Number(process.env.PORT ?? 3741);
 const HOST = process.env.HOST ?? "0.0.0.0";
@@ -228,9 +241,16 @@ function safeError(err: unknown): string {
   return msg;
 }
 
-async function requireUser(req: Request): Promise<{ id: number; username: string } | Response> {
+async function requireUser(req: Request): Promise<{ id: number; username: string; is_admin: boolean } | Response> {
   const user = await getUserFromRequest(req);
   if (!user) return unauthorized();
+  return user;
+}
+
+async function requireAdmin(req: Request): Promise<{ id: number; username: string; is_admin: boolean } | Response> {
+  const user = await getUserFromRequest(req);
+  if (!user) return unauthorized();
+  if (!user.is_admin) return json({ error: "Acceso denegado" }, { status: 403 });
   return user;
 }
 
@@ -259,13 +279,42 @@ function serveStatic(req: Request) {
 }
 
 /** Serve index.html with nonce injection for CSP and dynamic Cloudflare analytics */
-function serveIndexHtml(): Response {
+async function serveIndexHtml(req: Request): Promise<Response> {
   let html = cachedIndexHtml?.replace(/\{nonce\}/g, cachedNonce) ?? "";
   const cfToken = process.env.CLOUDFLARE_BEACON_TOKEN;
   if (cfToken) {
     const cfScript = `<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "${cfToken}"}' nonce="${cachedNonce}"></script>`;
     html = html.replace("</head>", `${cfScript}\n</head>`);
   }
+
+  // Try to inject logged-in user data so the landing page knows who is visiting
+  try {
+    const cookieHeader = req.headers.get("cookie") ?? "";
+    const match = cookieHeader.match(/(?:^|;\s*)ft_session=([^;]+)/);
+    if (match) {
+      const token = decodeURIComponent(match[1]);
+      const { verifyToken, getUserProfile } = await import("./auth");
+      const payload = await verifyToken(token);
+      if (payload) {
+        const profile = await getUserProfile(payload.sub);
+        if (profile) {
+          const safeUser = JSON.stringify({
+            id: profile.id,
+            username: profile.username,
+            email: profile.email,
+            is_admin: profile.is_admin,
+          });
+          html = html.replace(
+            "</head>",
+            `<script nonce="${cachedNonce}">window.__LANDING_USER__=${safeUser};</script>\n</head>`
+          );
+        }
+      }
+    }
+  } catch {
+    // Non-fatal: serve page without user injection
+  }
+
   return new Response(html, {
     headers: {
       "Content-Type": "text/html",
@@ -316,7 +365,7 @@ const server = serve({
   routes: {
     "/favicon.svg": (req) => serveStatic(req),
     "/favicon.ico": (req) => serveStatic(req),
-    "/": () => serveIndexHtml(),
+    "/": (req) => serveIndexHtml(req),
     "/dashboard": index,
     "/dashboard/*": index,
     "/login": index,
@@ -325,6 +374,8 @@ const server = serve({
     "/register/*": index,
     "/legal": index,
     "/legal/*": index,
+    "/admin": index,
+    "/admin/*": index,
 
     "/api/health": {
       async GET(req) {
@@ -377,10 +428,8 @@ const server = serve({
           if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
             return badRequest("Introduce un email válido");
           }
-          if (password.length < 8) return badRequest("Mínimo 8 caracteres");
-          if (!/[A-Z]/.test(password)) return badRequest("Requiere al menos una mayúscula");
-          if (!/[a-z]/.test(password)) return badRequest("Requiere al menos una minúscula");
-          if (!/[0-9]/.test(password)) return badRequest("Requiere al menos un número");
+          const pwError = validatePassword(password);
+          if (pwError) return badRequest(pwError);
           if (phone && !/^\+[1-9]\d{6,14}$/.test(phone.replace(/[\s-]/g, ""))) {
             return badRequest("Teléfono inválido. Formato: +34123456789");
           }
@@ -513,10 +562,8 @@ const server = serve({
             const ip = getClientIp(req);
             if (rateLimit("pwchange", ip, 5)) return tooManyRequests();
             const newPw = body.newPassword as string;
-            if (newPw.length < 8) return badRequest("Mínimo 8 caracteres");
-            if (!/[A-Z]/.test(newPw)) return badRequest("Requiere al menos una mayúscula");
-            if (!/[a-z]/.test(newPw)) return badRequest("Requiere al menos una minúscula");
-            if (!/[0-9]/.test(newPw)) return badRequest("Requiere al menos un número");
+            const pwError = validatePassword(newPw);
+            if (pwError) return badRequest(pwError);
             await changePassword(user.id, body.currentPassword as string, newPw);
           }
           return json({ ok: true });
@@ -539,27 +586,6 @@ const server = serve({
       },
     },
 
-    "/api/status": {
-      async GET(req) {
-        const user = await requireUser(req);
-        if (user instanceof Response) return user;
-        const [investments, digest] = await Promise.all([
-          listInvestments(user.id),
-          digestStatus(user.id),
-        ]);
-        const totals = computePortfolioTotals(investments);
-        return json({
-          ...totals,
-          whatsapp: {
-            ...digest.config,
-            lastSent: digest.lastSent,
-            nextRunAt: digest.nextRunAt,
-            lastTestAt: digest.lastTestAt,
-            lastStatus: digest.lastStatus,
-          },
-        });
-      },
-    },
 
     // Unified endpoint: returns funds + totals + whatsapp status in one request.
     "/api/portfolio": {
@@ -962,6 +988,166 @@ const server = serve({
           console.error("[digest] trigger error:", err);
           return json({ error: "Digest execution failed" }, { status: 500 });
         }
+      },
+    },
+
+    // ─── Admin Routes ──────────────────────────────────────────────────────
+    "/api/admin/overview": {
+      async GET(req) {
+        const admin = await requireAdmin(req);
+        if (admin instanceof Response) return admin;
+        const overview = await getAdminOverview();
+        
+        let customEnv: Record<string, string> = {};
+        try {
+          const fs = require('fs');
+          if (fs.existsSync('.env')) {
+            const envContent = fs.readFileSync('.env', 'utf-8');
+            const lines = envContent.split('\n');
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (trimmed && !trimmed.startsWith('#')) {
+                const parts = trimmed.split('=');
+                if (parts.length > 0) {
+                  const key = parts[0].trim();
+                  customEnv[key] = process.env[key] || '';
+                }
+              }
+            }
+          }
+        } catch (e) {
+          // fail silently
+        }
+
+        return json({ 
+          ...overview, 
+          uptime: Math.round((Date.now() - STARTED_AT) / 1000),
+          node_env: process.env.NODE_ENV || "development",
+          bun_version: process.versions?.bun || "N/A",
+          price_cache_size: overview.cached_prices,
+          env: customEnv
+        });
+      },
+    },
+
+    "/api/admin/users": {
+      async GET(req) {
+        const admin = await requireAdmin(req);
+        if (admin instanceof Response) return admin;
+        const url = new URL(req.url);
+        const search = url.searchParams.get("search") ?? undefined;
+        const status = url.searchParams.get("status") ?? undefined;
+        const offset = Number(url.searchParams.get("offset") ?? 0);
+        return json(await getAdminUsers(search, status, 50, offset));
+      },
+    },
+
+    "/api/admin/users/:id/delete": {
+      async POST(req) {
+        const admin = await requireAdmin(req);
+        if (admin instanceof Response) return admin;
+        const id = Number(req.params.id);
+        if (id === admin.id) return json({ error: "No puedes eliminarte a ti mismo" }, { status: 400 });
+        await adminSoftDeleteUser(id);
+        return json({ ok: true });
+      },
+    },
+
+    "/api/admin/users/:id/restore": {
+      async POST(req) {
+        const admin = await requireAdmin(req);
+        if (admin instanceof Response) return admin;
+        const id = Number(req.params.id);
+        await adminRestoreUser(id);
+        return json({ ok: true });
+      },
+    },
+
+    "/api/admin/users/:id/promote": {
+      async POST(req) {
+        const admin = await requireAdmin(req);
+        if (admin instanceof Response) return admin;
+        const id = Number(req.params.id);
+        const body = (await safeJson(req)) as { is_admin: boolean };
+        if (id === admin.id && !body.is_admin) return json({ error: "No puedes quitarte el rol de admin" }, { status: 400 });
+        await adminSetAdmin(id, body.is_admin);
+        return json({ ok: true });
+      },
+    },
+
+    "/api/admin/catalog": {
+      async GET(req) {
+        const admin = await requireAdmin(req);
+        if (admin instanceof Response) return admin;
+        const url = new URL(req.url);
+        const q = url.searchParams.get("q") ?? "";
+        if (q) {
+          const results = await adminSearchCatalog(q);
+          return json({ results });
+        }
+        return json(await getAdminCatalogStats());
+      },
+    },
+
+    "/api/admin/catalog/:isin/ticker": {
+      async PUT(req) {
+        const admin = await requireAdmin(req);
+        if (admin instanceof Response) return admin;
+        const isin = req.params.isin.toUpperCase();
+        if (!/^[A-Z]{2}[A-Z0-9]{10}$/.test(isin)) return badRequest("ISIN inválido");
+        const body = (await safeJson(req)) as { ticker?: string };
+        await adminUpdateTicker(isin, body.ticker ?? null);
+        return json({ ok: true });
+      },
+    },
+
+    "/api/admin/catalog/:isin/invalidate-price": {
+      async POST(req) {
+        const admin = await requireAdmin(req);
+        if (admin instanceof Response) return admin;
+        const isin = req.params.isin.toUpperCase();
+        if (!/^[A-Z]{2}[A-Z0-9]{10}$/.test(isin)) return badRequest("ISIN inválido");
+        await adminInvalidatePrice(isin);
+        const { invalidatePriceCache } = await import("./sentinel");
+        invalidatePriceCache(isin);
+        return json({ ok: true });
+      },
+    },
+
+    "/api/admin/notifications": {
+      async GET(req) {
+        const admin = await requireAdmin(req);
+        if (admin instanceof Response) return admin;
+        return json(await getAdminNotificationStats());
+      },
+    },
+
+    "/api/admin/notifications/trigger": {
+      async POST(req) {
+        const admin = await requireAdmin(req);
+        if (admin instanceof Response) return admin;
+        void runScheduledDigest(true);
+        return json({ ok: true, message: "Digest global iniciado" });
+      },
+    },
+
+    "/api/admin/system": {
+      async GET(req) {
+        const admin = await requireAdmin(req);
+        if (admin instanceof Response) return admin;
+        const { priceCache } = await import("./sentinel") as any;
+        return json({
+          uptime: Math.round((Date.now() - STARTED_AT) / 1000),
+          bun_version: Bun.version,
+          platform: process.platform,
+          pid: process.pid,
+          node_env: process.env.NODE_ENV ?? "development",
+          price_cache_size: (priceCache as Map<any,any>)?.size ?? -1,
+          cron_secret_set: Boolean(process.env.CRON_SECRET),
+          jwt_default: process.env.JWT_SECRET === "fondtracker-dev-secret-change-in-prod",
+          admin_emails_set: Boolean(process.env.ADMIN_EMAILS),
+          cloudflare_beacon_set: Boolean(process.env.CLOUDFLARE_BEACON_TOKEN),
+        });
       },
     },
 

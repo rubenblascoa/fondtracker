@@ -93,7 +93,7 @@ export const COUNTRIES = [
   { code: "GT", name: "Guatemala", dial: "+502", flag: "🇬🇹" },
   { code: "GN", name: "Guinea", dial: "+224", flag: "🇬🇳" },
   { code: "GW", name: "Guinea-Bissau", dial: "+245", flag: "🇬🇼" },
-  { code: "GY", name: "Guyana", dial: "+592", flag: "🇬🇾" },
+  { code: "GY", name: "Guyana", dial: "+592", flag: "GY" },
   { code: "HT", name: "Haiti", dial: "+509", flag: "🇭🇹" },
   { code: "HN", name: "Honduras", dial: "+504", flag: "🇭🇳" },
   { code: "HK", name: "Hong Kong", dial: "+852", flag: "🇭🇰" },
@@ -255,18 +255,18 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
     setError("");
 
     if (username.length < 3) {
-      setError("Username needs at least 3 characters");
+      setError("El nombre de usuario necesita al menos 3 caracteres");
       return;
     }
     if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-      setError("Only letters, numbers, and underscores in username");
+      setError("Solo letras, números y guiones bajos en el usuario");
       return;
     }
     if (!email.includes("@") || !email.includes(".")) {
-      setError("Enter a valid email");
+      setError("Introduce un email válido");
       return;
     }
-    if (password.length < 8) { setError("Mínimo 8 caracteres"); return; }
+    if (password.length < 8) { setError("Mínimo 8 caracteres en la contraseña"); return; }
     if (!/[A-Z]/.test(password)) { setError("Requiere al menos una mayúscula"); return; }
     if (!/[a-z]/.test(password)) { setError("Requiere al menos una minúscula"); return; }
     if (!/[0-9]/.test(password)) { setError("Requiere al menos un número"); return; }
@@ -278,22 +278,22 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
       setToken(result.token);
       onAuth();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error creating account");
+      setError(err instanceof Error ? err.message : "Error al crear la cuenta");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="w-full flex-1 flex items-center justify-center p-4 sm:p-8 relative overflow-hidden">
+    <div className="w-full flex-1 flex items-center justify-center p-4 sm:p-8 relative overflow-hidden bg-[var(--color-ink-0)] text-[var(--color-fg-1)]">
       {/* Background ambient light */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-[var(--color-accent)]/5 blur-[120px] rounded-full pointer-events-none" />
       
       {/* Main Container */}
-      <div className="w-full max-w-[1000px] flex flex-col lg:flex-row rounded-3xl overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.8)] relative z-10 fade-in border border-white/10 bg-black/40 backdrop-blur-2xl">
+      <div className="w-full max-w-[1000px] flex flex-col lg:flex-row rounded-3xl overflow-hidden shadow-2xl relative z-10 fade-in border border-[var(--color-ink-3)] bg-[var(--color-ink-1)]/90 backdrop-blur-2xl">
         
         {/* LEFT COLUMN: Features & Branding */}
-        <div className="w-full lg:w-[50%] p-8 sm:p-12 relative overflow-hidden flex flex-col justify-center">
+        <div className="hidden lg:flex w-full lg:w-[50%] p-8 sm:p-12 relative overflow-hidden flex-col justify-center bg-[var(--color-ink-2)]/30">
           {/* Subtle Grid Background (Perspective) */}
           <div 
             className="absolute inset-0 opacity-20 pointer-events-none"
@@ -304,7 +304,7 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
             }}
           />
           {/* Gradient Overlay for the grid to fade it out nicely */}
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/50 to-black/80 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--color-ink-0)]/40 to-[var(--color-ink-0)]/80 pointer-events-none" />
 
           <div className="relative z-10">
             {/* Logo */}
@@ -315,17 +315,17 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
                   <path d="M7 7h10v10"></path>
                 </svg>
               </div>
-              <span className="font-heading font-bold text-lg text-white tracking-wide">FondTracker</span>
+              <span className="font-heading font-bold text-lg text-[var(--color-fg-1)] tracking-wide">FondTracker</span>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 tracking-tight">
-              Elevate your portfolio
+            <h1 className="text-3xl sm:text-4xl font-bold text-[var(--color-fg-1)] mb-2 tracking-tight">
+              Eleva tu cartera
             </h1>
             <p className="text-[var(--color-fg-4)] text-sm mb-12 flex items-center gap-2 font-medium">
               <svg className="w-4 h-4 text-[var(--color-accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
-              No credit card required
+              100% Gratuito · Sin tarjeta de crédito
             </p>
 
             <div className="space-y-8">
@@ -337,9 +337,9 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold mb-1 text-[15px]">Track unlimited assets</h3>
+                  <h3 className="text-[var(--color-fg-1)] font-semibold mb-1 text-[15px]">Monitoriza activos sin límite</h3>
                   <p className="text-[var(--color-fg-4)] text-[13px] leading-relaxed">
-                    Add and monitor as many investment funds and ETFs as you need without arbitrary restrictions. Build your ultimate dashboard.
+                    Añade y sigue tantos fondos de inversión y ETFs como necesites sin restricciones. Configura tu cartera a tu medida.
                   </p>
                 </div>
               </div>
@@ -352,9 +352,9 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold mb-1 text-[15px]">Real-time accuracy</h3>
+                  <h3 className="text-[var(--color-fg-1)] font-semibold mb-1 text-[15px]">Precisión en tiempo real</h3>
                   <p className="text-[var(--color-fg-4)] text-[13px] leading-relaxed">
-                    Prices and NAVs are automatically synced every single day to ensure your portfolio valuation is always up to date.
+                    Precios y liquidativos sincronizados a diario para garantizar que la valoración de tu cartera esté siempre actualizada.
                   </p>
                 </div>
               </div>
@@ -367,9 +367,9 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold mb-1 text-[15px]">Built-in privacy</h3>
+                  <h3 className="text-[var(--color-fg-1)] font-semibold mb-1 text-[15px]">Privacidad por diseño</h3>
                   <p className="text-[var(--color-fg-4)] text-[13px] leading-relaxed">
-                    Your financial data is yours. We don't sell data to third parties, and our architecture is designed to keep you in control.
+                    Tus datos financieros son solo tuyos. No vendemos datos a terceros y nunca nos conectamos a tus claves bancarias.
                   </p>
                 </div>
               </div>
@@ -378,26 +378,51 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
         </div>
 
         {/* RIGHT COLUMN: Form */}
-        <div className="w-full lg:w-[50%] p-8 sm:p-12 bg-black/30 border-l border-white/5 flex flex-col justify-center">
+        <div className="w-full lg:w-[50%] p-8 sm:p-12 bg-[var(--color-ink-1)] border-t lg:border-t-0 lg:border-l border-[var(--color-ink-3)] flex flex-col justify-center">
           
-          <div className="flex items-center gap-3 mb-8">
-            <span className="text-[13px] text-[var(--color-fg-4)] font-medium">Register with</span>
-            <div className="flex gap-2">
-              <a href="/api/auth/google" className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors">
-                <svg width="14" height="14" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                <span className="text-[13px] text-[var(--color-fg-2)]">Google</span>
-              </a>
-              <a href="/api/auth/github" className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-white"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.285 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-                <span className="text-[13px] text-[var(--color-fg-2)]">GitHub</span>
-              </a>
+          <div className="lg:hidden flex items-center gap-3 mb-8">
+            <div className="w-8 h-8 bg-[var(--color-accent)]/20 rounded-lg flex items-center justify-center border border-[var(--color-accent)]/30">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 17L17 7"></path>
+                <path d="M7 7h10v10"></path>
+              </svg>
             </div>
+            <span className="font-heading font-bold text-lg text-[var(--color-fg-1)] tracking-wide">FondTracker</span>
           </div>
+
+          {/* Social Auth Providers in Large Format */}
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            <a 
+              href="/api/auth/google" 
+              className="flex items-center justify-center gap-2.5 px-4 py-3 bg-[var(--color-ink-2)] hover:bg-[var(--color-ink-3)] border border-[var(--color-ink-3)] rounded-xl transition-all group"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+              </svg>
+              <span className="text-sm font-semibold text-[var(--color-fg-1)]">Google</span>
+            </a>
+
+            <a 
+              href="/api/auth/github" 
+              className="flex items-center justify-center gap-2.5 px-4 py-3 bg-[var(--color-ink-2)] hover:bg-[var(--color-ink-3)] border border-[var(--color-ink-3)] rounded-xl transition-all group"
+            >
+              <svg width="18" height="18" fill="currentColor" className="text-[var(--color-fg-1)]" viewBox="0 0 24 24">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.825 1.11.825 2.235 0 1.605-.015 2.895-.015 3.285 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+              </svg>
+              <span className="text-sm font-semibold text-[var(--color-fg-1)]">GitHub</span>
+            </a>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-[var(--color-ink-3)] mb-6" />
 
           <form onSubmit={handleSubmit} className="space-y-4">
             
             <div className="space-y-1.5">
-              <label className="block text-[13px] text-[var(--color-fg-1)] font-medium">Username</label>
+              <label className="block text-[13px] text-[var(--color-fg-1)] font-medium">Nombre de Usuario</label>
               <div className="relative">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-fg-4)]">
                   <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
@@ -408,14 +433,15 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full bg-black/40 border border-white/5 focus:border-[var(--color-accent)]/50 focus:bg-black/60 text-[var(--color-fg-1)] text-sm pl-11 pr-3 py-3.5 rounded-lg outline-none transition-all placeholder:text-[var(--color-fg-5)]"
-                  placeholder="Username"
+                  className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] text-[var(--color-fg-1)] text-sm pl-11 pr-3 py-3.5 rounded-xl outline-none transition-all placeholder:text-[var(--color-fg-5)]"
+                  placeholder="usuario123"
+                  autoFocus
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[13px] text-[var(--color-fg-1)] font-medium">Email</label>
+              <label className="block text-[13px] text-[var(--color-fg-1)] font-medium">Correo Electrónico</label>
               <div className="relative">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-fg-4)]">
                   <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
@@ -426,14 +452,14 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-black/40 border border-white/5 focus:border-[var(--color-accent)]/50 focus:bg-black/60 text-[var(--color-fg-1)] text-sm pl-11 pr-3 py-3.5 rounded-lg outline-none transition-all placeholder:text-[var(--color-fg-5)]"
-                  placeholder="Email address"
+                  className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] text-[var(--color-fg-1)] text-sm pl-11 pr-3 py-3.5 rounded-xl outline-none transition-all placeholder:text-[var(--color-fg-5)]"
+                  placeholder="tu@email.com"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[13px] text-[var(--color-fg-1)] font-medium">Password</label>
+              <label className="block text-[13px] text-[var(--color-fg-1)] font-medium">Contraseña</label>
               <div className="relative">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-fg-4)]">
                   <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
@@ -444,21 +470,21 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-black/40 border border-white/5 focus:border-[var(--color-accent)]/50 focus:bg-black/60 text-[var(--color-fg-1)] text-sm pl-11 pr-3 py-3.5 rounded-lg outline-none transition-all placeholder:text-[var(--color-fg-5)]"
-                  placeholder="Password"
+                  className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] text-[var(--color-fg-1)] text-sm pl-11 pr-3 py-3.5 rounded-xl outline-none transition-all placeholder:text-[var(--color-fg-5)]"
+                  placeholder="••••••••"
                 />
               </div>
-              <p className="text-[11px] text-[var(--color-fg-4)] mt-1 ml-1">Minimum length is 8 characters.</p>
+              <p className="text-[11px] text-[var(--color-fg-4)] mt-1 ml-1">Mínimo 8 caracteres, una mayúscula, una minúscula y un número.</p>
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[13px] text-[var(--color-fg-1)] font-medium">Phone <span className="text-[var(--color-fg-5)]">(optional)</span></label>
+              <label className="block text-[13px] text-[var(--color-fg-1)] font-medium">Teléfono <span className="text-[var(--color-fg-5)]">(opcional, para WhatsApp)</span></label>
               <div className="flex gap-2">
                 <div className="relative shrink-0" ref={countryRef}>
                   <button
                     type="button"
                     onClick={() => { setShowCountryPicker(!showCountryPicker); setCountrySearch(""); }}
-                    className="flex items-center gap-1.5 bg-black/40 border border-white/5 hover:border-white/20 text-[var(--color-fg-1)] text-sm px-2.5 py-3.5 rounded-lg outline-none transition-all min-w-[90px]"
+                    className="flex items-center gap-1.5 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] hover:border-[var(--color-accent)] text-[var(--color-fg-1)] text-sm px-2.5 py-3.5 rounded-xl outline-none transition-all min-w-[90px]"
                   >
                     <span className="text-base leading-none">{selectedCountry.flag}</span>
                     <span className="font-mono text-xs">{selectedCountry.dial}</span>
@@ -469,8 +495,8 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
                   {showCountryPicker && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setShowCountryPicker(false)} />
-                      <div className="absolute bottom-full left-0 mb-2 z-50 w-72 bg-[#0d0d0f]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden">
-                        <div className="p-2 border-b border-white/5">
+                      <div className="absolute bottom-full left-0 mb-2 z-50 w-72 bg-[var(--color-ink-1)]/95 backdrop-blur-xl border border-[var(--color-ink-3)] rounded-2xl shadow-2xl overflow-hidden">
+                        <div className="p-2 border-b border-[var(--color-ink-3)]">
                           <div className="relative">
                             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--color-fg-4)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -479,8 +505,8 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
                               type="text"
                               value={countrySearch}
                               onChange={(e) => setCountrySearch(e.target.value)}
-                              placeholder="Search country..."
-                              className="w-full bg-black/60 border border-white/5 rounded-lg pl-9 pr-3 py-2 text-xs text-[var(--color-fg-1)] placeholder:text-[var(--color-fg-5)] outline-none focus:border-[var(--color-accent)]/50 transition-colors"
+                              placeholder="Buscar país..."
+                              className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-lg pl-9 pr-3 py-2 text-xs text-[var(--color-fg-1)] placeholder:text-[var(--color-fg-5)] outline-none focus:border-[var(--color-accent)] transition-colors"
                               autoFocus
                             />
                           </div>
@@ -496,7 +522,7 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
                               key={c.code}
                               type="button"
                               onClick={() => { setSelectedCountry(c); setShowCountryPicker(false); }}
-                              className={`flex items-center gap-3 w-full px-3 py-2.5 text-left text-sm transition-colors hover:bg-white/5 border-l-2 ${selectedCountry.code === c.code ? "border-[var(--color-accent)] bg-white/5 text-white" : "border-transparent text-[var(--color-fg-2)]"}`}
+                              className={`flex items-center gap-3 w-full px-3 py-2.5 text-left text-sm transition-colors hover:bg-[var(--color-ink-2)] border-l-2 ${selectedCountry.code === c.code ? "border-[var(--color-accent)] bg-[var(--color-ink-2)] text-[var(--color-accent)] font-semibold" : "border-transparent text-[var(--color-fg-2)]"}`}
                             >
                               <span className="text-base w-6 text-center">{c.flag}</span>
                               <span className="font-mono text-xs text-[var(--color-fg-4)] w-14">{c.dial}</span>
@@ -509,7 +535,7 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
                             c.dial.includes(countrySearch) ||
                             c.code.toLowerCase().includes(countrySearch.toLowerCase())
                           ).length === 0 && (
-                            <div className="px-4 py-8 text-center text-xs text-[var(--color-fg-5)]">No countries found</div>
+                            <div className="px-4 py-8 text-center text-xs text-[var(--color-fg-5)]">No se encontraron países</div>
                           )}
                         </div>
                       </div>
@@ -526,12 +552,11 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
                     type="tel"
                     value={localNumber}
                     onChange={(e) => setLocalNumber(e.target.value.replace(/\D/g, ""))}
-                    className="w-full bg-black/40 border border-white/5 focus:border-[var(--color-accent)]/50 focus:bg-black/60 text-[var(--color-fg-1)] text-sm pl-11 pr-3 py-3.5 rounded-lg outline-none transition-all placeholder:text-[var(--color-fg-5)]"
+                    className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] text-[var(--color-fg-1)] text-sm pl-11 pr-3 py-3.5 rounded-xl outline-none transition-all placeholder:text-[var(--color-fg-5)]"
                     placeholder="612345678"
                   />
                 </div>
               </div>
-              <p className="text-[11px] text-[var(--color-fg-4)] mt-1 ml-1">Used for WhatsApp notifications. Select your country and enter your number.</p>
             </div>
 
             {error && (
@@ -544,24 +569,24 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
             <button
               type="submit"
               disabled={loading || !username || !email || !password}
-              className="w-full bg-[var(--color-accent)] text-[#0a0a0a] font-semibold text-sm py-4 rounded-lg hover:brightness-110 active:brightness-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all mt-4"
+              className="w-full bg-[var(--color-accent)] text-[#0a0a0a] font-semibold text-sm py-4 rounded-xl hover:brightness-110 active:brightness-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all mt-4 shadow-[0_0_15px_rgba(57,255,136,0.2)]"
             >
-              {loading ? "Creating account..." : "Create Account"}
+              {loading ? "Creando cuenta..." : "Crear Cuenta"}
             </button>
           </form>
 
           <p className="text-[11px] text-[var(--color-fg-4)] leading-relaxed mt-6">
-            By creating an account, you agree to our <a href="/legal/terms-of-service" target="_blank" className="text-[var(--color-fg-2)] hover:text-white underline">Terms of Service</a> and <a href="/legal/privacy-policy" target="_blank" className="text-[var(--color-fg-2)] hover:text-white underline">Privacy Policy</a>.
+            Al registrarte aceptas nuestros <a href="/legal/terms" target="_blank" className="text-[var(--color-fg-2)] hover:text-[var(--color-accent)] underline">Términos de Servicio</a> y la <a href="/legal/privacy" target="_blank" className="text-[var(--color-fg-2)] hover:text-[var(--color-accent)] underline">Política de Privacidad</a>.
           </p>
 
-          <div className="mt-8 pt-6 border-t border-white/5 flex justify-between items-center">
-             <span className="text-[13px] text-[var(--color-fg-4)]">Already have an account?</span>
-             <button
-               onClick={onSwitchToLogin}
-               className="text-[13px] text-white font-medium hover:text-[var(--color-accent)] transition-colors"
-             >
-               Sign In &rarr;
-             </button>
+          <div className="mt-8 pt-6 border-t border-[var(--color-ink-3)] flex justify-between items-center">
+              <span className="text-[13px] text-[var(--color-fg-4)]">¿Ya tienes una cuenta?</span>
+              <button
+                onClick={onSwitchToLogin}
+                className="text-[13px] text-[var(--color-fg-1)] font-semibold hover:text-[var(--color-accent)] transition-colors"
+              >
+                Inicia Sesión &rarr;
+              </button>
           </div>
 
         </div>

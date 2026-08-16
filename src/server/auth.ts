@@ -1,4 +1,5 @@
 import { pool } from "./db";
+import { validatePassword } from "./validation";
 
 const DEFAULT_SECRET = "fondtracker-dev-secret-change-in-prod";
 const JWT_SECRET = process.env.JWT_SECRET ?? DEFAULT_SECRET;
@@ -145,23 +146,28 @@ export async function loginUser(
   if (!valid || !user) throw new Error("Credenciales incorrectas");
 
   const token = await signToken({ sub: user.id, username: user.username });
-  return { user: { id: user.id, username: user.username, email: user.email, phone: user.phone ?? null }, token };
+  return { user: { id: user.id, username: user.username, email: user.email }, token };
 }
 
-export async function getUserFromRequest(req: Request): Promise<{ id: number; username: string } | null> {
+export async function getUserFromRequest(req: Request): Promise<{ id: number; username: string; is_admin: boolean } | null> {
   const auth = req.headers.get("Authorization");
   if (!auth?.startsWith("Bearer ")) return null;
   const payload = await verifyToken(auth.slice(7));
   if (!payload) return null;
-  return { id: payload.sub, username: payload.username };
+  // Re-check is_admin from DB on every request (token may be stale)
+  const [rows] = await pool.query<any[]>("SELECT is_admin FROM users WHERE id = ? AND deleted_at IS NULL", [payload.sub]);
+  if (!rows[0]) return null;
+  return { id: payload.sub, username: payload.username, is_admin: Boolean(rows[0].is_admin) };
 }
 
-export async function getUserProfile(userId: number): Promise<{ id: number; username: string; email: string; phone: string | null; created_at: string } | null> {
+export async function getUserProfile(userId: number): Promise<{ id: number; username: string; email: string; phone: string | null; is_admin: boolean; created_at: string } | null> {
   const [rows] = await pool.query<any[]>(
-    "SELECT id, username, email, phone, created_at FROM users WHERE id = ? AND deleted_at IS NULL",
+    "SELECT id, username, email, phone, is_admin, created_at FROM users WHERE id = ? AND deleted_at IS NULL",
     [userId]
   );
-  return rows[0] ?? null;
+  const row = rows[0];
+  if (!row) return null;
+  return { ...row, is_admin: Boolean(row.is_admin) };
 }
 
 export async function changeEmail(userId: number, newEmail: string): Promise<void> {
@@ -174,10 +180,8 @@ export async function changeEmail(userId: number, newEmail: string): Promise<voi
 }
 
 export async function changePassword(userId: number, currentPassword: string, newPassword: string): Promise<void> {
-  if (newPassword.length < 8) throw new Error("Mínimo 8 caracteres");
-  if (!/[A-Z]/.test(newPassword)) throw new Error("Requiere al menos una mayúscula");
-  if (!/[a-z]/.test(newPassword)) throw new Error("Requiere al menos una minúscula");
-  if (!/[0-9]/.test(newPassword)) throw new Error("Requiere al menos un número");
+  const pwError = validatePassword(newPassword);
+  if (pwError) throw new Error(pwError);
   const [rows] = await pool.query<any[]>("SELECT password_hash FROM users WHERE id = ?", [userId]);
   if (!rows[0]) throw new Error("Usuario no encontrado");
   const valid = await verifyPassword(currentPassword, rows[0].password_hash);

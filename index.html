@@ -530,103 +530,121 @@
         observer.observe(el);
       });
 
-      // Reload if user logs in/out from another tab
-      window.addEventListener('storage', (e) => {
-        if (e.key === 'fondtracker_token') {
-          window.location.reload();
-        }
-      });
+      // Reload when user logs in from another tab (via BroadcastChannel)
+      if (typeof BroadcastChannel !== 'undefined') {
+        const authChannel = new BroadcastChannel('ft_auth');
+        authChannel.addEventListener('message', (e) => {
+          if (e.data.type === 'login' && e.data.token) {
+            try { sessionStorage.setItem('fondtracker_token', e.data.token); } catch {}
+            window.location.reload();
+          } else if (e.data.type === 'logout') {
+            window.location.reload();
+          }
+        });
+      }
 
       // Safe HTML escaping to prevent XSS
       function esc(str) { var d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
 
-      // Auth detection: show logged-in header when token exists
-      const token = localStorage.getItem('fondtracker_token');
-      if (token) {
-        fetch('/api/auth/me', {
-          headers: { 'Authorization': 'Bearer ' + token }
-        }).then(r => r.ok ? r.json() : null).then(user => {
-          if (!user) return;
-
-          // Desktop CTA -> user menu (matches dashboard Header.tsx exactly, but simplified with no gear button border)
-          const desktopCta = document.getElementById('desktop-cta');
-          if (desktopCta) {
-            desktopCta.innerHTML = `
-              <a href="/dashboard" target="_blank" rel="noopener noreferrer" class="hidden sm:inline-flex items-center justify-center px-4 py-2 border border-white/10 bg-white/5 hover:bg-white/10 text-white font-medium text-xs rounded-xl transition-all shadow-[0_0_15px_rgba(255,255,255,0.02)] no-underline">
-                Go to Dashboard
-              </a>
-              <div class="relative flex items-center pl-4 border-l border-white/10 gap-2" id="user-menu-wrap">
-                <div class="flex items-center gap-2">
-                  <div class="w-7 h-7 bg-[#39ff88]/10 border border-[#39ff88]/30 rounded-xl flex items-center justify-center text-[11px] text-[#39ff88] font-mono shadow-[0_0_10px_rgba(57,255,136,0.1)]">
-                    ${esc(user.username[0].toUpperCase())}
-                  </div>
-                  <span class="text-[12px] font-medium text-white hidden sm:block">${esc(user.username)}</span>
+      // Auth detection: server injects window.__LANDING_USER__ if the request had a valid JWT.
+      // Fallback: fetch /api/auth/me using the sessionStorage token (same-tab login case).
+      function renderUserMenu(user) {
+        const desktopCta = document.getElementById('desktop-cta');
+        if (desktopCta) {
+          const adminLink = user.is_admin
+            ? '<a href="/admin" class="w-full flex items-center gap-3 px-3 py-2 text-[12px] font-medium text-[#39ff88] hover:bg-[#39ff88]/10 rounded-xl transition-all no-underline text-left"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Panel de Admin</a>'
+            : '';
+          desktopCta.innerHTML = `
+            <a href="/dashboard" target="_blank" rel="noopener noreferrer" class="hidden sm:inline-flex items-center justify-center px-4 py-2 border border-white/10 bg-white/5 hover:bg-white/10 text-white font-medium text-xs rounded-xl transition-all shadow-[0_0_15px_rgba(255,255,255,0.02)] no-underline">
+              Go to Dashboard
+            </a>
+            <div class="relative flex items-center pl-4 border-l border-white/10 gap-2" id="user-menu-wrap">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 bg-[#39ff88]/10 border border-[#39ff88]/30 rounded-xl flex items-center justify-center text-[11px] text-[#39ff88] font-mono shadow-[0_0_10px_rgba(57,255,136,0.1)]">
+                  ${esc(user.username[0].toUpperCase())}
                 </div>
-                <button id="gear-btn" class="p-1.5 rounded-xl text-zinc-500 hover:text-white transition-all cursor-pointer flex items-center justify-center animate-none" title="Settings">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                  </svg>
-                </button>
-                <div id="user-dropdown" class="hidden absolute right-0 top-full mt-3 w-56 bg-[#0d0d0f] rounded-xl z-50 p-2 fade-in">
-                  <div class="px-3 py-3 border-b border-white/5 mb-2">
-                    <p class="text-[10px] text-zinc-500 font-mono uppercase tracking-wider mb-1">Signed in as</p>
-                    <p class="text-[13px] font-medium text-white truncate">${esc(user.email || user.username)}</p>
-                  </div>
-                  <a href="/dashboard" target="_blank" rel="noopener noreferrer" class="w-full flex items-center gap-3 px-3 py-2 text-[12px] font-medium text-zinc-300 hover:bg-white/10 hover:text-white rounded-xl transition-all no-underline text-left">
-                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-                    Go to Dashboard
-                  </a>
-                  <div class="h-px bg-white/5 my-2 mx-2"></div>
-                  <button id="dd-logout-btn" class="w-full flex items-center gap-3 px-3 py-2 text-[12px] font-medium text-zinc-300 hover:bg-white/10 hover:text-red-500 rounded-xl transition-all cursor-pointer border-0 bg-transparent text-left">
-                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                    Sign Out
-                  </button>
-                </div>
+                <span class="text-[12px] font-medium text-white hidden sm:block">${esc(user.username)}</span>
               </div>
-            `;
+              <button id="gear-btn" class="p-1.5 rounded-xl text-zinc-500 hover:text-white transition-all cursor-pointer flex items-center justify-center" title="Settings">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+              </button>
+              <div id="user-dropdown" class="hidden absolute right-0 top-full mt-3 w-56 bg-[#0d0d0f] rounded-xl z-50 p-2 fade-in">
+                <div class="px-3 py-3 border-b border-white/5 mb-2">
+                  <p class="text-[10px] text-zinc-500 font-mono uppercase tracking-wider mb-1">Signed in as</p>
+                  <p class="text-[13px] font-medium text-white truncate">${esc(user.email || user.username)}</p>
+                </div>
+                <a href="/dashboard" target="_blank" rel="noopener noreferrer" class="w-full flex items-center gap-3 px-3 py-2 text-[12px] font-medium text-zinc-300 hover:bg-white/10 hover:text-white rounded-xl transition-all no-underline text-left">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                  Go to Dashboard
+                </a>
+                ${adminLink}
+                <div class="h-px bg-white/5 my-2 mx-2"></div>
+                <button id="dd-logout-btn" class="w-full flex items-center gap-3 px-3 py-2 text-[12px] font-medium text-zinc-300 hover:bg-white/10 hover:text-red-500 rounded-xl transition-all cursor-pointer border-0 bg-transparent text-left">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          `;
 
-            document.getElementById('gear-btn').addEventListener('click', function(e) {
-              e.stopPropagation();
-              const dd = document.getElementById('user-dropdown');
-              if (dd) {
-                const isOpen = !dd.classList.contains('hidden');
-                if (isOpen) {
-                  dd.classList.add('hidden');
-                  this.className = "p-1.5 rounded-xl text-zinc-500 hover:text-white transition-all cursor-pointer flex items-center justify-center";
-                } else {
-                  dd.classList.remove('hidden');
-                  this.className = "p-1.5 rounded-xl text-[#39ff88] transition-all cursor-pointer flex items-center justify-center";
-                }
+          document.getElementById('gear-btn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            const dd = document.getElementById('user-dropdown');
+            if (dd) {
+              const isOpen = !dd.classList.contains('hidden');
+              if (isOpen) {
+                dd.classList.add('hidden');
+                this.className = "p-1.5 rounded-xl text-zinc-500 hover:text-white transition-all cursor-pointer flex items-center justify-center";
+              } else {
+                dd.classList.remove('hidden');
+                this.className = "p-1.5 rounded-xl text-[#39ff88] transition-all cursor-pointer flex items-center justify-center";
               }
-            });
+            }
+          });
 
-            document.getElementById('dd-logout-btn').addEventListener('click', function() {
-              localStorage.removeItem('fondtracker_token');
-              window.location.href = '/login';
-            });
-            document.addEventListener('click', function(e) {
-              const wrap = document.getElementById('user-menu-wrap');
-              const dd = document.getElementById('user-dropdown');
-              const gear = document.getElementById('gear-btn');
-              if (wrap && dd && !wrap.contains(e.target)) { 
-                dd.classList.add('hidden'); 
-                if (gear) {
-                  gear.className = "p-1.5 rounded-xl text-zinc-500 hover:text-white transition-all cursor-pointer flex items-center justify-center";
-                }
-              }
-            });
-          }
+          document.getElementById('dd-logout-btn').addEventListener('click', function() {
+            localStorage.removeItem('fondtracker_token');
+            sessionStorage.removeItem('fondtracker_token');
+            window.location.href = '/login';
+          });
 
-          // Mobile CTA -> simplified
-          const mobileCta = document.querySelector('#mobile-menu .flex.flex-col.gap-4');
-          if (mobileCta) {
-            mobileCta.innerHTML = `
-              <a href="/dashboard" class="text-center py-3 bg-brand-primary text-black font-bold rounded-lg">Go to Dashboard</a>
-              <button onclick="localStorage.removeItem('fondtracker_token');window.location.reload();" class="text-center py-3 text-text-secondary font-semibold">Sign Out</button>
-            `;
+          document.addEventListener('click', function(e) {
+            const wrap = document.getElementById('user-menu-wrap');
+            const dd = document.getElementById('user-dropdown');
+            const gear = document.getElementById('gear-btn');
+            if (wrap && dd && !wrap.contains(e.target)) {
+              dd.classList.add('hidden');
+              if (gear) gear.className = "p-1.5 rounded-xl text-zinc-500 hover:text-white transition-all cursor-pointer flex items-center justify-center";
+            }
+          });
+        }
+
+        const mobileCta = document.querySelector('#mobile-menu .flex.flex-col.gap-4');
+        if (mobileCta) {
+          mobileCta.innerHTML = `
+            <a href="/dashboard" class="text-center py-3 bg-brand-primary text-black font-bold rounded-lg">Go to Dashboard</a>
+            <button onclick="sessionStorage.removeItem('fondtracker_token');window.location.reload();" class="text-center py-3 text-text-secondary font-semibold">Sign Out</button>
+          `;
+        }
+      }
+
+      // 1. Server-injected user (best case: works on every load including fresh tabs)
+      if (window.__LANDING_USER__) {
+        renderUserMenu(window.__LANDING_USER__);
+      } else {
+        // 2. Fallback: fetch using sessionStorage token (same-tab login)
+        try {
+          const token = sessionStorage.getItem('fondtracker_token');
+          if (token) {
+            fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } })
+              .then(r => r.ok ? r.json() : null)
+              .then(user => { if (user) renderUserMenu(user); })
+              .catch(() => {});
           }
-        }).catch(() => {});
+        } catch {}
       }
     });
   </script>

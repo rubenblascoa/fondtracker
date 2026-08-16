@@ -1,6 +1,10 @@
 import { StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { App } from "./App";
+import { applyTheme, getStoredTheme } from "./theme";
+
+// Initialize Theme (Defaults to Dark, or Light if user preferred)
+applyTheme(getStoredTheme());
 
 const elem = document.getElementById("root")!;
 const tree = (

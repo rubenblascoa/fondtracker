@@ -70,6 +70,18 @@ export async function ensureSchema() {
     await pool.query(`ALTER TABLE users ADD COLUMN phone VARCHAR(20) DEFAULT NULL`);
   } catch (e) {} // Ignore if already exists
   try {
+    await pool.query(`ALTER TABLE users ADD COLUMN is_admin TINYINT(1) NOT NULL DEFAULT 0`);
+  } catch (e) {} // Ignore if already exists
+  // Auto-promote admins from ADMIN_EMAILS env var
+  const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+  if (adminEmails.length > 0) {
+    for (const email of adminEmails) {
+      try {
+        await pool.query("UPDATE users SET is_admin = 1 WHERE email = ? AND deleted_at IS NULL", [email]);
+      } catch {}
+    }
+  }
+  try {
     await pool.query(`ALTER TABLE investments ADD COLUMN deleted_at DATETIME DEFAULT NULL`);
   } catch (e) {} // Ignore if already exists
   await pool.query(`

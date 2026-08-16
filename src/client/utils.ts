@@ -25,3 +25,16 @@ export function formatRelative(dateStr: string): string {
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
 }
+
+export function sanitizeFundName(name: string): string {
+  if (!name || typeof name !== "string") return "";
+  return name
+    .replace(/Espa\?\?a/gi, "España")
+    .replace(/Gesti\?\?n/gi, "Gestión")
+    .replace(/Inversi\?\?n/gi, "Inversión")
+    .replace(/Selecci\?\?n/gi, "Selección")
+    .replace(/Acci\?\?n/gi, "Acción")
+    .replace(/Pensi\?\?n/gi, "Pensión")
+    .replace(/Monetari\?\?o/gi, "Monetario")
+    .replace(/\?\?/g, "ñ");
+}

@@ -19,9 +19,15 @@
   "dependencies": {
     "bun-plugin-tailwind": "0.1.2",
     "geist": "1.7.1",
+    "html-to-image": "^1.11.13",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
+    "lucide-react": "^1.31.0",
     "mysql2": "^3.22.6",
     "react": "19",
     "react-dom": "19",
+    "react-is": "^19.2.8",
+    "recharts": "^3.10.1",
     "tailwindcss": "4.1.11"
   },
   "devDependencies": {

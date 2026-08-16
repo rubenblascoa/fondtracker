@@ -68,6 +68,46 @@
   :root {
     color-scheme: dark;
     --grid-color: rgba(255, 255, 255, 0.02);
+    --color-accent-fg: #000000;
+  }
+
+  /* ── Light Mode Color Theme Overrides (High Contrast WCAG AAA) ── */
+  html[data-theme="light"],
+  body.theme-light {
+    color-scheme: light;
+    --color-ink-0: #f8fafc;
+    --color-ink-1: #ffffff;
+    --color-ink-2: #f1f5f9;
+    --color-ink-3: #e2e8f0;
+    --color-ink-4: #cbd5e1;
+    --color-ink-5: #94a3b8;
+    --color-fg-1: #09090b;
+    --color-fg-2: #18181b;
+    --color-fg-3: #334155;
+    --color-fg-4: #475569;
+    --color-fg-5: #64748b;
+    --color-accent: #047857;
+    --color-accent-dim: #065f46;
+    --color-accent-fg: #ffffff;
+    --color-danger: #dc2626;
+    --color-warn: #b45309;
+    --color-profit: #15803d;
+    --color-loss: #dc2626;
+
+    --color-brand-primary: #047857;
+    --color-brand-secondary: #dc2626;
+    --color-brand-accent: #b45309;
+    --color-neutral-background: #f8fafc;
+    --color-neutral-surface: #ffffff;
+    --color-text-primary: #09090b;
+    --color-text-secondary: #334155;
+    --color-text-light: #64748b;
+    --color-border-terminal: #e2e8f0;
+
+    --grid-color: rgba(0, 0, 0, 0.035);
+    --shadow-neon: 0 4px 14px rgba(4, 120, 87, 0.2);
+    --shadow-neon-hover: 0 6px 20px rgba(4, 120, 87, 0.3);
+    --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
   }
 
   html,
@@ -78,8 +118,8 @@
     font-feature-settings: "ss01", "ss03";
     -webkit-font-smoothing: subpixel-antialiased;
     -moz-osx-font-smoothing: auto;
-    /* Prevent horizontal scroll on mobile without breaking position: sticky */
     overflow-x: clip;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   body {
@@ -88,14 +128,12 @@
     padding-right: env(safe-area-inset-right);
   }
 
-  /* Prevent iOS from zooming in on input focus (requires font-size >= 16px) */
   input,
   select,
   textarea {
     font-size: max(16px, 0.75rem);
   }
 
-  /* Snappier tap response on mobile */
   button,
   a,
   [role="button"] {
@@ -202,10 +240,23 @@
   backface-visibility: hidden;
 }
 
+html[data-theme="light"] .glass-card,
+body.theme-light .glass-card {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.04);
+}
+
 .grid-overlay {
   background-image: linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
   background-size: 40px 40px;
+}
+
+html[data-theme="light"] .grid-overlay,
+body.theme-light .grid-overlay {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
 }
 
 .animate-on-scroll-hidden {
@@ -221,6 +272,11 @@
 
 .text-glow {
   text-shadow: 0 0 10px rgba(57, 255, 136, 0.3);
+}
+
+html[data-theme="light"] .text-glow,
+body.theme-light .text-glow {
+  text-shadow: none;
 }
 
 @keyframes float1 {
@@ -250,3 +306,166 @@
     background-size: 40px 40px;
   }
 }
+
+/* ── Global Contrast Enhancement for Light Mode (WCAG AAA) ── */
+html[data-theme="light"],
+body.theme-light {
+  /* Crisp Border and Background Mapping */
+  .border-white\/5,
+  .border-white\/10,
+  .border-white\/20,
+  .border-white\/30 {
+    border-color: #e2e8f0 !important;
+  }
+  
+  .bg-black\/40,
+  .bg-black\/50,
+  .bg-black\/60,
+  .bg-black\/70,
+  .bg-black\/80 {
+    background-color: #ffffff !important;
+  }
+
+  .bg-black\/20,
+  .bg-black\/30,
+  .bg-white\/5 {
+    background-color: #f1f5f9 !important;
+  }
+
+  .bg-white\/10 {
+    background-color: #e2e8f0 !important;
+  }
+
+  /* High contrast text overrides */
+  .text-white:not([class*="bg-[var(--color-accent)]"], [class*="bg-[var(--color-danger)]"], [class*="bg-brand-primary"], .badge-dark) {
+    color: #09090b !important;
+  }
+
+  .text-gray-300 {
+    color: #1e293b !important;
+  }
+
+  .text-gray-400 {
+    color: #334155 !important;
+  }
+
+  .text-gray-500 {
+    color: #64748b !important;
+  }
+
+  .text-gray-600 {
+    color: #94a3b8 !important;
+  }
+
+  /* Stat cards, fund cards and general cards in light mode */
+  .bg-\[var\(--color-ink-1\)\] {
+    background-color: #ffffff !important;
+    border-color: #e2e8f0 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+  }
+
+  .bg-\[var\(--color-ink-2\)\] {
+    background-color: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+  }
+
+  /* Primary action buttons */
+  button[class*="bg-[var(--color-accent)]"],
+  a[class*="bg-[var(--color-accent)]"],
+  button.bg-brand-primary,
+  a.bg-brand-primary {
+    color: #ffffff !important;
+    background-color: #047857 !important;
+    box-shadow: 0 4px 14px rgba(4, 120, 87, 0.25) !important;
+  }
+
+  button[class*="bg-[var(--color-accent)]"]:hover,
+  a[class*="bg-[var(--color-accent)]"]:hover,
+  button.bg-brand-primary:hover,
+  a.bg-brand-primary:hover {
+    background-color: #065f46 !important;
+  }
+
+  /* Make sure text inside accent buttons is white */
+  button[class*="bg-[var(--color-accent)]"] span,
+  a[class*="bg-[var(--color-accent)]"] span,
+  button.bg-brand-primary span,
+  a.bg-brand-primary span {
+    color: #ffffff !important;
+  }
+
+  /* Neon glows should not blur text in light mode */
+  .glow {
+    text-shadow: none !important;
+  }
+
+  /* Tooltip box in charts */
+  .recharts-default-tooltip {
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #09090b !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08) !important;
+  }
+
+  /* Sidebar in light mode */
+  aside {
+    background-color: #ffffff !important;
+    border-color: #e2e8f0 !important;
+  }
+}
+
+/* ── Dynamic Design Utility Bridges ── */
+.bg-neutral-background {
+  background-color: var(--color-ink-0) !important;
+}
+.bg-neutral-surface {
+  background-color: var(--color-ink-1) !important;
+}
+.border-border-terminal {
+  border-color: var(--color-ink-3) !important;
+}
+.text-text-primary {
+  color: var(--color-fg-1) !important;
+}
+.text-text-secondary {
+  color: var(--color-fg-3) !important;
+}
+.text-text-light {
+  color: var(--color-fg-4) !important;
+}
+.text-brand-primary {
+  color: var(--color-accent) !important;
+}
+.bg-brand-primary {
+  background-color: var(--color-accent) !important;
+}
+
+/* ── Isolated Executive PDF Report Styles (Immune to theme switches) ── */
+.report-page,
+.report-page * {
+  color-scheme: dark !important;
+}
+
+.report-page {
+  background-color: #0a0a0c !important;
+  color: #f8fafc !important;
+  box-sizing: border-box !important;
+}
+
+html[data-theme="light"] .report-page,
+body.theme-light .report-page {
+  background-color: #0a0a0c !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="light"] .report-page h1,
+html[data-theme="light"] .report-page h2,
+html[data-theme="light"] .report-page h3,
+html[data-theme="light"] .report-page p,
+html[data-theme="light"] .report-page span,
+html[data-theme="light"] .report-page td,
+html[data-theme="light"] .report-page th,
+html[data-theme="light"] .report-page div {
+  --color-accent: #39ff88 !important;
+}
+

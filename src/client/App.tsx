@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, clearToken, getToken, setToken, type Investment, type Status, type User } from "./api";
+import { api, clearToken, getToken, setToken, onAuthChange, type Investment, type Status, type User } from "./api";
 import { AddFundForm } from "./components/AddFundForm";
 import { FundCard } from "./components/FundCard";
 import { Header } from "./components/Header";
@@ -8,9 +8,11 @@ import { NotifyPanel } from "./components/NotifyPanel";
 import { RegisterPage } from "./components/RegisterPage";
 import { LandingPage } from "./components/LandingPage";
 import { Stats } from "./components/Stats";
-import { ApiDocsModal } from "./components/ApiDocsModal";
 import { LegalPage } from "./components/LegalPage";
 import { Footer } from "./components/Footer";
+import { AdminPanel } from "./components/AdminPanel";
+import { UserDashboard } from "./components/UserDashboard";
+import { applyTheme, getStoredTheme } from "./theme";
 
 function AnimatedBackground() {
   return (
@@ -19,7 +21,7 @@ function AnimatedBackground() {
       <div 
         className="absolute inset-0 opacity-40"
         style={{ 
-          backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)',
+          backgroundImage: 'linear-gradient(var(--grid-color) 1px, transparent 1px), linear-gradient(90deg, var(--grid-color) 1px, transparent 1px)',
           backgroundSize: '40px 40px',
           maskImage: 'radial-gradient(circle at center, black 40%, transparent 100%)', 
           WebkitMaskImage: 'radial-gradient(circle at center, black 40%, transparent 100%)' 
@@ -39,9 +41,7 @@ function AnimatedBackground() {
   );
 }
 
-function SectionTitle({ title }: { title: string }) {
-  return <h2 className="font-pixel text-xs text-[var(--color-fg-4)] tracking-widest uppercase mb-4">{title}</h2>;
-}
+
 
 export function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -51,12 +51,16 @@ export function App() {
   const [checking, setChecking] = useState(true);
   const [status, setStatus] = useState<Status | null>(null);
   const [funds, setFunds] = useState<Investment[]>([]);
-  const [apiDocsOpen, setApiDocsOpen] = useState(false);
 
   const isLoginPath = window.location.pathname.startsWith("/login") || window.location.pathname.startsWith("/register");
-  const isPrivacyPath = window.location.pathname.startsWith("/legal/privacy-policy");
-  const isTermsPath = window.location.pathname.startsWith("/legal/terms-of-service");
+  const isPrivacyPath = window.location.pathname.startsWith("/legal/privacy-policy") || window.location.pathname.startsWith("/legal/privacy");
+  const isTermsPath = window.location.pathname.startsWith("/legal/terms-of-service") || window.location.pathname.startsWith("/legal/terms");
   const isRootPath = window.location.pathname === "/";
+  const isAdminPath = window.location.pathname.startsWith("/admin");
+
+  useEffect(() => {
+    api.getBanks().catch(() => {});
+  }, []);
 
   useEffect(() => {
     let title = "FondTracker";
@@ -64,11 +68,13 @@ export function App() {
       title = authView === "register" ? "FondTracker | Register" : "FondTracker | Login";
     } else if (isPrivacyPath || isTermsPath) {
       title = "FondTracker | Legal";
+    } else if (isAdminPath) {
+      title = "FondTracker | Admin";
     } else {
       title = "FondTracker | Dashboard";
     }
     document.title = title;
-  }, [isLoginPath, isPrivacyPath, isTermsPath, authView]);
+  }, [isLoginPath, isPrivacyPath, isTermsPath, isAdminPath, authView]);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -93,13 +99,8 @@ export function App() {
       return;
     }
 
-    if (isPrivacyPath || isTermsPath) {
-      clearToken();
-      setChecking(false);
-      return;
-    }
     if (!getToken()) {
-      if (isRootPath || isLoginPath) {
+      if (isRootPath || isLoginPath || isPrivacyPath || isTermsPath || isAdminPath) {
         setChecking(false);
         return;
       }
@@ -116,13 +117,13 @@ export function App() {
       })
       .catch(() => {
         clearToken();
-        if (isRootPath || isLoginPath) return;
+        if (isRootPath || isLoginPath || isPrivacyPath || isTermsPath || isAdminPath) return;
         window.location.replace("/login");
       })
       .finally(() => {
         setChecking(false);
       });
-  }, [isLoginPath, isPrivacyPath, isTermsPath]);
+  }, [isLoginPath, isPrivacyPath, isTermsPath, isAdminPath]);
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -134,6 +135,47 @@ export function App() {
       // token expired or server error — don't crash
     }
   }, []);
+
+  const refreshUser = useCallback(async () => {
+    try {
+      if (getToken()) {
+        const me = await api.me();
+        setUser(me);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    // Cross-tab / cross-window auth sync via BroadcastChannel
+    const unsubscribe = onAuthChange((type, token) => {
+      if (type === "login") {
+        if (token) setToken(token); // store in THIS tab's sessionStorage
+        refreshUser();
+      } else {
+        setUser(null);
+        if (!isRootPath && !isPrivacyPath && !isTermsPath) {
+          window.location.replace("/login");
+        }
+      }
+    });
+
+    // Fallback: re-check when user returns to this tab
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        if (getToken()) {
+          refreshUser();
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      unsubscribe();
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [refreshUser, isRootPath, isPrivacyPath, isTermsPath]);
 
   useEffect(() => {
     if (!user) return;
@@ -169,6 +211,17 @@ export function App() {
     return () => { ctrl.abort(); clearInterval(t); };
   }, [user, refresh]);
 
+  // Synchronize theme: Only user dashboard uses the saved custom theme (Light/Dark).
+  // Landing page, Login, Register, and Legal views are always forced to the dark theme.
+  useEffect(() => {
+    const isDashboardView = !isRootPath && !isPrivacyPath && !isTermsPath && (user !== null || isAdminPath);
+    if (isDashboardView) {
+      applyTheme(getStoredTheme(), false);
+    } else {
+      applyTheme("dark", false);
+    }
+  }, [isRootPath, isPrivacyPath, isTermsPath, isAdminPath, user]);
+
   function handleLogout() {
     clearToken();
     window.location.replace("/login");
@@ -184,24 +237,6 @@ export function App() {
     setAuthView("login");
   }
 
-  if (isPrivacyPath) {
-    return (
-      <div className="min-h-screen bg-[var(--color-ink-0)] text-[var(--color-fg-1)] font-sans relative">
-        <AnimatedBackground />
-        <LegalPage view="privacy" />
-      </div>
-    );
-  }
-
-  if (isTermsPath) {
-    return (
-      <div className="min-h-screen bg-[var(--color-ink-0)] text-[var(--color-fg-1)] font-sans relative">
-        <AnimatedBackground />
-        <LegalPage view="terms" />
-      </div>
-    );
-  }
-
   if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -213,6 +248,51 @@ export function App() {
           </span>
         </div>
       </div>
+    );
+  }
+
+  if (isPrivacyPath) {
+    return (
+      <div className="min-h-screen bg-[var(--color-ink-0)] text-[var(--color-fg-1)] font-sans relative">
+        <AnimatedBackground />
+        <LegalPage view="privacy" user={user} onLogout={handleLogout} />
+      </div>
+    );
+  }
+
+  if (isTermsPath) {
+    return (
+      <div className="min-h-screen bg-[var(--color-ink-0)] text-[var(--color-fg-1)] font-sans relative">
+        <AnimatedBackground />
+        <LegalPage view="terms" user={user} onLogout={handleLogout} />
+      </div>
+    );
+  }
+
+
+  if (isAdminPath) {
+    if (!user) {
+      window.location.replace("/login");
+      return null;
+    }
+    if (!user.is_admin) {
+      return (
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#080810", flexDirection: "column", gap: "16px" }}>
+          <div style={{ fontSize: "32px" }}>🚫</div>
+          <div style={{ color: "#ff6464", fontFamily: "monospace", fontSize: "14px" }}>Acceso denegado — no eres administrador</div>
+          <a href="/dashboard" style={{ color: "#39ff88", fontSize: "13px" }}>← Volver al dashboard</a>
+        </div>
+      );
+    }
+    return (
+      <UserDashboard
+        user={user}
+        status={status}
+        funds={funds}
+        onRefresh={refresh}
+        onLogout={handleLogout}
+        initialSection="admin"
+      />
     );
   }
 
@@ -250,55 +330,12 @@ export function App() {
   }
 
   return (
-    <div className="min-h-screen relative">
-      <AnimatedBackground />
-      <Header status={status} user={user} onLogout={handleLogout} />
-      <ApiDocsModal isOpen={apiDocsOpen} onClose={() => setApiDocsOpen(false)} />
-
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 relative z-10">
-        <Stats status={status} />
-
-        <section className="mb-12">
-          <SectionTitle title="Add Investment" />
-          <AddFundForm onAdded={refresh} />
-        </section>
-
-        <section className="mb-12">
-          <SectionTitle title="My Investments" />
-          {funds.length === 0 ? (
-            <div className="border border-dashed border-[var(--color-ink-3)] p-10 text-center text-sm text-[var(--color-fg-3)]">
-              <div className="font-pixel text-3xl text-[var(--color-fg-4)] mb-3">∅</div>
-              <p className="max-w-sm mx-auto leading-relaxed">
-                your portfolio is empty. search for a fund in the catalog and add your first investment.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {funds.map((fund) => (
-                <FundCard key={fund.id} fund={fund} onChange={refresh} />
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className="mb-12">
-          <SectionTitle title="Notifications" />
-          <NotifyPanel status={status} onChange={refresh} />
-        </section>
-      </main>
-
-      <Footer />
-    </div>
-  );
-}
-
-function SectionTitle({ title, button }: { title: string; button?: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
-      <h2 className="font-heading font-semibold text-2xl text-[var(--color-fg-1)] flex items-center gap-3">
-        {title}
-      </h2>
-      {button}
-    </div>
+    <UserDashboard
+      user={user}
+      status={status}
+      funds={funds}
+      onRefresh={refresh}
+      onLogout={handleLogout}
+    />
   );
 }

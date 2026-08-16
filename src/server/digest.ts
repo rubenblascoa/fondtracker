@@ -33,7 +33,7 @@ function localTimeInTimezone(timezone: string): { hour: number } {
   return { hour: Number(get("hour")) };
 }
 
-export async function runScheduledDigest(): Promise<void> {
+export async function runScheduledDigest(force: boolean = false): Promise<void> {
   const userIds = await queries.getAllUserIds();
   for (const userId of userIds) {
     try {
@@ -45,18 +45,20 @@ export async function runScheduledDigest(): Promise<void> {
       const cfg = await whatsappConfig(userId);
       const { hour } = localTimeInTimezone(cfg.timezone);
       
-      // Check if current hour in user timezone is scheduled
-      if (!cfg.hours.includes(hour)) continue;
+      // Check if current hour in user timezone is scheduled (unless forced)
+      if (!force && !cfg.hours.includes(hour)) continue;
 
       const slot = `hour-${hour}`;
       const nowInTz = new Date().toLocaleDateString("en-CA", { timeZone: cfg.timezone }); // formats as YYYY-MM-DD
       const slotKey = `digest:last_sent_slot:${userId}`;
       const expectedVal = `${nowInTz}:${slot}`;
       
-      const lastSentSlot = await queries.getSetting(slotKey);
-      if (lastSentSlot === expectedVal) {
-        // Already sent for this hour today!
-        continue;
+      if (!force) {
+        const lastSentSlot = await queries.getSetting(slotKey);
+        if (lastSentSlot === expectedVal) {
+          // Already sent for this hour today!
+          continue;
+        }
       }
       
       const result = await runDigest({ slot: "manual", timezone: cfg.timezone }, userId);
@@ -67,6 +69,7 @@ export async function runScheduledDigest(): Promise<void> {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`[digest] error usuario=${userId}: ${msg}`);
+      await queries.setSetting(`digest:last_status:${userId}`, msg.substring(0, 255));
     }
   }
 }
@@ -75,6 +78,7 @@ async function executeDigest(ctx: DigestContext, userId: number): Promise<Digest
   const message = await buildFundReport(ctx, userId);
   const sent = await sendWhatsApp(userId, message);
   await queries.setSetting(`${LAST_SENT_AT_KEY}:${userId}`, new Date().toISOString());
+  await queries.setSetting(`digest:last_status:${userId}`, "ok");
   return { message, sent };
 }
 

@@ -36,7 +36,7 @@ function now(): string {
   return new Date().toISOString().slice(0, 19).replace("T", " ");
 }
 
-function computeInvestmentStats(
+export function computeInvestmentStats(
   investment: InvestmentRow,
   currentPrice: number | null,
   resolvedTicker: string | null
@@ -108,7 +108,10 @@ export async function listInvestments(userId: number): Promise<InvestmentWithSta
 
       // Slow path: fetch live price
       if (ticker) {
-        const quote = await fetchCurrentPrice(ticker).catch(() => null);
+        const quote = await fetchCurrentPrice(ticker).catch((err) => {
+          console.warn(`[sentinel] precio no obtenido para ${ticker}: ${err.message}`);
+          return null;
+        });
         if (quote?.price) {
           setCachedPrice(isin, quote.price, quote.currency);
           await queries.setFundPrice(isin, quote.price, quote.currency);
@@ -160,7 +163,10 @@ export async function getInvestmentWithStats(
 
   let currentPrice: number | null = null;
   if (ticker) {
-    const quote = await fetchCurrentPrice(ticker).catch(() => null);
+    const quote = await fetchCurrentPrice(ticker).catch((err) => {
+      console.warn(`[sentinel] precio no obtenido para ${ticker}: ${err.message}`);
+      return null;
+    });
     currentPrice = quote?.price ?? null;
     if (currentPrice) {
       setCachedPrice(inv.isin, currentPrice, quote!.currency);

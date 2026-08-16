@@ -1,8 +1,19 @@
 const TOKEN_KEY = "fondtracker_token";
+const COOKIE_KEY = "ft_session";
+const authChannel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("ft_auth") : null;
 
 export function getToken(): string | null {
   try {
-    return localStorage.getItem(TOKEN_KEY);
+    const fromSession = sessionStorage.getItem(TOKEN_KEY);
+    if (fromSession) return fromSession;
+    // Fallback: try to restore from cookie (cross-tab / fresh load)
+    const match = document.cookie.match(/(?:^|;\s*)ft_session=([^;]+)/);
+    if (match) {
+      const token = decodeURIComponent(match[1]);
+      try { sessionStorage.setItem(TOKEN_KEY, token); } catch {}
+      return token;
+    }
+    return null;
   } catch {
     return null;
   }
@@ -10,18 +21,31 @@ export function getToken(): string | null {
 
 export function setToken(token: string) {
   try {
-    localStorage.setItem(TOKEN_KEY, token);
+    sessionStorage.setItem(TOKEN_KEY, token);
+    // Also set a cookie so the server can inject user data on page load
+    document.cookie = `${COOKIE_KEY}=${encodeURIComponent(token)}; path=/; SameSite=Strict; max-age=86400`;
+    authChannel?.postMessage({ type: "login", token });
   } catch {
-    // localStorage full or unavailable
+    // sessionStorage full or unavailable
   }
 }
 
 export function clearToken() {
   try {
-    localStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
+    // Clear cookie
+    document.cookie = `${COOKIE_KEY}=; path=/; SameSite=Strict; max-age=0`;
+    authChannel?.postMessage({ type: "logout" });
   } catch {
     // ignore
   }
+}
+
+export function onAuthChange(cb: (type: "login" | "logout", token?: string) => void): () => void {
+  if (!authChannel) return () => {};
+  const handler = (e: MessageEvent) => cb(e.data.type, e.data.token);
+  authChannel.addEventListener("message", handler);
+  return () => authChannel.removeEventListener("message", handler);
 }
 
 export type User = {
@@ -29,6 +53,7 @@ export type User = {
   username: string;
   email: string;
   phone: string | null;
+  is_admin: boolean;
   created_at: string;
 };
 
@@ -182,55 +207,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
-export const BANK_URLS: Record<string, string> = {
-  "Santander": "https://www.bancosantander.es/particulares/fondos-inversion",
-  "BBVA": "https://www.bbva.es/personas/productos/fondos-inversion.html",
-  "CaixaBank": "https://www.caixabank.es/particular/fondos-inversion/fondos-inversion_es.html",
-  "Bankinter": "https://www.bankinter.com/fondos-inversion",
-  "Sabadell": "https://www.bancsabadell.com/fondos-inversion",
-  "Unicaja": "https://www.unicajabanco.es/fondos-inversion",
-  "Kutxabank": "https://www.kutxabank.es/fondos-inversion",
-  "Ibercaja": "https://www.ibercaja.es/fondos-inversion",
-  "Abanca": "https://www.abanca.com/fondos-inversion",
-  "ING": "https://www.ing.es/fondos-inversion",
-  "Openbank": "https://www.openbank.es/fondos-inversion",
-  "EVO Banco": "https://www.evobanco.com/fondos-inversion",
-  "MyInvestor": "https://www.myinvestor.es/fondos",
-  "Indexa Capital": "https://indexacapital.com",
-  "Finizens": "https://finizens.com",
-  "Renta 4": "https://www.r4.com/fondos",
-  "GPM": "https://www.gpm.es",
-  "Andbank": "https://www.andbank.es/fondos-inversion",
-  "Banca March": "https://www.bancamarch.es/fondos-inversion",
-  "Caja Ingenieros": "https://www.cajaingenieros.es/fondos-inversion",
-  "Arquia Banca": "https://www.arquiabanca.com/fondos-inversion",
-  "Deutsche Bank": "https://www.deutschebank.es/fondos-inversion",
-  "Tressis": "https://www.tressis.com/fondos-inversion",
-  "Singular Bank": "https://www.singularbank.es/fondos-inversion",
-  "Mapfre": "https://www.mapfre.es/fondos-inversion",
-  "Carmignac": "https://www.carmignac.es",
-  "Magallanes": "https://www.magallanes.es",
-  "iShares": "https://www.ishares.com/es",
-  "Vanguard": "https://www.vanguard.com/es",
-  "Xtrackers": "https://www.xtrackers.com/es",
-  "Amundi": "https://www.amundi.es",
-  "Invesco": "https://www.invesco.com/es",
-  "SPDR": "https://www.spdrs.com/es",
-  "Pictet": "https://www.pictet.com/es",
-  "Allianz": "https://www.allianz.es/fondos-inversion",
-  "Nordea": "https://www.nordea.com/es",
-  "Robeco": "https://www.robeco.com/es",
-  "Fidelity": "https://www.fidelity.es",
-  "JP Morgan": "https://www.jpmorgan.com/es/fondos",
-  "PIMCO": "https://www.pimco.com/es",
-  "Schroder": "https://www.schroders.com/es",
-  "Franklin Templeton": "https://www.franklintempleton.es",
-  "M&G": "https://www.mandg.com/es",
-  "BNP Paribas": "https://www.bnpparibas.es/fondos",
-  "AXA": "https://www.axa.es/fondos-inversion",
-  "BlackRock": "https://www.blackrock.com/es",
-  "HSBC": "https://www.hsbc.es/fondos-inversion",
-};
+export let BANK_URLS: Record<string, string> = {};
 
 export function getBankUrl(bank: string): string | null {
   if (!bank) return null;
@@ -242,10 +219,10 @@ export function getBankUrl(bank: string): string | null {
   return matchKey ? BANK_URLS[matchKey] : null;
 }
 
-export function getSpecificFundUrl(isin: string, bank: string, name: string): string {
-  const normBank = (bank || "").toLowerCase().trim();
-  const cleanIsin = (isin || "").toUpperCase().trim();
-  const cleanName = (name || "").trim();
+export function getSpecificFundUrl(isin: string, bank?: string, name?: string): string {
+  const normBank = typeof bank === "string" ? bank.toLowerCase().trim() : "";
+  const cleanIsin = typeof isin === "string" ? isin.toUpperCase().trim() : "";
+  const cleanName = typeof name === "string" ? name.trim() : "";
 
   // 1. Ibercaja specific dynamic routing
   if (normBank.includes("ibercaja")) {
@@ -351,7 +328,49 @@ export const api = {
 
   me: () => request<User>("/api/auth/me"),
 
-  status: () => request<Status>("/api/status"),
+  getBanks: async () => {
+    const res = await request<Record<string, string>>("/api/banks");
+    BANK_URLS = res;
+    return res;
+  },
+
+  // ─── Admin API ─────────────────────────────────────────────────────────────
+  admin: {
+    overview: () => request<any>("/api/admin/overview"),
+    users: (search?: string, status?: string, offset?: number) => {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      if (status) params.set("status", status);
+      if (offset) params.set("offset", String(offset));
+      return request<{ users: any[]; total: number }>(`/api/admin/users?${params}`);
+    },
+    deleteUser: (id: number) =>
+      request<{ ok: true }>(`/api/admin/users/${id}/delete`, { method: "POST" }),
+    restoreUser: (id: number) =>
+      request<{ ok: true }>(`/api/admin/users/${id}/restore`, { method: "POST" }),
+    promoteUser: (id: number, is_admin: boolean) =>
+      request<{ ok: true }>(`/api/admin/users/${id}/promote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_admin }),
+      }),
+    catalog: (q?: string) => {
+      const params = q ? `?q=${encodeURIComponent(q)}` : "";
+      return request<any>(`/api/admin/catalog${params}`);
+    },
+    updateTicker: (isin: string, ticker: string) =>
+      request<{ ok: true }>(`/api/admin/catalog/${isin}/ticker`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticker }),
+      }),
+    invalidatePrice: (isin: string) =>
+      request<{ ok: true }>(`/api/admin/catalog/${isin}/invalidate-price`, { method: "POST" }),
+    notifications: () => request<any>("/api/admin/notifications"),
+    triggerDigest: () =>
+      request<{ ok: true; message: string }>("/api/admin/notifications/trigger", { method: "POST" }),
+    system: () => request<any>("/api/admin/system"),
+  },
 
   searchFunds: (q: string, bank?: string, category?: string) => {
     const params = new URLSearchParams();
@@ -440,4 +459,19 @@ export const api = {
 
   testWhatsApp: () =>
     request<{ ok: true }>("/api/whatsapp/test", { method: "POST" }),
+
+  whatsapp: {
+    getConfig: () =>
+      request<Status["whatsapp"]>("/api/whatsapp/config", { method: "GET" }),
+    saveConfig: (data: { api_key?: string; timezone?: string; enabled?: boolean; phone?: string; hours?: number[] }) =>
+      request<{ ok: true }>("/api/whatsapp/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    test: () =>
+      request<{ ok: true }>("/api/whatsapp/test", { method: "POST" }),
+    preview: () =>
+      request<{ ok: true; message: string }>("/api/notify/preview"),
+  },
 };
