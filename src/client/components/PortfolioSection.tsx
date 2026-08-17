@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from "react";
-import type { Investment, Status } from "../api";
+import { getSpecificFundUrl, getFundDataSourceInfo, getBankPortalInfo, type Investment, type Status } from "../api";
 import { FundCard } from "./FundCard";
 import { 
   Search, ArrowUpDown, Plus, LayoutGrid, List, Copy, 
   Check, TrendingUp, ArrowUpRight, ArrowDownRight, Layers, 
-  Building2, Activity, ExternalLink, Sparkles, RefreshCw
+  Building2, Activity, ExternalLink, Sparkles, RefreshCw, BarChart3
 } from "lucide-react";
 import { sanitizeFundName } from "../utils";
 
@@ -108,93 +108,104 @@ export function PortfolioSection({ funds, status, onRefresh, onNavigateAdd }: Po
     <div className="space-y-6 dash-cascade">
       
       {/* ── Portfolio Header KPIs Strip ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         
         {/* Total Invested */}
-        <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-4">
-          <div className="text-[11px] font-mono uppercase text-gray-400 mb-1">Total Invertido</div>
-          <div className="text-xl font-bold font-mono text-white">{fmtEur(totalInvested)}</div>
-          <div className="text-[11px] text-gray-500 mt-1">{funds.length} posiciones suscritas</div>
+        <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between">
+          <div>
+            <div className="text-[10px] sm:text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-0.5 sm:mb-1">Total Invertido</div>
+            <div className="text-base sm:text-xl font-bold font-mono text-[var(--color-fg-1)] truncate">{fmtEur(totalInvested)}</div>
+          </div>
+          <div className="text-[10px] sm:text-[11px] text-[var(--color-fg-5)] mt-1 truncate">{funds.length} {funds.length === 1 ? "posición" : "posiciones"}</div>
         </div>
 
         {/* Current Market Value */}
-        <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-4">
-          <div className="text-[11px] font-mono uppercase text-gray-400 mb-1">Valoración Actual</div>
-          <div className="text-xl font-bold font-mono text-white">{fmtEur(totalCurrent)}</div>
-          <div className="text-[11px] text-gray-500 mt-1">Calculado a precio liquidativo (NAV)</div>
+        <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between">
+          <div>
+            <div className="text-[10px] sm:text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-0.5 sm:mb-1">Valoración Actual</div>
+            <div className="text-base sm:text-xl font-bold font-mono text-[var(--color-fg-1)] truncate">{fmtEur(totalCurrent)}</div>
+          </div>
+          <div className="text-[10px] sm:text-[11px] text-[var(--color-fg-5)] mt-1 truncate">Precio liquidativo (NAV)</div>
         </div>
 
         {/* Total Profit / Loss */}
-        <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-4">
-          <div className="text-[11px] font-mono uppercase text-gray-400 mb-1">Plusvalía Latente</div>
-          <div className={`text-xl font-bold font-mono ${totalProfitLoss >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"}`}>
-            {totalProfitLoss >= 0 ? "+" : ""}{fmtEur(totalProfitLoss)} ({fmtPct(totalProfitLossPct)})
+        <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between">
+          <div>
+            <div className="text-[10px] sm:text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-0.5 sm:mb-1">Plusvalía Latente</div>
+            <div className={`text-base sm:text-xl font-bold font-mono truncate ${totalProfitLoss >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"}`}>
+              {totalProfitLoss >= 0 ? "+" : ""}{fmtEur(totalProfitLoss)}
+            </div>
           </div>
-          <div className="text-[11px] text-gray-500 mt-1">Exenta por diferimiento fiscal</div>
+          <div className="text-[10px] sm:text-[11px] font-mono font-medium text-[var(--color-fg-4)] mt-1 truncate">
+            {fmtPct(totalProfitLossPct)} • Exenta IRPF
+          </div>
         </div>
 
         {/* Best Performer */}
-        <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-4">
-          <div className="text-[11px] font-mono uppercase text-gray-400 mb-1">Activo Más Rentable</div>
-          {bestPerformer ? (
-            <>
-              <div className="text-sm font-bold text-white truncate">{sanitizeFundName(bestPerformer.fund.name)}</div>
-              <div className="text-xs font-mono text-[var(--color-profit)] font-bold mt-1">
-                {fmtPct(bestPerformer.pct)} ({fmtEur(bestPerformer.pl)})
-              </div>
-            </>
-          ) : (
-            <div className="text-xs text-gray-500 mt-1">Sin fondos</div>
-          )}
+        <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between">
+          <div>
+            <div className="text-[10px] sm:text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-0.5 sm:mb-1">Activo Más Rentable</div>
+            {bestPerformer ? (
+              <>
+                <div className="text-xs sm:text-sm font-bold text-[var(--color-fg-1)] truncate">{sanitizeFundName(bestPerformer.fund.name)}</div>
+                <div className="text-[11px] sm:text-xs font-mono text-[var(--color-profit)] font-bold mt-0.5 truncate">
+                  {fmtPct(bestPerformer.pct)} ({fmtEur(bestPerformer.pl)})
+                </div>
+              </>
+            ) : (
+              <div className="text-xs text-[var(--color-fg-5)] mt-1">Sin fondos</div>
+            )}
+          </div>
+          <div className="text-[10px] sm:text-[11px] text-[var(--color-fg-5)] mt-1 truncate">{bestPerformer?.fund.isin || "—"}</div>
         </div>
 
       </div>
 
       {/* ── Search, Filters & View Toggle Toolbar ── */}
-      <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-4 space-y-3">
+      <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 space-y-3">
         
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           
           {/* Search Input */}
           <div className="relative w-full sm:flex-1 sm:min-w-[220px]">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-fg-4)]" />
             <input 
               type="text" 
               placeholder="Buscar por nombre, ISIN, entidad..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)] rounded-xl pl-10 pr-4 py-2.5 text-xs text-white outline-none transition-all placeholder:text-gray-500 font-medium"
+              className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[var(--color-fg-1)] outline-none transition-all placeholder:text-[var(--color-fg-5)] font-medium"
             />
           </div>
 
           {/* Sort Selector, View Mode & Add Button */}
           <div className="flex items-center justify-between sm:justify-end gap-2">
-            <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 px-2.5 sm:px-3 py-2 rounded-xl text-xs flex-1 sm:flex-initial justify-center sm:justify-start">
+            <div className="flex items-center gap-1.5 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] px-2.5 sm:px-3 py-2 rounded-xl text-xs flex-1 sm:flex-initial justify-center sm:justify-start">
               <ArrowUpDown size={13} className="text-[var(--color-accent)] shrink-0" />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-transparent text-white outline-none cursor-pointer text-xs font-medium truncate"
+                className="bg-transparent text-[var(--color-fg-1)] outline-none cursor-pointer text-xs font-medium truncate"
               >
-                <option value="value" className="bg-[var(--color-ink-2)] text-white">Mayor Valor</option>
-                <option value="profit" className="bg-[var(--color-ink-2)] text-white">Mayor Ganancia (€)</option>
-                <option value="profit_pct" className="bg-[var(--color-ink-2)] text-white">Mayor Rentabilidad (%)</option>
-                <option value="name" className="bg-[var(--color-ink-2)] text-white">Nombre A-Z</option>
+                <option value="value" className="bg-[var(--color-ink-2)] text-[var(--color-fg-1)]">Mayor Valor</option>
+                <option value="profit" className="bg-[var(--color-ink-2)] text-[var(--color-fg-1)]">Mayor Ganancia (€)</option>
+                <option value="profit_pct" className="bg-[var(--color-ink-2)] text-[var(--color-fg-1)]">Mayor Rentabilidad (%)</option>
+                <option value="name" className="bg-[var(--color-ink-2)] text-[var(--color-fg-1)]">Nombre A-Z</option>
               </select>
             </div>
 
             {/* View Mode Toggle (Cards vs Table) */}
-            <div className="flex items-center bg-black/40 border border-white/10 p-1 rounded-xl shrink-0">
+            <div className="flex items-center bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] p-1 rounded-xl shrink-0">
               <button
                 onClick={() => setViewMode("cards")}
-                className={`p-1.5 rounded-lg transition-all ${viewMode === "cards" ? "bg-[var(--color-accent)] text-black" : "text-gray-400 hover:text-white"}`}
+                className={`p-1.5 rounded-lg transition-all ${viewMode === "cards" ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)]" : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"}`}
                 title="Vista en cuadrícula de tarjetas"
               >
                 <LayoutGrid size={15} />
               </button>
               <button
                 onClick={() => setViewMode("table")}
-                className={`p-1.5 rounded-lg transition-all ${viewMode === "table" ? "bg-[var(--color-accent)] text-black" : "text-gray-400 hover:text-white"}`}
+                className={`p-1.5 rounded-lg transition-all ${viewMode === "table" ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)]" : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"}`}
                 title="Vista en tabla financiera"
               >
                 <List size={15} />
@@ -204,7 +215,7 @@ export function PortfolioSection({ funds, status, onRefresh, onNavigateAdd }: Po
             {/* Add Fund CTA */}
             <button 
               onClick={onNavigateAdd}
-              className="px-3 sm:px-4 py-2 bg-[var(--color-accent)] text-black font-bold text-xs rounded-xl shadow-[0_0_12px_rgba(57,255,136,0.2)] hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5 shrink-0"
+              className="px-3 sm:px-4 py-2 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold text-xs rounded-xl shadow-[0_0_12px_rgba(57,255,136,0.2)] hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5 shrink-0"
             >
               <Plus size={14} strokeWidth={2.5} />
               <span className="hidden sm:inline">Añadir</span>
@@ -219,8 +230,8 @@ export function PortfolioSection({ funds, status, onRefresh, onNavigateAdd }: Po
             onClick={() => setSelectedBankFilter("all")}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
               selectedBankFilter === "all"
-                ? "bg-white text-black font-bold shadow-sm"
-                : "bg-black/30 text-gray-400 hover:text-white border border-white/5"
+                ? "bg-white text-[var(--color-accent-fg)] font-bold shadow-sm"
+                : "bg-[var(--color-ink-2)] text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] border border-[var(--color-ink-3)]"
             }`}
           >
             Todas ({funds.length})
@@ -231,8 +242,8 @@ export function PortfolioSection({ funds, status, onRefresh, onNavigateAdd }: Po
               onClick={() => setSelectedBankFilter(b)}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
                 selectedBankFilter === b
-                  ? "bg-white text-black font-bold shadow-sm"
-                  : "bg-black/30 text-gray-400 hover:text-white border border-white/5"
+                  ? "bg-white text-[var(--color-accent-fg)] font-bold shadow-sm"
+                  : "bg-[var(--color-ink-2)] text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] border border-[var(--color-ink-3)]"
               }`}
             >
               {b}
@@ -244,19 +255,19 @@ export function PortfolioSection({ funds, status, onRefresh, onNavigateAdd }: Po
 
       {/* ── Content View: Empty State ── */}
       {filteredFunds.length === 0 ? (
-        <div className="bg-[var(--color-ink-1)] border border-dashed border-white/10 rounded-3xl p-12 text-center">
-          <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 mx-auto flex items-center justify-center mb-3">
-            <Search size={20} className="text-gray-400" />
+        <div className="bg-[var(--color-ink-1)] border border-dashed border-[var(--color-ink-3)] rounded-3xl p-12 text-center">
+          <div className="w-12 h-12 rounded-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] mx-auto flex items-center justify-center mb-3">
+            <Search size={20} className="text-[var(--color-fg-4)]" />
           </div>
-          <p className="text-sm text-white font-bold mb-1">No se encontraron inversiones</p>
-          <p className="text-xs text-gray-400 max-w-sm mx-auto mb-4">
+          <p className="text-sm text-[var(--color-fg-1)] font-bold mb-1">No se encontraron inversiones</p>
+          <p className="text-xs text-[var(--color-fg-4)] max-w-sm mx-auto mb-4">
             {searchQuery || selectedBankFilter !== "all" 
               ? "Prueba a cambiar tus criterios de búsqueda o filtro de entidad bancaria." 
               : "Añade tu primer fondo de inversión o ETF para comenzar el seguimiento."}
           </p>
           <button 
             onClick={() => { setSearchQuery(""); setSelectedBankFilter("all"); }}
-            className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white rounded-xl text-xs font-semibold transition-colors"
+            className="px-4 py-2 bg-[var(--color-ink-2)] hover:bg-[var(--color-ink-3)] text-[var(--color-fg-1)] rounded-xl text-xs font-semibold transition-colors"
           >
             Limpiar Filtros
           </button>
@@ -270,11 +281,11 @@ export function PortfolioSection({ funds, status, onRefresh, onNavigateAdd }: Po
         </div>
       ) : (
         /* ── Financial Table View ── */
-        <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl overflow-hidden shadow-xl">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left font-mono text-xs">
+        <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl overflow-hidden shadow-xl">
+          <div className="overflow-x-auto touch-scroll">
+            <table className="w-full text-left font-mono text-xs min-w-[720px]">
               <thead>
-                <tr className="border-b border-white/10 text-gray-400 uppercase tracking-wider bg-white/[0.02]">
+                <tr className="border-b border-[var(--color-ink-3)] text-[var(--color-fg-4)] uppercase tracking-wider bg-[var(--color-ink-2)]">
                   <th className="py-3.5 px-4 font-medium">Fondo / ISIN</th>
                   <th className="py-3.5 px-4 font-medium">Entidad</th>
                   <th className="py-3.5 px-4 font-medium text-right">Participaciones</th>
@@ -286,7 +297,7 @@ export function PortfolioSection({ funds, status, onRefresh, onNavigateAdd }: Po
                   <th className="py-3.5 px-4 font-medium text-right">Rentabilidad</th>
                 </tr>
               </thead>
-              <tbody className="text-gray-300 divide-y divide-white/5">
+              <tbody className="text-[var(--color-fg-2)] divide-y divide-[var(--color-ink-3)]">
                 {filteredFunds.map((f) => {
                   const invested = f.total_invested || (f.shares * f.purchase_price);
                   const curPrice = f.current_price ?? f.purchase_price;
@@ -295,27 +306,54 @@ export function PortfolioSection({ funds, status, onRefresh, onNavigateAdd }: Po
                   const plPct = invested > 0 ? (pl / invested) * 100 : 0;
                   const isP = pl >= 0;
 
+                  const sourceInfo = getFundDataSourceInfo(f);
+                  const bankInfo = getBankPortalInfo(f);
+
                   return (
-                    <tr key={f.id} className="hover:bg-white/[0.02] transition-colors">
+                    <tr key={f.id} className="hover:bg-[var(--color-ink-2)] transition-colors">
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-white text-xs">{sanitizeFundName(f.name)}</div>
-                        <div className="flex items-center gap-1.5 text-[11px] text-gray-500 mt-0.5">
+                        <div className="font-bold text-[var(--color-fg-1)] text-xs">{sanitizeFundName(f.name)}</div>
+                        <div className="flex items-center gap-2 text-[11px] text-[var(--color-fg-5)] mt-0.5">
                           <span>{f.isin}</span>
                           <button
                             onClick={() => copyIsinToClipboard(f.isin)}
-                            className="text-gray-500 hover:text-white transition-colors"
+                            className="text-[var(--color-fg-5)] hover:text-[var(--color-fg-1)] transition-colors"
                             title="Copiar ISIN"
                           >
                             {copiedIsin === f.isin ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
                           </button>
+                          <a
+                            href={sourceInfo.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[var(--color-fg-5)] hover:text-[var(--color-accent)] transition-colors inline-flex items-center gap-0.5"
+                            title={`Ver fuente en ${sourceInfo.name}`}
+                          >
+                            <ExternalLink size={11} />
+                          </a>
                         </div>
                       </td>
-                      <td className="py-3.5 px-4 text-gray-400 font-sans font-medium">{f.bank || "—"}</td>
-                      <td className="py-3.5 px-4 text-right font-bold text-white">{f.shares.toFixed(4)}</td>
-                      <td className="py-3.5 px-4 text-right text-gray-400">{fmtEur(f.purchase_price)}</td>
-                      <td className="py-3.5 px-4 text-right font-bold text-white">{fmtEur(curPrice)}</td>
-                      <td className="py-3.5 px-4 text-right text-gray-400">{fmtEur(invested)}</td>
-                      <td className="py-3.5 px-4 text-right font-bold text-white">{fmtEur(currentVal)}</td>
+                      <td className="py-3.5 px-4 font-sans font-medium">
+                        {bankInfo ? (
+                          <a
+                            href={bankInfo.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[var(--color-fg-2)] hover:text-[var(--color-accent)] hover:underline inline-flex items-center gap-1 group"
+                            title={`Ver en web de ${bankInfo.name}`}
+                          >
+                            <span>{bankInfo.name}</span>
+                            <ExternalLink size={10} className="text-[var(--color-fg-5)] group-hover:text-[var(--color-accent)] transition-colors" />
+                          </a>
+                        ) : (
+                          <span className="text-[var(--color-fg-5)]">—</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-bold text-[var(--color-fg-1)]">{f.shares.toFixed(4)}</td>
+                      <td className="py-3.5 px-4 text-right text-[var(--color-fg-4)]">{fmtEur(f.purchase_price)}</td>
+                      <td className="py-3.5 px-4 text-right font-bold text-[var(--color-fg-1)]">{fmtEur(curPrice)}</td>
+                      <td className="py-3.5 px-4 text-right text-[var(--color-fg-4)]">{fmtEur(invested)}</td>
+                      <td className="py-3.5 px-4 text-right font-bold text-[var(--color-fg-1)]">{fmtEur(currentVal)}</td>
                       <td className={`py-3.5 px-4 text-right font-bold ${isP ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"}`}>
                         {isP ? "+" : ""}{fmtEur(pl)}
                       </td>

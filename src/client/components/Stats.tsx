@@ -43,7 +43,7 @@ export function Stats({ status }: { status: Status | null }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
       {items.map((it) => (
-        <div key={it.label} className="bg-black/20 border border-white/5 backdrop-blur-sm p-5 hover:border-[var(--color-accent)]/30 hover:bg-black/40 transition-all cursor-default">
+        <div key={it.label} className="bg-black/20 border border-[var(--color-ink-3)] backdrop-blur-sm p-5 hover:border-[var(--color-accent)]/30 hover:bg-[var(--color-ink-2)] transition-all cursor-default">
           <div className="text-[10px] uppercase tracking-widest text-[var(--color-fg-4)] mb-2 font-mono">
             {it.label}
           </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
-import { api, clearToken, type Investment, type Status, type User, type YahooChartData } from "../api";
+import { api, clearToken, getFundDataSourceInfo, getBankPortalInfo, type Investment, type Status, type User, type YahooChartData } from "../api";
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar
@@ -58,13 +58,13 @@ function timeAgo(date: Date | number | null) {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-[var(--color-ink-2)]/95 backdrop-blur-md border border-white/10 p-3 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
-        <p className="text-gray-400 text-xs font-mono mb-1">{label}</p>
+      <div className="bg-[var(--color-ink-2)]/95 backdrop-blur-md border border-[var(--color-ink-3)] p-3 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+        <p className="text-[var(--color-fg-4)] text-xs font-mono mb-1">{label}</p>
         {payload.map((p: any, i: number) => (
           <div key={i} className="flex items-center gap-2 text-xs">
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color || 'var(--color-accent)' }} />
-            <span className="text-gray-300 font-medium">{p.name === 'value' ? 'Valor Cartera' : p.name}:</span>
-            <span className="text-white font-mono font-bold">{fmtEur(p.value)}</span>
+            <span className="text-[var(--color-fg-2)] font-medium">{p.name === 'value' ? 'Valor Cartera' : p.name}:</span>
+            <span className="text-[var(--color-fg-1)] font-mono font-bold">{fmtEur(p.value)}</span>
           </div>
         ))}
       </div>
@@ -542,15 +542,15 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
     <div className="flex h-screen bg-[var(--color-ink-0)] text-[var(--color-fg-1)] font-sans overflow-hidden">
       
       {/* ── Sidebar Navigation (Desktop) ── */}
-      <aside className="hidden md:flex w-60 bg-black/40 backdrop-blur-xl border-r border-white/5 flex-col relative z-20 shrink-0">
+      <aside className="hidden md:flex w-60 bg-[var(--color-ink-2)] backdrop-blur-xl border-r border-[var(--color-ink-3)] flex-col relative z-20 shrink-0">
         
         {/* Brand */}
-        <div className="h-16 flex items-center px-5 border-b border-white/5 justify-between">
+        <div className="h-16 flex items-center px-5 border-b border-[var(--color-ink-3)] justify-between">
           <a href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <div className="w-8 h-8 rounded-xl bg-[var(--color-accent)]/10 flex items-center justify-center border border-[var(--color-accent)]/20 shadow-[0_0_12px_rgba(57,255,136,0.15)]">
               <Activity size={17} className="text-[var(--color-accent)]" />
             </div>
-            <span className="font-bold text-white text-base tracking-wide">
+            <span className="font-bold text-[var(--color-fg-1)] text-base tracking-wide">
               Fond<span className="text-[var(--color-accent)]">Tracker</span>
             </span>
           </a>
@@ -571,7 +571,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
                   active 
                     ? "bg-[var(--color-accent)]/10 text-[var(--color-accent)] shadow-[inset_3px_0_0_0_var(--color-accent)] font-bold" 
-                    : "text-[var(--color-fg-4)] hover:text-white hover:bg-white/5"
+                    : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] hover:bg-[var(--color-ink-2)]"
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -580,7 +580,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                 </div>
                 {item.badge !== undefined && (
                   <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
-                    active ? "bg-[var(--color-accent)]/20 text-[var(--color-accent)]" : "bg-white/10 text-gray-300"
+                    active ? "bg-[var(--color-accent)]/20 text-[var(--color-accent)]" : "bg-[var(--color-ink-2)] text-[var(--color-fg-2)]"
                   }`}>
                     {item.badge}
                   </span>
@@ -591,7 +591,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
 
           {/* Admin Link if admin */}
           {user.is_admin && (
-            <div className="pt-4 mt-4 border-t border-white/5 space-y-1">
+            <div className="pt-4 mt-4 border-t border-[var(--color-ink-3)] space-y-1">
               <p className="text-[10px] font-mono uppercase tracking-widest text-[var(--color-warn)] px-3 mb-2 flex items-center gap-1.5">
                 <Shield size={11} /> Administración
               </p>
@@ -618,11 +618,11 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
                   section === "docs"
                     ? "bg-blue-500/10 text-blue-400 shadow-[inset_3px_0_0_0_#3b82f6] font-bold border border-blue-500/30"
-                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                    : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] hover:bg-[var(--color-ink-2)]"
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <BookOpen size={16} className={section === "docs" ? "text-blue-400" : "text-gray-400"} />
+                  <BookOpen size={16} className={section === "docs" ? "text-blue-400" : "text-[var(--color-fg-4)]"} />
                   <span>Documentación &amp; APIs</span>
                 </div>
                 <span className="text-[9px] font-mono px-1.5 py-0.5 rounded font-bold bg-blue-500/20 text-blue-400">
@@ -655,17 +655,17 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
           }
 
           return (
-            <div className="p-3.5 border-t border-white/5">
+            <div className="p-3.5 border-t border-[var(--color-ink-3)]">
               <div className={`border rounded-2xl p-3.5 transition-all ${
                 isActive 
                   ? "bg-[var(--color-ink-2)] border-emerald-500/20 shadow-[0_0_12px_rgba(57,255,136,0.06)]"
                   : isPaused
                   ? "bg-[var(--color-ink-2)] border-amber-500/20"
-                  : "bg-[var(--color-ink-2)] border-white/10"
+                  : "bg-[var(--color-ink-2)] border-[var(--color-ink-3)]"
               }`}>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-white flex items-center gap-1.5">
-                    <Smartphone size={13} className={isActive ? "text-[var(--color-accent)]" : isPaused ? "text-amber-400" : "text-gray-400"} />
+                  <span className="text-xs font-semibold text-[var(--color-fg-1)] flex items-center gap-1.5">
+                    <Smartphone size={13} className={isActive ? "text-[var(--color-accent)]" : isPaused ? "text-amber-400" : "text-[var(--color-fg-4)]"} />
                     <span>WhatsApp Bot</span>
                   </span>
                   <div className="flex items-center gap-1.5">
@@ -674,7 +674,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                         ? "bg-emerald-500/10 text-emerald-400" 
                         : isPaused 
                         ? "bg-amber-500/10 text-amber-400" 
-                        : "bg-white/5 text-gray-400"
+                        : "bg-[var(--color-ink-2)] text-[var(--color-fg-4)]"
                     }`}>
                       {isActive ? "ON" : isPaused ? "PAUSA" : "OFF"}
                     </span>
@@ -694,8 +694,8 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                   onClick={() => setSection("notifications")} 
                   className={`w-full py-1.5 rounded-lg text-xs font-semibold transition-all ${
                     !isConfigured
-                      ? "bg-[var(--color-accent)] text-black hover:brightness-110 shadow-[0_0_10px_rgba(57,255,136,0.2)]"
-                      : "bg-white/5 hover:bg-white/10 border border-white/10 text-white"
+                      ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] hover:brightness-110 shadow-[0_0_10px_rgba(57,255,136,0.2)]"
+                      : "bg-[var(--color-ink-2)] hover:bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] text-[var(--color-fg-1)]"
                   }`}
                 >
                   {isActive ? "Gestionar Alertas" : isPaused ? "Reactivar Bot" : "Conectar WhatsApp"}
@@ -706,13 +706,13 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
         })()}
 
         {/* User Account Footer */}
-        <div className="p-3.5 border-t border-white/5 flex items-center justify-between">
+        <div className="p-3.5 border-t border-[var(--color-ink-3)] flex items-center justify-between">
           <div className="flex items-center gap-3 truncate">
             <div className="w-8 h-8 rounded-full bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 flex items-center justify-center text-xs font-bold text-[var(--color-accent)] shrink-0">
               {user.username[0].toUpperCase()}
             </div>
             <div className="truncate">
-              <p className="text-xs font-medium text-white truncate">{user.username}</p>
+              <p className="text-xs font-medium text-[var(--color-fg-1)] truncate">{user.username}</p>
               <p className="text-[10px] text-[var(--color-fg-4)] truncate">{user.email}</p>
             </div>
           </div>
@@ -720,7 +720,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
           <div className="flex items-center gap-1">
             <button 
               onClick={() => setSettingsOpen(true)}
-              className="p-1.5 text-[var(--color-fg-4)] hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              className="p-1.5 text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] hover:bg-[var(--color-ink-2)] rounded-lg transition-colors"
               title="Ajustes de cuenta"
             >
               <Settings size={15} />
@@ -749,23 +749,23 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
         
         {/* Drawer Panel */}
         <div 
-          className={`relative w-[285px] max-w-[85vw] bg-[var(--color-ink-1)] border-r border-white/10 h-full flex flex-col z-10 shadow-2xl transition-transform duration-200 ease-out transform-gpu will-change-transform ${
+          className={`relative w-[285px] max-w-[85vw] bg-[var(--color-ink-1)] border-r border-[var(--color-ink-3)] h-full flex flex-col z-10 shadow-2xl transition-transform duration-200 ease-out transform-gpu will-change-transform ${
             mobileDrawerOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
           {/* Header */}
-          <div className="h-16 flex items-center justify-between px-4 border-b border-white/5 shrink-0">
+          <div className="h-16 flex items-center justify-between px-4 border-b border-[var(--color-ink-3)] shrink-0">
             <a href="/" className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-[var(--color-accent)]/10 flex items-center justify-center border border-[var(--color-accent)]/20">
                 <Activity size={16} className="text-[var(--color-accent)]" />
               </div>
-              <span className="font-bold text-white text-base tracking-wide">
+              <span className="font-bold text-[var(--color-fg-1)] text-base tracking-wide">
                 Fond<span className="text-[var(--color-accent)]">Tracker</span>
               </span>
             </a>
             <button 
               onClick={() => setMobileDrawerOpen(false)}
-              className="p-2 text-gray-400 hover:text-white rounded-xl hover:bg-white/5 transition-colors"
+              className="p-2 text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] rounded-xl hover:bg-[var(--color-ink-2)] transition-colors"
             >
               <X size={18} />
             </button>
@@ -786,7 +786,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                   className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
                     active 
                       ? "bg-[var(--color-accent)]/10 text-[var(--color-accent)] shadow-[inset_3px_0_0_0_var(--color-accent)] font-bold" 
-                      : "text-[var(--color-fg-4)] hover:text-white hover:bg-white/5"
+                      : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] hover:bg-[var(--color-ink-2)]"
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -795,7 +795,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                   </div>
                   {item.badge !== undefined && (
                     <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
-                      active ? "bg-[var(--color-accent)]/20 text-[var(--color-accent)]" : "bg-white/10 text-gray-300"
+                      active ? "bg-[var(--color-accent)]/20 text-[var(--color-accent)]" : "bg-[var(--color-ink-2)] text-[var(--color-fg-2)]"
                     }`}>
                       {item.badge}
                     </span>
@@ -806,7 +806,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
 
             {/* Admin Links */}
             {user.is_admin && (
-              <div className="pt-3 mt-3 border-t border-white/5 space-y-1">
+              <div className="pt-3 mt-3 border-t border-[var(--color-ink-3)] space-y-1">
                 <p className="text-[10px] font-mono uppercase tracking-widest text-[var(--color-warn)] px-3 mb-2 flex items-center gap-1.5">
                   <Shield size={11} /> Administración
                 </p>
@@ -833,11 +833,11 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                   className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
                     section === "docs"
                       ? "bg-blue-500/10 text-blue-400 shadow-[inset_3px_0_0_0_#3b82f6] font-bold border border-blue-500/30"
-                      : "text-gray-400 hover:text-white hover:bg-white/5"
+                      : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] hover:bg-[var(--color-ink-2)]"
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <BookOpen size={16} className={section === "docs" ? "text-blue-400" : "text-gray-400"} />
+                    <BookOpen size={16} className={section === "docs" ? "text-blue-400" : "text-[var(--color-fg-4)]"} />
                     <span>Documentación &amp; APIs</span>
                   </div>
                   <span className="text-[9px] font-mono px-1.5 py-0.5 rounded font-bold bg-blue-500/20 text-blue-400">
@@ -848,15 +848,15 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
             )}
 
             {/* Quick Theme Switcher in Mobile Drawer */}
-            <div className="pt-3 mt-3 border-t border-white/5 px-2">
+            <div className="pt-3 mt-3 border-t border-[var(--color-ink-3)] px-2">
               <p className="text-[10px] font-mono uppercase tracking-widest text-[var(--color-fg-4)] px-1 mb-2">
                 Tema Visual
               </p>
-              <div className="grid grid-cols-2 gap-1.5 p-1 bg-black/40 rounded-xl border border-white/5">
+              <div className="grid grid-cols-2 gap-1.5 p-1 bg-[var(--color-ink-2)] rounded-xl border border-[var(--color-ink-3)]">
                 <button
                   onClick={() => setTheme("dark")}
                   className={`py-1.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
-                    isDark ? "bg-[var(--color-accent)]/20 text-[var(--color-accent)] font-bold shadow-sm" : "text-gray-400 hover:text-white"
+                    isDark ? "bg-[var(--color-accent)]/20 text-[var(--color-accent)] font-bold shadow-sm" : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
                   }`}
                 >
                   <Moon size={13} /> Oscuro
@@ -864,7 +864,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                 <button
                   onClick={() => setTheme("light")}
                   className={`py-1.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
-                    isLight ? "bg-[var(--color-accent)]/20 text-[var(--color-accent)] font-bold shadow-sm" : "text-gray-400 hover:text-white"
+                    isLight ? "bg-[var(--color-accent)]/20 text-[var(--color-accent)] font-bold shadow-sm" : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
                   }`}
                 >
                   <Sun size={13} /> Blanco
@@ -874,13 +874,13 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
           </div>
 
           {/* Mobile Drawer Footer with Profile & Actions */}
-          <div className="p-3.5 border-t border-white/5 flex items-center justify-between bg-black/20 shrink-0">
+          <div className="p-3.5 border-t border-[var(--color-ink-3)] flex items-center justify-between bg-black/20 shrink-0">
             <div className="flex items-center gap-2.5 truncate">
               <div className="w-8 h-8 rounded-full bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 flex items-center justify-center text-xs font-bold text-[var(--color-accent)] shrink-0">
                 {user.username[0].toUpperCase()}
               </div>
               <div className="truncate">
-                <p className="text-xs font-medium text-white truncate">{user.username}</p>
+                <p className="text-xs font-medium text-[var(--color-fg-1)] truncate">{user.username}</p>
                 <p className="text-[10px] text-[var(--color-fg-4)] truncate">{user.email}</p>
               </div>
             </div>
@@ -888,7 +888,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
             <div className="flex items-center gap-1">
               <button 
                 onClick={() => { setSettingsOpen(true); setMobileDrawerOpen(false); }}
-                className="p-2 text-[var(--color-fg-4)] hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                className="p-2 text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] hover:bg-[var(--color-ink-2)] rounded-lg transition-colors"
                 title="Ajustes de cuenta"
               >
                 <Settings size={15} />
@@ -914,19 +914,19 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
         <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-[var(--color-warn)]/5 rounded-full blur-[90px] pointer-events-none transform-gpu will-change-transform" />
 
         {/* ── Top Header Bar ── */}
-        <header className="h-16 flex items-center justify-between px-4 sm:px-8 border-b border-white/5 bg-[var(--color-ink-0)]/80 backdrop-blur-xl relative z-10 shrink-0 gap-2">
+        <header className="h-16 flex items-center justify-between px-4 sm:px-8 border-b border-[var(--color-ink-3)] bg-[var(--color-ink-0)]/80 backdrop-blur-xl relative z-10 shrink-0 gap-2">
           <div className="flex items-center gap-3 min-w-0">
             {/* Hamburger Toggle (Mobile Only) */}
             <button
               onClick={() => setMobileDrawerOpen(true)}
-              className="md:hidden p-2 text-gray-300 hover:text-white rounded-xl bg-white/5 border border-white/10 shrink-0 active:scale-95 transition-all"
+              className="md:hidden p-2 text-[var(--color-fg-2)] hover:text-[var(--color-fg-1)] rounded-xl bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] shrink-0 active:scale-95 transition-all"
               aria-label="Abrir menú"
             >
               <Menu size={18} />
             </button>
 
             <div className="truncate">
-              <h1 className="text-base sm:text-xl font-bold text-white tracking-tight flex items-center gap-2 truncate">
+              <h1 className="text-base sm:text-xl font-bold text-[var(--color-fg-1)] tracking-tight flex items-center gap-2 truncate">
                 {section === "overview" && "Resumen"}
                 {section === "portfolio" && "Mis Inversiones"}
                 {section === "add" && "Añadir Fondo"}
@@ -952,7 +952,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             
             {/* Last updated & Refresh button */}
-            <div className="flex items-center gap-1.5 sm:gap-2 bg-[var(--color-ink-2)] border border-white/10 px-2.5 sm:px-3 py-1.5 rounded-full text-xs text-[var(--color-fg-4)]">
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] px-2.5 sm:px-3 py-1.5 rounded-full text-xs text-[var(--color-fg-4)]">
               <span className="hidden md:inline">Actualizado {timeAgo(lastRefreshedAt)}</span>
               <button 
                 onClick={handleManualRefresh}
@@ -992,97 +992,103 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                 TAB 1: OVERVIEW / RESUMEN
                ═══════════════════════════════════════════════════════════════════ */}
             {section === "overview" && (
-              <div key="overview" className="space-y-5 dash-cascade">
+              <div key="overview" className="space-y-4 sm:space-y-5 dash-cascade">
                 
                 {/* ── Key Stat Cards (Neon Glass Style) ── */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
                   
                   {/* Total Invertido */}
-                  <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-5 relative overflow-hidden group hover:border-white/10 transition-all">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-                        <Wallet size={18} />
+                  <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-3.5 sm:p-5 relative overflow-hidden group hover:border-[var(--color-ink-3)] transition-all flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-start mb-2 sm:mb-3">
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                          <Wallet size={16} />
+                        </div>
+                        <span className="text-[9px] sm:text-[10px] font-mono text-[var(--color-fg-4)] uppercase tracking-wider bg-[var(--color-ink-2)] px-1.5 sm:px-2 py-0.5 rounded">
+                          Capital
+                        </span>
                       </div>
-                      <span className="text-[10px] font-mono text-[var(--color-fg-4)] uppercase tracking-wider bg-white/5 px-2 py-0.5 rounded">
-                        Capital
-                      </span>
+                      <p className="text-[10px] sm:text-[11px] text-[var(--color-fg-4)] font-medium mb-0.5 sm:mb-1 uppercase tracking-wider">Total Invertido</p>
+                      <p className="text-lg sm:text-[26px] font-bold font-mono text-[var(--color-fg-1)] tracking-tight truncate">{fmtEur(totalInvested)}</p>
                     </div>
-                    <p className="text-[11px] text-[var(--color-fg-4)] font-medium mb-1 uppercase tracking-wider">Total Invertido</p>
-                    <p className="text-2xl sm:text-[26px] font-bold font-mono text-white tracking-tight">{fmtEur(totalInvested)}</p>
-                    <p className="text-xs text-gray-500 mt-2.5 flex items-center gap-1.5">
-                      <Layers size={12} /> {funds.length} {funds.length === 1 ? 'fondo activo' : 'fondos activos'}
+                    <p className="text-[11px] sm:text-xs text-[var(--color-fg-5)] mt-2 sm:mt-2.5 flex items-center gap-1.5">
+                      <Layers size={12} /> {funds.length} {funds.length === 1 ? 'posición' : 'posiciones'}
                     </p>
                   </div>
 
                   {/* Valor Actual */}
-                  <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-5 relative overflow-hidden group hover:border-[var(--color-accent)]/30 transition-all">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="w-9 h-9 rounded-xl bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-accent)] shadow-[0_0_12px_rgba(57,255,136,0.15)]">
-                        <TrendingUp size={18} />
+                  <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-3.5 sm:p-5 relative overflow-hidden group hover:border-[var(--color-accent)]/30 transition-all flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-start mb-2 sm:mb-3">
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-accent)] shadow-[0_0_12px_rgba(57,255,136,0.15)]">
+                          <TrendingUp size={16} />
+                        </div>
+                        <span className="text-[9px] sm:text-[10px] font-mono text-[var(--color-accent)] uppercase tracking-wider bg-[var(--color-accent)]/10 px-1.5 sm:px-2 py-0.5 rounded font-bold">
+                          Valoración
+                        </span>
                       </div>
-                      <span className="text-[10px] font-mono text-[var(--color-accent)] uppercase tracking-wider bg-[var(--color-accent)]/10 px-2 py-0.5 rounded font-bold">
-                        Valoración
-                      </span>
+                      <p className="text-[10px] sm:text-[11px] text-[var(--color-fg-4)] font-medium mb-0.5 sm:mb-1 uppercase tracking-wider">Valor Actual</p>
+                      <p className="text-lg sm:text-[26px] font-bold font-mono text-[var(--color-fg-1)] tracking-tight truncate">{fmtEur(totalCurrent)}</p>
                     </div>
-                    <p className="text-[11px] text-[var(--color-fg-4)] font-medium mb-1 uppercase tracking-wider">Valor Actual</p>
-                    <p className="text-2xl sm:text-[26px] font-bold font-mono text-white tracking-tight">{fmtEur(totalCurrent)}</p>
-                    <div className="flex items-center gap-1.5 mt-2.5 text-xs">
-                      <span className={`flex items-center gap-0.5 font-semibold ${isOverallProfit ? 'text-[var(--color-profit)]' : 'text-[var(--color-loss)]'}`}>
-                        {isOverallProfit ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
+                    <div className="flex items-center gap-1 mt-2 sm:mt-2.5 text-[11px] sm:text-xs truncate">
+                      <span className={`flex items-center gap-0.5 font-semibold shrink-0 ${isOverallProfit ? 'text-[var(--color-profit)]' : 'text-[var(--color-loss)]'}`}>
+                        {isOverallProfit ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
                         {fmtPct(totalProfitLossPct)}
                       </span>
-                      <span className="text-gray-500">rentabilidad total</span>
+                      <span className="text-[var(--color-fg-5)] hidden sm:inline">total</span>
                     </div>
                   </div>
 
                   {/* Ganancia / Pérdida */}
-                  <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-5 relative overflow-hidden group hover:border-white/10 transition-all">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className={`w-9 h-9 rounded-xl border flex items-center justify-center ${
-                        isOverallProfit 
-                          ? 'bg-[var(--color-profit)]/10 border-[var(--color-profit)]/20 text-[var(--color-profit)]' 
-                          : 'bg-[var(--color-loss)]/10 border-[var(--color-loss)]/20 text-[var(--color-loss)]'
-                      }`}>
-                        {isOverallProfit ? <ArrowUpRight size={18} /> : <ArrowDownRight size={18} />}
+                  <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-3.5 sm:p-5 relative overflow-hidden group hover:border-[var(--color-ink-3)] transition-all flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-start mb-2 sm:mb-3">
+                        <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl border flex items-center justify-center ${
+                          isOverallProfit 
+                            ? 'bg-[var(--color-profit)]/10 border-[var(--color-profit)]/20 text-[var(--color-profit)]' 
+                            : 'bg-[var(--color-loss)]/10 border-[var(--color-loss)]/20 text-[var(--color-loss)]'
+                        }`}>
+                          {isOverallProfit ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
+                        </div>
+                        <span className={`text-[9px] sm:text-[10px] font-mono uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded font-bold ${
+                          isOverallProfit ? 'bg-[var(--color-profit)]/10 text-[var(--color-profit)]' : 'bg-[var(--color-loss)]/10 text-[var(--color-loss)]'
+                        }`}>
+                          {isOverallProfit ? 'Plusvalía' : 'Minusvalía'}
+                        </span>
                       </div>
-                      <span className={`text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded font-bold ${
-                        isOverallProfit ? 'bg-[var(--color-profit)]/10 text-[var(--color-profit)]' : 'bg-[var(--color-loss)]/10 text-[var(--color-loss)]'
-                      }`}>
-                        {isOverallProfit ? 'Plusvalía' : 'Minusvalía'}
-                      </span>
+                      <p className="text-[10px] sm:text-[11px] text-[var(--color-fg-4)] font-medium mb-0.5 sm:mb-1 uppercase tracking-wider">Beneficio Neto</p>
+                      <p className={`text-lg sm:text-[26px] font-bold font-mono tracking-tight truncate ${isOverallProfit ? 'text-[var(--color-profit)] glow' : 'text-[var(--color-loss)]'}`}>
+                        {fmtEur(totalProfitLoss)}
+                      </p>
                     </div>
-                    <p className="text-[11px] text-[var(--color-fg-4)] font-medium mb-1 uppercase tracking-wider">Beneficio Neto</p>
-                    <p className={`text-2xl sm:text-[26px] font-bold font-mono tracking-tight ${isOverallProfit ? 'text-[var(--color-profit)] glow' : 'text-[var(--color-loss)]'}`}>
-                      {fmtEur(totalProfitLoss)}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-2.5">
-                      Retorno absoluto sobre capital
+                    <p className="text-[10px] sm:text-xs text-[var(--color-fg-5)] mt-2 sm:mt-2.5 truncate">
+                      Retorno absoluto
                     </p>
                   </div>
 
                   {/* WhatsApp Status Widget */}
-                  <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-5 relative overflow-hidden group hover:border-white/10 transition-all flex flex-col justify-between">
+                  <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-3.5 sm:p-5 relative overflow-hidden group hover:border-[var(--color-ink-3)] transition-all flex flex-col justify-between">
                     <div>
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="w-9 h-9 rounded-xl bg-[var(--color-warn)]/10 border border-[var(--color-warn)]/20 flex items-center justify-center text-[var(--color-warn)]">
-                          <Smartphone size={18} />
+                      <div className="flex justify-between items-start mb-2 sm:mb-3">
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[var(--color-warn)]/10 border border-[var(--color-warn)]/20 flex items-center justify-center text-[var(--color-warn)]">
+                          <Smartphone size={16} />
                         </div>
-                        <span className={`text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded font-bold ${
-                          status?.whatsapp?.configured ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' : 'bg-gray-800 text-gray-400'
+                        <span className={`text-[9px] sm:text-[10px] font-mono uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded font-bold ${
+                          status?.whatsapp?.configured ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' : 'bg-gray-800 text-[var(--color-fg-4)]'
                         }`}>
                           {status?.whatsapp?.configured ? 'Conectado' : 'Inactivo'}
                         </span>
                       </div>
-                      <p className="text-[11px] text-[var(--color-fg-4)] font-medium mb-1 uppercase tracking-wider">Digest Diario</p>
-                      <p className="text-base font-bold text-white tracking-tight truncate">
+                      <p className="text-[10px] sm:text-[11px] text-[var(--color-fg-4)] font-medium mb-0.5 sm:mb-1 uppercase tracking-wider">Digest Diario</p>
+                      <p className="text-xs sm:text-base font-bold text-[var(--color-fg-1)] tracking-tight truncate">
                         {status?.whatsapp?.configured ? (user.phone || "Activo") : "Sin configurar"}
                       </p>
                     </div>
                     <button 
-                      onClick={() => setSection("notifications")}
-                      className="text-xs text-[var(--color-accent)] hover:underline mt-2.5 flex items-center gap-1 font-medium"
+                      onClick={() => setSection("notifications")} 
+                      className="text-[11px] sm:text-xs text-[var(--color-accent)] hover:underline mt-2 sm:mt-2.5 flex items-center gap-1 font-medium"
                     >
-                      Configurar alertas <ChevronRight size={12} />
+                      Alertas <ChevronRight size={12} />
                     </button>
                   </div>
 
@@ -1092,10 +1098,10 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                   
                   {/* Interactive Portfolio Growth Chart */}
-                  <div className="lg:col-span-2 bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-5 relative overflow-hidden">
+                  <div className="lg:col-span-2 bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-5 relative overflow-hidden">
                     <div className="flex flex-wrap justify-between items-start gap-3 mb-4">
                       <div>
-                        <h2 className="text-sm sm:text-base font-semibold text-white">Evolución de Patrimonio</h2>
+                        <h2 className="text-sm sm:text-base font-semibold text-[var(--color-fg-1)]">Evolución de Patrimonio</h2>
                         <p className="text-xs text-[var(--color-fg-4)] mt-0.5">Valoración consolidada de tu cartera (últimos 30 días)</p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -1125,10 +1131,10 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                   </div>
 
                   {/* Bank Asset Distribution Donut */}
-                  <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-5 flex flex-col justify-between">
+                  <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
                     <div>
                       <div className="flex justify-between items-start mb-0.5">
-                        <h2 className="text-sm sm:text-base font-semibold text-white">Distribución por Entidad</h2>
+                        <h2 className="text-sm sm:text-base font-semibold text-[var(--color-fg-1)]">Distribución por Entidad</h2>
                         <button onClick={() => setSection("analytics")} className="text-xs text-[var(--color-accent)] hover:underline">
                           Detalles
                         </button>
@@ -1138,8 +1144,8 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
 
                     <div className="h-[145px] relative flex items-center justify-center">
                       <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
-                        <p className="text-lg font-bold font-mono text-white">{fmtEur(totalCurrent)}</p>
-                        <p className="text-[10px] text-gray-500 uppercase tracking-widest">Total</p>
+                        <p className="text-base sm:text-lg font-bold font-mono text-[var(--color-fg-1)]">{fmtEur(totalCurrent)}</p>
+                        <p className="text-[10px] text-[var(--color-fg-5)] uppercase tracking-widest">Total</p>
                       </div>
                       <ResponsiveContainer width="100%" height="100%">
                         {bankDistribution.length > 0 ? (
@@ -1159,7 +1165,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                             <Tooltip content={<CustomTooltip />} />
                           </PieChart>
                         ) : (
-                          <div className="flex items-center justify-center text-xs text-gray-500">Sin fondos</div>
+                          <div className="flex items-center justify-center text-xs text-[var(--color-fg-5)]">Sin fondos</div>
                         )}
                       </ResponsiveContainer>
                     </div>
@@ -1168,12 +1174,12 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                       {bankDistribution.slice(0, 3).map(b => (
                         <div key={b.name} className="flex justify-between items-center text-xs">
                           <div className="flex items-center gap-2">
-                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: b.color }} />
-                            <span className="text-gray-300 font-medium truncate max-w-[120px]">{b.name}</span>
+                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: b.color }} />
+                            <span className="text-[var(--color-fg-2)] font-medium truncate max-w-[120px]">{b.name}</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-gray-400 font-mono">{b.pct}%</span>
-                            <span className="font-mono text-white font-semibold">{fmtEur(b.value)}</span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[var(--color-fg-4)] font-mono">{b.pct}%</span>
+                            <span className="font-mono text-[var(--color-fg-1)] font-semibold">{fmtEur(b.value)}</span>
                           </div>
                         </div>
                       ))}
@@ -1183,13 +1189,13 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                 </div>
 
                 {/* ── Best / Worst Performers & Quick Action Highlights ── */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
                   
                   {/* Best Performer */}
-                  <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-5 flex flex-col justify-between">
+                  <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between mb-2.5">
-                        <span className="text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="text-xs font-semibold text-[var(--color-fg-1)] uppercase tracking-wider flex items-center gap-1.5">
                           <Sparkles size={14} className="text-[var(--color-accent)]" /> Mejor Rendimiento
                         </span>
                         {bestPerformer && (
@@ -1200,24 +1206,24 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                       </div>
                       {bestPerformer ? (
                         <>
-                          <h3 className="text-sm font-semibold text-white truncate max-w-[260px]">{bestPerformer.fund.name}</h3>
-                          <p className="text-xs font-mono text-gray-400 mt-1">{bestPerformer.fund.isin} • {bestPerformer.fund.bank || '—'}</p>
-                          <div className="flex justify-between items-center mt-3 pt-2.5 border-t border-white/5 text-xs font-mono">
-                            <span className="text-gray-400">Ganancia:</span>
+                          <h3 className="text-sm font-semibold text-[var(--color-fg-1)] truncate max-w-[260px]">{bestPerformer.fund.name}</h3>
+                          <p className="text-xs font-mono text-[var(--color-fg-4)] mt-1">{bestPerformer.fund.isin} • {bestPerformer.fund.bank || '—'}</p>
+                          <div className="flex justify-between items-center mt-3 pt-2.5 border-t border-[var(--color-ink-3)] text-xs font-mono">
+                            <span className="text-[var(--color-fg-4)]">Ganancia:</span>
                             <span className="text-[var(--color-accent)] font-bold">{fmtEur(bestPerformer.pl)}</span>
                           </div>
                         </>
                       ) : (
-                        <p className="text-xs text-gray-500 mt-1">Añade fondos para ver el ranking.</p>
+                        <p className="text-xs text-[var(--color-fg-5)] mt-1">Añade fondos para ver el ranking.</p>
                       )}
                     </div>
                   </div>
 
                   {/* Worst Performer */}
-                  <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-5 flex flex-col justify-between">
+                  <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between mb-2.5">
-                        <span className="text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="text-xs font-semibold text-[var(--color-fg-1)] uppercase tracking-wider flex items-center gap-1.5">
                           <AlertTriangle size={14} className="text-[var(--color-warn)]" /> Menor Rendimiento
                         </span>
                         {worstPerformer && (
@@ -1228,29 +1234,29 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                       </div>
                       {worstPerformer ? (
                         <>
-                          <h3 className="text-sm font-semibold text-white truncate max-w-[260px]">{worstPerformer.fund.name}</h3>
-                          <p className="text-xs font-mono text-gray-400 mt-1">{worstPerformer.fund.isin} • {worstPerformer.fund.bank || '—'}</p>
-                          <div className="flex justify-between items-center mt-3 pt-2.5 border-t border-white/5 text-xs font-mono">
-                            <span className="text-gray-400">Resultado:</span>
+                          <h3 className="text-sm font-semibold text-[var(--color-fg-1)] truncate max-w-[260px]">{worstPerformer.fund.name}</h3>
+                          <p className="text-xs font-mono text-[var(--color-fg-4)] mt-1">{worstPerformer.fund.isin} • {worstPerformer.fund.bank || '—'}</p>
+                          <div className="flex justify-between items-center mt-3 pt-2.5 border-t border-[var(--color-ink-3)] text-xs font-mono">
+                            <span className="text-[var(--color-fg-4)]">Resultado:</span>
                             <span className={`font-bold ${worstPerformer.pl >= 0 ? 'text-[var(--color-accent)]' : 'text-[var(--color-danger)]'}`}>
                               {fmtEur(worstPerformer.pl)}
                             </span>
                           </div>
                         </>
                       ) : (
-                        <p className="text-xs text-gray-500 mt-1">Solo tienes 1 fondo activo o cartera vacía.</p>
+                        <p className="text-xs text-[var(--color-fg-5)] mt-1">Solo tienes 1 fondo activo o cartera vacía.</p>
                       )}
                     </div>
                   </div>
 
                   {/* Quick Export / Report Widget */}
-                  <div className="bg-gradient-to-br from-[var(--color-accent)]/15 to-[var(--color-ink-1)] border border-[var(--color-accent)]/20 rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden group">
+                  <div className="bg-gradient-to-br from-[var(--color-accent)]/15 to-[var(--color-ink-1)] border border-[var(--color-accent)]/20 rounded-2xl p-4 sm:p-5 flex flex-col justify-between relative overflow-hidden group">
                     <div className="absolute -top-8 -right-8 w-28 h-28 bg-[var(--color-accent)]/20 blur-2xl rounded-full pointer-events-none group-hover:bg-[var(--color-accent)]/30 transition-all" />
                     <div>
-                      <h3 className="text-sm font-semibold text-white mb-1 flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-[var(--color-fg-1)] mb-1 flex items-center gap-2">
                         <FileText size={16} className="text-[var(--color-accent)]" /> Informe Ejecutivo PDF
                       </h3>
-                      <p className="text-xs text-gray-400 leading-relaxed mb-3.5">
+                      <p className="text-xs text-[var(--color-fg-4)] leading-relaxed mb-3.5">
                         Descarga un resumen con gráficos de rendimiento y desglose de activos.
                       </p>
                     </div>
@@ -1267,41 +1273,41 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                 </div>
 
                 {/* ── Recent Investments Table Summary ── */}
-                <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-5">
+                <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-5">
                   <div className="flex justify-between items-center mb-4">
                     <div>
-                      <h2 className="text-sm sm:text-base font-semibold text-white">Posiciones Principales</h2>
+                      <h2 className="text-sm sm:text-base font-semibold text-[var(--color-fg-1)]">Posiciones Principales</h2>
                       <p className="text-xs text-[var(--color-fg-4)] mt-0.5">Tus fondos con mayor capital invertido</p>
                     </div>
                     <button 
                       onClick={() => setSection("portfolio")} 
-                      className="text-xs text-[var(--color-accent)] hover:text-white font-medium bg-[var(--color-accent)]/10 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                      className="text-xs text-[var(--color-accent)] hover:text-[var(--color-fg-1)] font-medium bg-[var(--color-accent)]/10 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
                     >
                       Ver todas ({funds.length}) <ChevronRight size={12} />
                     </button>
                   </div>
 
                   {funds.length === 0 ? (
-                    <div className="border border-dashed border-white/10 rounded-xl p-8 text-center">
+                    <div className="border border-dashed border-[var(--color-ink-3)] rounded-xl p-8 text-center">
                       <div className="w-11 h-11 rounded-full bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 mx-auto flex items-center justify-center mb-2.5">
                         <Database size={18} className="text-[var(--color-accent)]" />
                       </div>
-                      <p className="text-sm text-white font-medium mb-1">Tu cartera está vacía</p>
+                      <p className="text-sm text-[var(--color-fg-1)] font-medium mb-1">Tu cartera está vacía</p>
                       <p className="text-xs text-[var(--color-fg-4)] max-w-sm mx-auto mb-3.5">
                         Registra tu primera inversión para comenzar a monitorear tus rendimientos.
                       </p>
                       <button 
-                        onClick={() => setSection("add")}
-                        className="px-4 py-2 bg-[var(--color-accent)] text-black font-semibold text-xs rounded-xl shadow-[0_0_12px_rgba(57,255,136,0.2)] hover:brightness-110 transition-all"
+                        onClick={() => setSection("add")} 
+                        className="px-4 py-2 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-xs rounded-xl shadow-[0_0_12px_rgba(57,255,136,0.2)] hover:brightness-110 transition-all"
                       >
                         Añadir Primer Fondo
                       </button>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse text-xs">
+                    <div className="overflow-x-auto touch-scroll">
+                      <table className="w-full text-left border-collapse text-xs min-w-[520px]">
                         <thead>
-                          <tr className="border-b border-white/5 text-[var(--color-fg-4)] uppercase tracking-wider font-mono">
+                          <tr className="border-b border-[var(--color-ink-3)] text-[var(--color-fg-4)] uppercase tracking-wider font-mono">
                             <th className="pb-2.5 font-medium">Fondo</th>
                             <th className="pb-2.5 font-medium">Entidad</th>
                             <th className="pb-2.5 font-medium text-right">Invertido</th>
@@ -1317,22 +1323,59 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                             const plPct = invested > 0 ? (pl / invested) * 100 : 0;
                             const isP = pl >= 0;
 
+                            const sourceInfo = getFundDataSourceInfo(f);
+                            const bankInfo = getBankPortalInfo(f);
+
                             return (
-                              <tr key={f.id} className="border-b border-white/[0.02] hover:bg-white/[0.02] transition-colors">
+                              <tr key={f.id} className="border-b border-[var(--color-ink-3)] hover:bg-[var(--color-ink-2)] transition-colors">
                                 <td className="py-3">
                                   <div className="flex items-center gap-3">
-                                    <div className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center font-mono font-bold text-[11px] text-white">
+                                    <div className="w-7 h-7 rounded-lg bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] flex items-center justify-center font-mono font-bold text-[11px] text-[var(--color-fg-1)] shrink-0">
                                       {f.name.slice(0, 2).toUpperCase()}
                                     </div>
-                                    <div>
-                                      <p className="font-medium text-white truncate max-w-[220px] sm:max-w-sm">{f.name}</p>
-                                      <p className="text-[10px] font-mono text-gray-500">{f.isin}</p>
+                                    <div className="min-w-0">
+                                      <a
+                                        href={sourceInfo.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="font-medium text-[var(--color-fg-1)] hover:text-[var(--color-accent)] truncate max-w-[220px] sm:max-w-sm block transition-colors"
+                                        title={`Ver en ${sourceInfo.name}`}
+                                      >
+                                        {f.name}
+                                      </a>
+                                      <div className="flex items-center gap-1.5 mt-0.5">
+                                        <span className="text-[10px] font-mono text-[var(--color-fg-5)]">{f.isin}</span>
+                                        <a
+                                          href={sourceInfo.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-[var(--color-fg-5)] hover:text-[var(--color-accent)] transition-colors"
+                                          title={`Ver en ${sourceInfo.name}`}
+                                        >
+                                          <ExternalLink size={9} />
+                                        </a>
+                                      </div>
                                     </div>
                                   </div>
                                 </td>
-                                <td className="py-3 text-gray-300 font-medium">{f.bank || '—'}</td>
-                                <td className="py-3 text-right font-mono text-gray-400">{fmtEur(invested)}</td>
-                                <td className="py-3 text-right font-mono text-white font-bold">{fmtEur(currentVal)}</td>
+                                <td className="py-3 font-medium">
+                                  {bankInfo ? (
+                                    <a
+                                      href={bankInfo.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-[var(--color-fg-2)] hover:text-[var(--color-accent)] hover:underline inline-flex items-center gap-1 group"
+                                      title={`Ver en web de ${bankInfo.name}`}
+                                    >
+                                      <span>{bankInfo.name}</span>
+                                      <ExternalLink size={9} className="text-[var(--color-fg-5)] group-hover:text-[var(--color-accent)] transition-colors" />
+                                    </a>
+                                  ) : (
+                                    <span className="text-[var(--color-fg-5)]">—</span>
+                                  )}
+                                </td>
+                                <td className="py-3 text-right font-mono text-[var(--color-fg-4)]">{fmtEur(invested)}</td>
+                                <td className="py-3 text-right font-mono text-[var(--color-fg-1)] font-bold">{fmtEur(currentVal)}</td>
                                 <td className="py-3 text-right font-mono font-bold">
                                   <span className={`px-2 py-0.5 rounded-md ${isP ? 'bg-[var(--color-profit)]/10 text-[var(--color-profit)]' : 'bg-[var(--color-loss)]/10 text-[var(--color-loss)]'}`}>
                                     {fmtPct(plPct)}
@@ -1424,66 +1467,66 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
           ACCOUNT SETTINGS MODAL
          ═══════════════════════════════════════════════════════════════════════ */}
       {settingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fade-in">
-          <div className="bg-[var(--color-ink-1)] border border-white/10 rounded-3xl w-full max-w-lg overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.7)] flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/75 backdrop-blur-md p-2.5 sm:p-4 overflow-y-auto pt-4 sm:pt-4 animate-fade-in">
+          <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl sm:rounded-3xl w-full max-w-lg overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.7)] flex flex-col max-h-[85vh] sm:max-h-[90vh] my-auto">
             
             {/* Modal Header */}
-            <div className="p-6 border-b border-white/5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-accent)]">
-                  <Settings size={18} />
+            <div className="p-4 sm:p-6 border-b border-[var(--color-ink-3)] flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-accent)] shrink-0">
+                  <Settings size={17} />
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-white">Ajustes de Cuenta</h3>
-                  <p className="text-xs text-[var(--color-fg-4)]">{user.username} • {user.email}</p>
+                <div className="truncate">
+                  <h3 className="text-sm sm:text-base font-bold text-[var(--color-fg-1)] truncate">Ajustes de Cuenta</h3>
+                  <p className="text-[11px] sm:text-xs text-[var(--color-fg-4)] truncate">{user.username} • {user.email}</p>
                 </div>
               </div>
               <button 
                 onClick={() => setSettingsOpen(false)}
-                className="p-2 text-gray-400 hover:text-white rounded-xl hover:bg-white/5 transition-colors"
+                className="p-1.5 sm:p-2 text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] rounded-xl hover:bg-[var(--color-ink-2)] transition-colors shrink-0"
               >
                 <X size={18} />
               </button>
             </div>
 
             {/* Modal Tabs */}
-            <div className="flex border-b border-white/5 px-6 pt-2 gap-2">
+            <div className="flex border-b border-[var(--color-ink-3)] px-3 sm:px-6 pt-2 gap-1 sm:gap-2 overflow-x-auto no-scrollbar touch-scroll shrink-0">
               <button 
                 onClick={() => { setSettingsTab("appearance"); setSettingsError(""); setSettingsSuccess(""); }}
-                className={`pb-3 px-2 text-xs font-medium border-b-2 transition-all flex items-center gap-1.5 ${
-                  settingsTab === "appearance" ? "border-[var(--color-accent)] text-[var(--color-accent)] font-semibold" : "border-transparent text-gray-400 hover:text-white"
+                className={`pb-2.5 sm:pb-3 px-2 sm:px-2.5 text-xs font-medium border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                  settingsTab === "appearance" ? "border-[var(--color-accent)] text-[var(--color-accent)] font-semibold" : "border-transparent text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
                 }`}
               >
                 <Palette size={13} /> Apariencia
               </button>
               <button 
                 onClick={() => { setSettingsTab("phone"); setSettingsError(""); setSettingsSuccess(""); }}
-                className={`pb-3 px-2 text-xs font-medium border-b-2 transition-all flex items-center gap-1.5 ${
-                  settingsTab === "phone" ? "border-[var(--color-accent)] text-[var(--color-accent)] font-semibold" : "border-transparent text-gray-400 hover:text-white"
+                className={`pb-2.5 sm:pb-3 px-2 sm:px-2.5 text-xs font-medium border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                  settingsTab === "phone" ? "border-[var(--color-accent)] text-[var(--color-accent)] font-semibold" : "border-transparent text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
                 }`}
               >
                 <Phone size={13} /> WhatsApp
               </button>
               <button 
                 onClick={() => { setSettingsTab("email"); setSettingsError(""); setSettingsSuccess(""); }}
-                className={`pb-3 px-2 text-xs font-medium border-b-2 transition-all flex items-center gap-1.5 ${
-                  settingsTab === "email" ? "border-[var(--color-accent)] text-[var(--color-accent)] font-semibold" : "border-transparent text-gray-400 hover:text-white"
+                className={`pb-2.5 sm:pb-3 px-2 sm:px-2.5 text-xs font-medium border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                  settingsTab === "email" ? "border-[var(--color-accent)] text-[var(--color-accent)] font-semibold" : "border-transparent text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
                 }`}
               >
                 <Mail size={13} /> Email
               </button>
               <button 
                 onClick={() => { setSettingsTab("password"); setSettingsError(""); setSettingsSuccess(""); }}
-                className={`pb-3 px-2 text-xs font-medium border-b-2 transition-all flex items-center gap-1.5 ${
-                  settingsTab === "password" ? "border-[var(--color-accent)] text-[var(--color-accent)] font-semibold" : "border-transparent text-gray-400 hover:text-white"
+                className={`pb-2.5 sm:pb-3 px-2 sm:px-2.5 text-xs font-medium border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                  settingsTab === "password" ? "border-[var(--color-accent)] text-[var(--color-accent)] font-semibold" : "border-transparent text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
                 }`}
               >
                 <Lock size={13} /> Contraseña
               </button>
               <button 
                 onClick={() => { setSettingsTab("danger"); setSettingsError(""); setSettingsSuccess(""); }}
-                className={`pb-3 px-2 text-xs font-medium border-b-2 transition-all flex items-center gap-1.5 ml-auto ${
-                  settingsTab === "danger" ? "border-[var(--color-danger)] text-[var(--color-danger)] font-semibold" : "border-transparent text-gray-500 hover:text-red-400"
+                className={`pb-2.5 sm:pb-3 px-2 sm:px-2.5 text-xs font-medium border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ml-auto ${
+                  settingsTab === "danger" ? "border-[var(--color-danger)] text-[var(--color-danger)] font-semibold" : "border-transparent text-[var(--color-fg-5)] hover:text-red-400"
                 }`}
               >
                 <ShieldAlert size={13} /> Peligro
@@ -1491,7 +1534,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 overflow-y-auto space-y-4">
+            <div className="p-4 sm:p-6 overflow-y-auto touch-scroll space-y-4 flex-1">
               
               {settingsError && (
                 <div className="p-3 bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/20 rounded-xl text-xs text-[var(--color-danger)] flex items-center gap-2">
@@ -1527,35 +1570,35 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                       className={`p-4 rounded-2xl border text-left transition-all relative overflow-hidden group ${
                         isDark 
                           ? "border-[var(--color-accent)] bg-[var(--color-ink-2)] shadow-[0_0_20px_rgba(57,255,136,0.15)] ring-1 ring-[var(--color-accent)]" 
-                          : "border-white/10 bg-black/40 hover:border-white/20"
+                          : "border-[var(--color-ink-3)] bg-[var(--color-ink-2)] hover:border-[var(--color-ink-3)]"
                       }`}
                     >
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg bg-black border border-white/10 flex items-center justify-center text-emerald-400 shadow-sm">
+                          <div className="w-7 h-7 rounded-lg bg-black border border-[var(--color-ink-3)] flex items-center justify-center text-emerald-400 shadow-sm">
                             <Moon size={14} />
                           </div>
                           <div>
-                            <p className="text-xs font-bold text-white">Modo Oscuro</p>
-                            <span className="text-[10px] text-gray-400">Predeterminado</span>
+                            <p className="text-xs font-bold text-[var(--color-fg-1)]">Modo Oscuro</p>
+                            <span className="text-[10px] text-[var(--color-fg-4)]">Predeterminado</span>
                           </div>
                         </div>
                         {isDark && (
-                          <div className="w-5 h-5 rounded-full bg-[var(--color-accent)] text-black flex items-center justify-center shadow-[0_0_8px_rgba(57,255,136,0.5)]">
+                          <div className="w-5 h-5 rounded-full bg-[var(--color-accent)] text-[var(--color-accent-fg)] flex items-center justify-center shadow-[0_0_8px_rgba(57,255,136,0.5)]">
                             <Check size={11} strokeWidth={3} />
                           </div>
                         )}
                       </div>
 
                       {/* Visual Mini Preview */}
-                      <div className="h-14 bg-[#0a0a0c] border border-white/10 rounded-xl p-2 flex flex-col justify-between">
+                      <div className="h-14 bg-[#0a0a0c] border border-[var(--color-ink-3)] rounded-xl p-2 flex flex-col justify-between">
                         <div className="flex items-center justify-between">
                           <div className="h-2 w-12 bg-white/20 rounded" />
                           <div className="h-2 w-6 bg-[var(--color-accent)] rounded" />
                         </div>
                         <div className="flex gap-1.5">
-                          <div className="h-5 flex-1 bg-white/5 border border-white/5 rounded" />
-                          <div className="h-5 flex-1 bg-white/5 border border-white/5 rounded" />
+                          <div className="h-5 flex-1 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded" />
+                          <div className="h-5 flex-1 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded" />
                         </div>
                       </div>
                     </button>
@@ -1567,7 +1610,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                       className={`p-4 rounded-2xl border text-left transition-all relative overflow-hidden group ${
                         isLight 
                           ? "border-[var(--color-accent)] bg-[var(--color-ink-2)] shadow-[0_0_20px_rgba(5,150,105,0.15)] ring-1 ring-[var(--color-accent)]" 
-                          : "border-white/10 bg-white/5 hover:border-white/20"
+                          : "border-[var(--color-ink-3)] bg-[var(--color-ink-2)] hover:border-[var(--color-ink-3)]"
                       }`}
                     >
                       <div className="flex items-center justify-between mb-3">
@@ -1577,11 +1620,11 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                           </div>
                           <div>
                             <p className="text-xs font-bold text-[var(--color-fg-1)]">Modo Blanco</p>
-                            <span className="text-[10px] text-gray-500">Luminoso & Nítido</span>
+                            <span className="text-[10px] text-[var(--color-fg-5)]">Luminoso & Nítido</span>
                           </div>
                         </div>
                         {isLight && (
-                          <div className="w-5 h-5 rounded-full bg-[var(--color-accent)] text-white flex items-center justify-center shadow-[0_0_8px_rgba(5,150,105,0.5)]">
+                          <div className="w-5 h-5 rounded-full bg-[var(--color-accent)] text-[var(--color-fg-1)] flex items-center justify-center shadow-[0_0_8px_rgba(5,150,105,0.5)]">
                             <Check size={11} strokeWidth={3} />
                           </div>
                         )}
@@ -1601,7 +1644,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                     </button>
                   </div>
 
-                  <div className="p-3 bg-[var(--color-ink-2)] border border-white/5 rounded-xl flex items-center gap-2 text-[11px] text-[var(--color-fg-4)]">
+                  <div className="p-3 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl flex items-center gap-2 text-[11px] text-[var(--color-fg-4)]">
                     <CheckCircle2 size={13} className="text-[var(--color-accent)] shrink-0" />
                     <span>El cambio de tema se guarda automáticamente en tus preferencias locales.</span>
                   </div>
@@ -1611,39 +1654,39 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
               {/* Phone Tab */}
               {settingsTab === "phone" && (
                 <div className="space-y-4">
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-[var(--color-fg-4)]">
                     Introduce el número donde quieres recibir los resúmenes diarios de cotizaciones por WhatsApp.
                   </p>
                   <div>
-                    <label className="text-[11px] font-mono uppercase text-gray-400 mb-1.5 block">Teléfono WhatsApp</label>
+                    <label className="text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-1.5 block">Teléfono WhatsApp</label>
                     <div className="flex gap-2 relative" ref={countryRef}>
                       <button
                         type="button"
                         onClick={() => setShowCountryPicker(!showCountryPicker)}
-                        className="flex items-center gap-1.5 bg-[var(--color-ink-2)] border border-white/10 px-3 py-2.5 rounded-xl text-xs text-white hover:border-[var(--color-accent)] transition-all shrink-0"
+                        className="flex items-center gap-1.5 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] px-3 py-2.5 rounded-xl text-xs text-[var(--color-fg-1)] hover:border-[var(--color-accent)] transition-all shrink-0"
                       >
                         <span>{phoneCountry.flag}</span>
-                        <span className="font-mono text-gray-400">{phoneCountry.dial}</span>
+                        <span className="font-mono text-[var(--color-fg-4)]">{phoneCountry.dial}</span>
                       </button>
 
                       {showCountryPicker && (
-                        <div className="absolute left-0 top-full mt-2 w-64 bg-[var(--color-ink-2)] border border-white/10 rounded-2xl shadow-2xl z-50 p-2 max-h-52 overflow-y-auto">
+                        <div className="absolute left-0 top-full mt-2 w-64 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-2xl shadow-2xl z-50 p-2 max-h-52 overflow-y-auto">
                           <input
                             type="text"
                             placeholder="Buscar país..."
                             value={countrySearch}
                             onChange={(e) => setCountrySearch(e.target.value)}
-                            className="w-full bg-black/40 border border-white/10 px-2.5 py-1.5 rounded-lg text-xs text-white mb-2 outline-none"
+                            className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] px-2.5 py-1.5 rounded-lg text-xs text-[var(--color-fg-1)] mb-2 outline-none"
                           />
                           {COUNTRIES.filter(c => !countrySearch || c.name.toLowerCase().includes(countrySearch.toLowerCase()) || c.dial.includes(countrySearch)).map(c => (
                             <button
                               key={c.code}
                               type="button"
                               onClick={() => { setPhoneCountry(c); setShowCountryPicker(false); }}
-                              className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-left hover:bg-white/5 rounded-lg text-gray-300 hover:text-white"
+                              className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-left hover:bg-[var(--color-ink-2)] rounded-lg text-[var(--color-fg-2)] hover:text-[var(--color-fg-1)]"
                             >
                               <span>{c.flag}</span>
-                              <span className="font-mono text-gray-400 text-[10px] w-10">{c.dial}</span>
+                              <span className="font-mono text-[var(--color-fg-4)] text-[10px] w-10">{c.dial}</span>
                               <span className="truncate">{c.name}</span>
                             </button>
                           ))}
@@ -1655,7 +1698,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                         value={localPhone}
                         onChange={(e) => setLocalPhone(e.target.value.replace(/\D/g, ""))}
                         placeholder="612345678"
-                        className="flex-1 bg-[var(--color-ink-2)] border border-white/10 focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-sm text-white outline-none transition-all"
+                        className="flex-1 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-sm text-[var(--color-fg-1)] outline-none transition-all"
                       />
                     </div>
                   </div>
@@ -1663,7 +1706,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                   <button
                     onClick={handleSavePhone}
                     disabled={settingsLoading}
-                    className="w-full py-2.5 bg-[var(--color-accent)] text-black font-semibold text-xs rounded-xl hover:brightness-110 transition-all shadow-[0_0_15px_rgba(57,255,136,0.2)] disabled:opacity-50"
+                    className="w-full py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-xs rounded-xl hover:brightness-110 transition-all shadow-[0_0_15px_rgba(57,255,136,0.2)] disabled:opacity-50"
                   >
                     {settingsLoading ? "Guardando..." : "Guardar Teléfono"}
                   </button>
@@ -1674,29 +1717,29 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
               {settingsTab === "email" && (
                 <div className="space-y-4">
                   <div>
-                    <label className="text-[11px] font-mono uppercase text-gray-400 mb-1.5 block">Email Actual</label>
+                    <label className="text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-1.5 block">Email Actual</label>
                     <input
                       type="email"
                       value={currentEmail}
                       onChange={(e) => setCurrentEmail(e.target.value)}
                       placeholder={user.email}
-                      className="w-full bg-[var(--color-ink-2)] border border-white/10 focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-sm text-white outline-none transition-all"
+                      className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-sm text-[var(--color-fg-1)] outline-none transition-all"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-mono uppercase text-gray-400 mb-1.5 block">Nuevo Email</label>
+                    <label className="text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-1.5 block">Nuevo Email</label>
                     <input
                       type="email"
                       value={newEmail}
                       onChange={(e) => setNewEmail(e.target.value)}
                       placeholder="nuevo@email.com"
-                      className="w-full bg-[var(--color-ink-2)] border border-white/10 focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-sm text-white outline-none transition-all"
+                      className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-sm text-[var(--color-fg-1)] outline-none transition-all"
                     />
                   </div>
                   <button
                     onClick={handleChangeEmail}
                     disabled={settingsLoading}
-                    className="w-full py-2.5 bg-[var(--color-accent)] text-black font-semibold text-xs rounded-xl hover:brightness-110 transition-all shadow-[0_0_15px_rgba(57,255,136,0.2)] disabled:opacity-50"
+                    className="w-full py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-xs rounded-xl hover:brightness-110 transition-all shadow-[0_0_15px_rgba(57,255,136,0.2)] disabled:opacity-50"
                   >
                     {settingsLoading ? "Actualizando..." : "Actualizar Email"}
                   </button>
@@ -1707,27 +1750,27 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
               {settingsTab === "password" && (
                 <div className="space-y-4">
                   <div>
-                    <label className="text-[11px] font-mono uppercase text-gray-400 mb-1.5 block">Contraseña Actual</label>
+                    <label className="text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-1.5 block">Contraseña Actual</label>
                     <input
                       type="password"
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
-                      className="w-full bg-[var(--color-ink-2)] border border-white/10 focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-sm text-white outline-none transition-all"
+                      className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-sm text-[var(--color-fg-1)] outline-none transition-all"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-mono uppercase text-gray-400 mb-1.5 block">Nueva Contraseña (mín. 8 caracteres)</label>
+                    <label className="text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-1.5 block">Nueva Contraseña (mín. 8 caracteres)</label>
                     <input
                       type="password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full bg-[var(--color-ink-2)] border border-white/10 focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-sm text-white outline-none transition-all"
+                      className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-sm text-[var(--color-fg-1)] outline-none transition-all"
                     />
                   </div>
                   <button
                     onClick={handleChangePassword}
                     disabled={settingsLoading}
-                    className="w-full py-2.5 bg-[var(--color-accent)] text-black font-semibold text-xs rounded-xl hover:brightness-110 transition-all shadow-[0_0_15px_rgba(57,255,136,0.2)] disabled:opacity-50"
+                    className="w-full py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-xs rounded-xl hover:brightness-110 transition-all shadow-[0_0_15px_rgba(57,255,136,0.2)] disabled:opacity-50"
                   >
                     {settingsLoading ? "Cambiando..." : "Cambiar Contraseña"}
                   </button>
@@ -1739,23 +1782,23 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                 <div className="space-y-4">
                   <div className="p-4 bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/20 rounded-2xl">
                     <p className="text-xs font-bold text-[var(--color-danger)] mb-1">Zona de Peligro</p>
-                    <p className="text-xs text-gray-400 leading-relaxed">
+                    <p className="text-xs text-[var(--color-fg-4)] leading-relaxed">
                       Esta acción eliminará permanentemente tu cuenta, tus fondos registrados y todo tu historial. No se puede deshacer.
                     </p>
                   </div>
                   <div>
-                    <label className="text-[11px] font-mono uppercase text-gray-400 mb-1.5 block">Introduce tu contraseña para confirmar</label>
+                    <label className="text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-1.5 block">Introduce tu contraseña para confirmar</label>
                     <input
                       type="password"
                       value={deletePassword}
                       onChange={(e) => setDeletePassword(e.target.value)}
-                      className="w-full bg-[var(--color-ink-2)] border border-[var(--color-danger)]/40 focus:border-[var(--color-danger)] px-3 py-2.5 rounded-xl text-sm text-white outline-none transition-all"
+                      className="w-full bg-[var(--color-ink-2)] border border-[var(--color-danger)]/40 focus:border-[var(--color-danger)] px-3 py-2.5 rounded-xl text-sm text-[var(--color-fg-1)] outline-none transition-all"
                     />
                   </div>
                   <button
                     onClick={handleDeleteAccount}
                     disabled={settingsLoading}
-                    className="w-full py-2.5 bg-[var(--color-danger)] text-white font-bold text-xs rounded-xl hover:brightness-110 transition-all shadow-[0_0_15px_rgba(255,90,74,0.3)] disabled:opacity-50"
+                    className="w-full py-2.5 bg-[var(--color-danger)] text-[var(--color-fg-1)] font-bold text-xs rounded-xl hover:brightness-110 transition-all shadow-[0_0_15px_rgba(255,90,74,0.3)] disabled:opacity-50"
                   >
                     {settingsLoading ? "Eliminando..." : "Eliminar Cuenta Definitivamente"}
                   </button>
@@ -1770,14 +1813,14 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
 
       {/* ── Mobile Bottom Navigation Bar (Fixed for quick thumb access) ── */}
       <nav 
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--color-ink-1)]/95 backdrop-blur-2xl border-t border-white/10 px-2 py-1.5 flex items-center justify-around shadow-[0_-4px_25px_rgba(0,0,0,0.6)]"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--color-ink-1)]/95 backdrop-blur-2xl border-t border-[var(--color-ink-3)] px-2 py-1.5 flex items-center justify-around shadow-[0_-4px_25px_rgba(0,0,0,0.6)]"
         style={{ paddingBottom: 'max(0.375rem, env(safe-area-inset-bottom))' }}
       >
         {/* Dashboard */}
         <button
           onClick={() => setSection("overview")}
           className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all ${
-            section === "overview" ? "text-[var(--color-accent)] font-bold" : "text-gray-400 hover:text-white"
+            section === "overview" ? "text-[var(--color-accent)] font-bold" : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
           }`}
         >
           <LayoutDashboard size={18} />
@@ -1788,13 +1831,13 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
         <button
           onClick={() => setSection("portfolio")}
           className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all relative ${
-            section === "portfolio" ? "text-[var(--color-accent)] font-bold" : "text-gray-400 hover:text-white"
+            section === "portfolio" ? "text-[var(--color-accent)] font-bold" : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
           }`}
         >
           <Database size={18} />
           <span className="text-[10px] tracking-tight">Cartera</span>
           {funds.length > 0 && (
-            <span className="absolute top-0 right-1.5 w-3.5 h-3.5 bg-[var(--color-accent)] text-black text-[9px] font-mono font-bold rounded-full flex items-center justify-center">
+            <span className="absolute top-0 right-1.5 w-3.5 h-3.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] text-[9px] font-mono font-bold rounded-full flex items-center justify-center">
               {funds.length > 9 ? "9+" : funds.length}
             </span>
           )}
@@ -1806,17 +1849,17 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
           className="flex flex-col items-center -mt-5 group"
           aria-label="Añadir Inversión"
         >
-          <div className="w-12 h-12 rounded-full bg-[var(--color-accent)] text-black flex items-center justify-center shadow-[0_0_16px_rgba(57,255,136,0.4)] group-active:scale-95 transition-transform border-2 border-[var(--color-ink-0)]">
+          <div className="w-12 h-12 rounded-full bg-[var(--color-accent)] text-[var(--color-accent-fg)] flex items-center justify-center shadow-[0_0_16px_rgba(57,255,136,0.4)] group-active:scale-95 transition-transform border-2 border-[var(--color-ink-0)]">
             <Plus size={24} strokeWidth={2.8} />
           </div>
-          <span className="text-[10px] font-semibold text-white mt-0.5">Añadir</span>
+          <span className="text-[10px] font-semibold text-[var(--color-fg-1)] mt-0.5">Añadir</span>
         </button>
 
         {/* Analítica */}
         <button
           onClick={() => setSection("analytics")}
           className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all ${
-            section === "analytics" ? "text-[var(--color-accent)] font-bold" : "text-gray-400 hover:text-white"
+            section === "analytics" ? "text-[var(--color-accent)] font-bold" : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
           }`}
         >
           <BarChart3 size={18} />
@@ -1827,7 +1870,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
         <button
           onClick={() => setMobileDrawerOpen(true)}
           className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all ${
-            mobileDrawerOpen ? "text-[var(--color-accent)] font-bold" : "text-gray-400 hover:text-white"
+            mobileDrawerOpen ? "text-[var(--color-accent)] font-bold" : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
           }`}
         >
           <Menu size={18} />

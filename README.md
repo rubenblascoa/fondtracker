@@ -1,138 +1,237 @@
-<div align="center">
+# FondTracker
+## Plataforma Integral de Gestion Patrimonial, Analitica Financiera y Seguimiento de Inversiones
 
-<img src="https://cdn-icons-png.flaticon.com/512/2830/2830284.png" alt="FondTracker Logo" width="200" />
+[![Runtime: Bun](https://img.shields.io/badge/Runtime-Bun%20v1.3+-black?style=flat-square&logo=bun)](https://bun.sh)
+[![Language: TypeScript](https://img.shields.io/badge/Language-TypeScript%205.7-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![Frontend: React 18](https://img.shields.io/badge/Frontend-React%2018%20SPA-61DAFB?style=flat-square&logo=react)](https://react.dev/)
+[![Styling: Tailwind v4](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
+[![Database: MySQL](https://img.shields.io/badge/Database-MySQL%208%20%2F%20MariaDB-4479A1?style=flat-square&logo=mysql)](https://www.mysql.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-39FF88?style=flat-square)](https://opensource.org/licenses/MIT)
 
-<h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.iconify.design/lucide:trending-up.svg?color=white">
-    <img src="https://api.iconify.design/lucide:trending-up.svg?color=black" alt="Chart" width="28" align="center" />
-  </picture>
-  FondTracker | Personal Investment Tracker
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.iconify.design/lucide:wallet.svg?color=white">
-    <img src="https://api.iconify.design/lucide:wallet.svg?color=black" alt="Wallet" width="28" align="center" />
-  </picture>
-</h3>
+**FondTracker** es una plataforma web full-stack de ultima generacion para la monitorizacion en tiempo real, analisis profundo de asignacion de activos (Asset Allocation), simulacion de rebalanceos y generacion de informes ejecutivos de carteras de inversion (Fondos Indexados, Fondos Activos, ETFs y Acciones).
 
-**Español**
+[Caracteristicas](#caracteristicas-principales) | [Arquitectura](#arquitectura-del-sistema) | [Modulos de Analitica](#analitica-financiera-y-asset-allocation) | [API REST](#referencia-de-la-api-rest) | [Instalacion](#instalacion-y-despliegue) | [Contacto](#contacto)
 
 ---
 
-**La plataforma definitiva para el seguimiento personal de fondos de inversión y ETFs.**
+## Caracteristicas Principales
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg?style=flat-square)](https://opensource.org/licenses/MIT)
-[![Runtime](https://img.shields.io/badge/Runtime-Bun-black?style=flat-square)](#)
-[![Database](https://img.shields.io/badge/Database-MySQL-orange?style=flat-square)](#)
-
-**FondTracker** es una aplicación web full-stack diseñada para el seguimiento en tiempo real de una cartera personal de fondos de inversión, ETFs y acciones. Permite registrar aportaciones, calcular rentabilidad histórica frente a precios de mercado en vivo (vía Yahoo Finance), gestionar múltiples usuarios de forma aislada y segura, y recibir resúmenes automáticos de cartera por WhatsApp según un horario configurable.
-
-[Explorar el Código](#) · [Reportar un Error](#) · [Solicitar una Mejora](#)
+### 1. Motor de Cotizaciones en Tiempo Real y Scraping Hibrido
+* **Multi-Proveedor Resiliente**: Integracion directa con Yahoo Finance v8 Chart API y motor de scraping secundario de respaldo (QueFondos / BME) para fondos no listados en mercados internacionales.
+* **Descubrimiento Automatico de ISIN**: Mapeo inteligente de codigos ISIN a tickers de mercado (.MC, .PA, .F, etc.).
+* **Optimizacion de Alta Frecuencia**: Cache en memoria con TTL de 5 minutos y mecanismo de Request Coalescing (bloqueo por mutex de peticiones simultaneas) para evitar peticiones duplicadas a los proveedores.
+* **Cache Persistente en Base de Datos**: Respaldo automatico del ultimo valor liquidativo (NAV) en la tabla fund_prices para garantizar operatividad ininterrumpida ante caidas externas.
 
 ---
 
-</div>
-
-## <picture><source media="(prefers-color-scheme: dark)" srcset="https://api.iconify.design/lucide:folder-tree.svg?color=white"><img src="https://api.iconify.design/lucide:folder-tree.svg?color=black" width="26" align="center"></picture> Arquitectura y Estructura Modular
-
-El backend implementa una clara separación de responsabilidades entre el servidor HTTP, el acceso a datos, la lógica de negocio y las integraciones externas. A continuación se detalla el propósito y la lógica interna de cada archivo del sistema:
-
-### 1. Núcleo de Entrada y Orquestación
-* **`src/server/index.ts`**
-  * **Propósito:** Punto de entrada del servidor y enrutador principal de la API REST.
-  * **Lógica detallada:** Levanta el servidor nativo de **Bun** sobre el host y puerto definidos por variables de entorno (`HOST`, `PORT`), invoca `ensureSchema()` para garantizar que el esquema de base de datos existe antes de aceptar tráfico, y expone más de 20 endpoints agrupados por dominio (autenticación, fondos, catálogo, cotizaciones, WhatsApp). Gestiona CORS de forma manual en cada respuesta y sirve tanto la SPA (`/dashboard`, `/login`, `/register`) como los recursos estáticos (`/public`) con protección explícita contra path traversal.
-
-### 2. Capa de Persistencia
-* **`src/server/db.ts`**
-  * **Propósito:** Abstracción del pool de conexión MySQL y definición del esquema autogestionado.
-  * **Lógica detallada:** Crea un `pool` con `mysql2/promise` a partir de variables de entorno (`MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`). La función `ensureSchema()` crea de forma idempotente las tablas `users`, `investments`, `fund_history`, `settings`, `fund_catalog` y `fund_prices`, además de migrar columnas nuevas (`ticker`, `user_id`) en despliegues ya existentes sin perder datos. Expone el objeto `queries` como capa de acceso a datos tipada para el resto de módulos.
-
-### 3. Lógica de Negocio de Cartera
-* **`src/server/sentinel.ts`**
-  * **Propósito:** Motor de cálculo financiero de la cartera del usuario.
-  * **Lógica detallada:** Resuelve el ticker de mercado de cada posición (propio, del catálogo, o mediante descubrimiento automático), obtiene el precio actual vía Yahoo Finance con caché en `fund_prices` como *fallback*, y calcula en paralelo (`Promise.all`) el valor invertido, valor actual, plusvalía absoluta y porcentual de cada fondo y del total de la cartera.
-
-### 4. Autenticación y Seguridad de Sesión
-* **`src/server/auth.ts`**
-  * **Propósito:** Registro, login y gestión del ciclo de vida de la cuenta de usuario.
-  * **Lógica detallada:** Aísla completamente los datos entre usuarios mediante `user_id`, valida credenciales con hashing seguro de contraseñas (Argon2), y resuelve la identidad del solicitante en cada petición protegida a través de `getUserFromRequest`.
-
-### 5. Integración de Mercado
-* **`src/server/yahoo.ts`**
-  * **Propósito:** Cliente de datos de mercado en tiempo real.
-  * **Lógica detallada:** Consulta la API pública de gráficos de Yahoo Finance para obtener precios actuales e históricos por rango (`1d`, `1wk`, `1mo`) e intervalo, con un mecanismo de descubrimiento de *ticker* a partir del ISIN cuando el fondo no lo trae precargado en el catálogo.
-
-### 6. Notificaciones Automatizadas
-* **`src/server/digest.ts`** + **`src/server/whatsapp.ts`**
-  * **Propósito:** Generación y envío de resúmenes periódicos de cartera.
-  * **Lógica detallada:** Un *scheduler* interno evalúa de forma recurrente si toca enviar el resumen según el huso horario y cron configurados, construye un mensaje formateado con la evolución de la cartera, y lo despacha a través de la API de CallMeBot hacia WhatsApp, persistiendo el estado del último envío en la tabla `settings`.
-
-### 7. Interfaz Cliente
-* **`src/client/`**
-  * **Propósito:** Dashboard SPA para la visualización y gestión de la cartera.
-  * **Lógica detallada:** Consume la API REST para listar posiciones, mostrar gráficos históricos de cotización, dar de alta/baja/editar fondos, y gestionar la configuración de cuenta y notificaciones desde el navegador, sin recargar página.
+### 2. Analitica Avanzada y Asset Allocation
+* **Desglose de Clases de Activos**: Monitorizacion de exposicion en Renta Variable, Renta Fija, Monetarios, Mixtos y Alternativos.
+* **Exposicion Sectorial y Geografica**: Ponderacion consolidada de toda la cartera en sectores clave (Tecnologia, Salud, Financiero, etc.) y regiones (EE.UU., Europa, Mercados Emergentes, Asia-Pacifico).
+* **Top Activos Subyacentes**: Deteccion de concentracion en empresas subyacentes (Microsoft, Apple, NVIDIA, Amazon, ASML, etc.).
+* **Calculadora de Costes y TER Ponderado**: Calculo del Total Expense Ratio (TER) medio de la cartera y proyeccion del impacto de comisiones a 1, 5, 10 y 20 anos.
+* **Indicadores de Riesgo y Diversificacion**: Puntuacion de riesgo sintetico SRRI (1 a 7) e Indice de Concentracion Herfindahl-Hirschman (HHI).
+* **Simulador Interactivo de Rebalanceo**: Asignacion de pesos objetivo por fondo, calculo de aportaciones extraordinarias y generacion de ordenes de compra/venta para reequilibrar la cartera.
 
 ---
 
-## <picture><source media="(prefers-color-scheme: dark)" srcset="https://api.iconify.design/lucide:list.svg?color=white"><img src="https://api.iconify.design/lucide:list.svg?color=black" width="26" align="center"></picture> Características Principales
-
-* **Multiusuario y Aislado:** Cada cuenta gestiona su propia cartera de forma independiente, con autenticación por contraseña hasheada.
-* **Cotización en Tiempo Real:** Precios actuales e históricos obtenidos de Yahoo Finance, con caché local en base de datos como respaldo ante caídas del proveedor.
-* **Catálogo de Fondos Precargado:** Búsqueda por texto completo (`FULLTEXT`) sobre cientos de fondos y ETFs indexados por ISIN, banco, categoría y nivel de riesgo.
-* **Resúmenes por WhatsApp:** Notificaciones periódicas configurables (horario y zona horaria) con el estado de la cartera, enviadas vía CallMeBot de forma completamente aislada por usuario.
-* **Optimizado de Alto Rendimiento:** Cuenta con coalescencia de peticiones en paralelo (Request Coalescing), almacenamiento en caché en memoria con un TTL de 5 minutos para cotizaciones e históricos de gráficos, y procesamiento unificado por ISIN único para evitar sobrecargar a los proveedores externos y eliminar el lag en el frontend.
-* **Despliegue 100% Gratuito:** Backend en **Render** (free tier) conectado a una base de datos **MySQL en Railway**, sin coste mensual para uso personal.
-* **Auto-gestión de Esquema:** La base de datos se crea y migra sola al arrancar (`ensureSchema()`), sin necesidad de scripts de migración manuales en producción.
-
----
-## <picture><source media="(prefers-color-scheme: dark)" srcset="https://api.iconify.design/lucide:git-compare.svg?color=white"><img src="https://api.iconify.design/lucide:git-compare.svg?color=black" width="26" align="center"></picture> El Problema vs La Solución
-
-Llevar el seguimiento de una cartera de fondos "a mano" (Excel, apuntes sueltos, apps bancarias fragmentadas) es lento y poco fiable.
-
-| Sin FondTracker | Con FondTracker |
-| :--- | :--- |
-| Rentabilidad calculada manualmente en Excel | **Cálculo automático** en tiempo real |
-| Precios desactualizados o buscados uno a uno | **Cotización en vivo** vía Yahoo Finance |
-| Datos de la cartera solo en tu PC (XAMPP local) | **Acceso desde cualquier lugar** (nube) |
-| Sin aviso de cómo va la cartera | **Resúmenes automáticos por WhatsApp** |
-| Un solo usuario / sin control de acceso | **Multiusuario** con autenticación segura |
-| Catálogo de fondos disperso o inexistente | **Catálogo centralizado** con búsqueda instantánea |
+### 3. Experiencia Movil de Grado Nativo y Diseno Premium
+* **Diseno Ultra-Responsivo**: Barra de navegacion inferior movil fija con boton flotante de accion rapida (Bottom Navigation Bar), panel lateral deslizante (Drawer) y areas seguras (Safe Area Insets).
+* **Interaccion Tactil en Graficas**: Navegacion y deslizamiento tactil fluido en los lienzos interactivos de las tarjetas de fondos.
+* **Motor Dual de Temas**: Modo Oscuro Cyber-Fintech (por defecto) y Modo Claro de Alto Contraste adaptado a normativas de accesibilidad WCAG AAA.
+* **Animaciones Suaves y Aceleracion por GPU**: Transiciones fluidas a 120 FPS sin bloqueos ni recargas completas.
 
 ---
 
-## <picture><source media="(prefers-color-scheme: dark)" srcset="https://api.iconify.design/lucide:hard-drive.svg?color=white"><img src="https://api.iconify.design/lucide:hard-drive.svg?color=black" width="26" align="center"></picture> Stack e Instalación
+### 4. Hub de Informes y Exportacion
+* **Informes Ejecutivos en PDF Multipage**: Generacion cliente de dossiers en formato vectorial con graficos sparkline de cotizacion a 1 ano, tablas desglosadas de rentabilidad, plusvalias latentes y fiscalidad.
+* **Exportacion a CSV**: Formato universal compatible con Microsoft Excel, Google Sheets y Numbers.
+* **Copias de Seguridad en JSON**: Exportacion e importacion integra de posiciones y configuraciones para migracion o respaldo de datos.
 
-* **Runtime:** [Bun](https://bun.sh)
-* **Lenguaje:** TypeScript
-* **Base de datos:** MySQL (compatible con MariaDB en desarrollo local)
-* **Frontend:** SPA servida como HTML/JS estático desde `src/client`
-* **Mercado:** Yahoo Finance (API pública de gráficos)
-* **Notificaciones:** CallMeBot (WhatsApp)
-* **Hosting recomendado (gratuito):** Backend en [Render](https://render.com) · Base de datos en [Railway](https://railway.com)
+---
 
-### Variables de entorno requeridas
+### 5. Automatizacion de Alertas via WhatsApp
+* **Resumenes Diarios Automatizados**: Envio de reportes periodicos de evolucion patrimonial via CallMeBot API.
+* **Programador Horario de 24 Horas**: Selector de hora preferida de entrega con soporte para husos horarios globales (Europe/Madrid, UTC, etc.).
+* **Verificacion en Vivo**: Boton de prueba interactivo para validar la recepcion de mensajes instantaneos.
 
-| Variable | Descripción | Por defecto |
+---
+
+### 6. Panel de Administracion y Documentacion Integrada
+* **Suite de Administracion Global**: Control y moderacion de usuarios registrados, catalogo de fondos, metricas de memoria del servidor, logs de scraping y envios masivos.
+* **Consola Interactiva de APIs**: Pestana de documentacion viva con consola de pruebas para ejecutar endpoints en tiempo real y snippets en cURL, Fetch y Python.
+
+---
+
+## Arquitectura del Sistema
+
+El proyecto esta disenado bajo una arquitectura desacoplada y tipada con TypeScript:
+
+```text
+FondTracker/
+  src/
+    client/                       # FRONTEND (React 18 SPA + Tailwind CSS v4)
+      components/                 # Componentes visuales y modulos de la interfaz
+        UserDashboard.tsx         # Shell principal del Dashboard y navegacion
+        PortfolioSection.tsx      # Gestion de inversiones, filtros y vista tarjetas/tabla
+        AnalyticsSection.tsx      # Exposicion sectorial, geografica, TER y rebalanceo
+        FundCard.tsx              # Tarjeta interactiva de fondo con canvas y metricas
+        AddFundForm.tsx           # Formulario de alta con busqueda en catalogo
+        NotifyPanel.tsx           # Configuracion de alertas WhatsApp y horario 24h
+        ReportsHub.tsx            # Generacion de informes PDF, CSV y backup JSON
+        UserReportTemplate.tsx    # Plantilla vectorial para exportacion de PDF
+        AdminPanel.tsx            # Panel de control y metricas para administradores
+        DocsTab.tsx               # Manual tecnico y consola de pruebas REST
+        Header.tsx                # Barra de navegacion publica con menu movil
+        LandingPage.tsx           # Pagina de presentacion publica y caracteristicas
+        LoginPage.tsx             # Portal de acceso seguro
+        RegisterPage.tsx          # Registro de nuevos usuarios
+        LegalPage.tsx             # Terminos del servicio y politica de privacidad
+        Footer.tsx                # Pie de pagina institucional
+      api.ts                      # Cliente HTTP REST tipado con interceptor JWT
+      theme.ts                    # Motor de temas Claro / Oscuro
+      utils.ts                    # Formateadores numericos, divisas y calculos
+      styles.css                  # Capa base de estilos y utilidades Tailwind v4
+      App.tsx                     # Enrutador principal de la SPA
+      main.tsx                    # Punto de montaje de React en el DOM
+
+    server/                       # BACKEND (Bun Native HTTP + MySQL)
+      index.ts                    # Servidor HTTP, middleware CORS y enrutador REST
+      db.ts                       # Pool de MySQL2 y migraciones automaticas (ensureSchema)
+      auth.ts                     # Autenticacion, hashing Argon2 y gestion de tokens JWT
+      sentinel.ts                 # Motor de consolidacion financiera de carteras
+      yahoo.ts                    # Cliente de cotizaciones e historicos de Yahoo Finance
+      quefondos.ts                # Motor de scraping secundario para fondos espanoles
+      fund-catalog.ts             # Gestion del catalogo centralizado de fondos y ETFs
+      metadata.ts                 # Extraccion de composiciones sectoriales y geograficas
+      whatsapp.ts                 # Integracion de mensajeria con CallMeBot
+      digest.ts                   # Tareas programadas (Cron) para resumenes automaticos
+      admin.ts                    # Metricas de servidor, gestion de usuarios y moderacion
+
+  public/                         # Recursos estaticos servidos por el servidor
+  dist/                           # Bundle optimizado de produccion generado por Bun
+  build.ts                        # Script de compilacion y bundling del frontend
+  package.json                    # Dependencias y scripts del proyecto
+  README.md                       # Documentacion oficial
+```
+
+---
+
+## Analitica Financiera y Asset Allocation
+
+| Modulo | Metricas Calculadas | Visualizacion |
 | :--- | :--- | :--- |
-| `HOST` | Interfaz de red de escucha | `0.0.0.0` |
-| `PORT` | Puerto del servidor | `3741` |
-| `MYSQL_HOST` | Host de la base de datos | `127.0.0.1` |
-| `MYSQL_PORT` | Puerto de la base de datos | `3306` |
-| `MYSQL_USER` | Usuario de la base de datos | `root` |
-| `MYSQL_PASSWORD` | Contraseña de la base de datos | *(vacío)* |
-| `MYSQL_DATABASE` | Nombre de la base de datos | `fondtracker` |
-
-### Despliegue inicial
-
-1. Clona el repositorio y ejecuta `bun install`.
-2. Configura las variables de entorno anteriores apuntando a tu instancia de MySQL (local vía XAMPP, o remota vía Railway/PlanetScale/Neon).
-3. Arranca el servidor con `bun run start` — el esquema de base de datos se crea automáticamente en el primer arranque.
-4. Accede a `http://localhost:3741` (o al `HOST`/`PORT` configurados), regístrate como usuario y comienza a añadir posiciones desde el catálogo de fondos.
+| **Clases de Activos** | Renta Variable, Renta Fija, Monetarios, Alternativos | Grafico de Donut interactivo y Porcentajes |
+| **Sectores Globales** | Tecnologia, Salud, Consumo, Finanzas, Industrial, Energia, etc. | Graficos de barras ponderadas |
+| **Geografia** | Estados Unidos, Zona Euro, Mercados Emergentes, Japon, etc. | Distribucion regional con pesos porcentuales |
+| **Top Holdings** | Ponderacion de acciones subyacentes individuales (MSFT, NVDA, AAPL...) | Ranking de empresas con impacto en cartera |
+| **Costes y TER** | Comision de gestion media ponderada y Coste anual acumulado | Proyeccion de impacto a 1, 5, 10 y 20 anos |
+| **Riesgo y Concentracion**| Indicador de Riesgo SRRI (1 a 7) e Indice HHI | Calificacion de perfil (Conservador a Crecimiento) |
+| **Rebalanceo** | Desviacion de pesos objetivo (EUR y %) y Ordenes de ajuste | Calculadora con simulacion de aportacion extra |
 
 ---
 
-## <picture><source media="(prefers-color-scheme: dark)" srcset="https://api.iconify.design/lucide:mail.svg?color=white"><img src="https://api.iconify.design/lucide:mail.svg?color=black" width="26" align="center"></picture> Contacto
+## Referencia de la API REST
 
-Desarrollado por **Rubén Blasco Armengod**.
+Todos los endpoints que requieren autenticacion admiten el token en la cabecera `Authorization: Bearer <token>`.
 
-* **GitHub:** [@rubenblascoa](https://github.com/rubenblascoa)
-* **Email:** rubenblascoarmengod@gmail.com
+### Autenticacion y Cuenta
+| Metodo | Endpoint | Descripcion |
+| :--- | :--- | :--- |
+| `POST` | `/api/auth/register` | Registro de nuevo usuario (nombre, email, contrasena). |
+| `POST` | `/api/auth/login` | Inicio de sesion y obtencion del token JWT. |
+| `GET` | `/api/auth/me` | Obtiene el perfil del usuario autenticado. |
+| `PUT` | `/api/auth/account` | Actualizacion de email, telefono o contrasena. |
+| `DELETE` | `/api/auth/account` | Eliminacion definitiva de la cuenta y sus datos. |
+
+### Gestion de Cartera
+| Metodo | Endpoint | Descripcion |
+| :--- | :--- | :--- |
+| `GET` | `/api/portfolio` | Obtiene todas las posiciones del usuario con cotizaciones en vivo y totales. |
+| `POST` | `/api/investments` | Anade una nueva posicion indicando ISIN, participaciones y precio de compra. |
+| `PUT` | `/api/investments/:id` | Modifica una inversion existente (numero de titulos, precio o banco). |
+| `DELETE` | `/api/investments/:id` | Elimina una posicion de la cartera del usuario. |
+
+### Mercado y Catalogo
+| Metodo | Endpoint | Descripcion |
+| :--- | :--- | :--- |
+| `GET` | `/api/chart?isin=...&range=1y` | Datos historicos de cotizacion para visualizacion de graficas (1mo, 6mo, 1y, max). |
+| `GET` | `/api/catalog/search?q=...` | Busqueda por texto en el catalogo europeo de fondos y ETFs. |
+| `GET` | `/api/catalog/banks` | Listado de entidades bancarias registradas en el sistema. |
+
+### Notificaciones WhatsApp
+| Metodo | Endpoint | Descripcion |
+| :--- | :--- | :--- |
+| `GET` | `/api/whatsapp/config` | Obtiene la configuracion de alertas WhatsApp del usuario. |
+| `POST` | `/api/whatsapp/config` | Actualiza la API Key de CallMeBot, horario preferido y activacion. |
+| `POST` | `/api/whatsapp/test` | Envia un mensaje de prueba inmediato a WhatsApp. |
+
+### Panel de Administracion (Solo Administradores)
+| Metodo | Endpoint | Descripcion |
+| :--- | :--- | :--- |
+| `GET` | `/api/admin/overview` | Estadisticas globales de usuarios, posiciones y salud del servidor. |
+| `GET` | `/api/admin/users` | Listado y auditoria de todos los usuarios registrados. |
+| `POST` | `/api/admin/broadcast` | Envio de comunicado masivo a todos los usuarios con alertas activas. |
+
+---
+
+## Instalacion y Despliegue
+
+### Requisitos Previos
+* [Bun](https://bun.sh) v1.1 o superior instalado en el sistema.
+* MySQL 8.0+ o MariaDB 10.5+ (local via Docker/XAMPP o en la nube via Railway, PlanetScale, Neon).
+
+### 1. Clonar el Repositorio e Instalar Dependencias
+```bash
+git clone https://github.com/rubenblascoa/FondTracker.git
+cd FondTracker
+bun install
+```
+
+### 2. Configurar Variables de Entorno
+Crea un archivo `.env` en la raiz del proyecto basandote en la siguiente plantilla:
+
+```env
+# Servidor HTTP
+HOST=0.0.0.0
+PORT=3741
+NODE_ENV=production
+
+# Base de Datos MySQL
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PASSWORD=tu_password_aqui
+MYSQL_DATABASE=fondtracker
+
+# Seguridad
+JWT_SECRET=tu_clave_secreta_super_segura_de_al_menos_32_caracteres
+```
+
+### 3. Compilar el Frontend y Levantar el Servidor
+```bash
+# Compilar el bundle de produccion del cliente React
+bun build.ts
+
+# Iniciar el servidor
+bun run start
+```
+> Nota: La base de datos se inicializa y migra de forma automatica en el primer arranque mediante ensureSchema(), sin necesidad de ejecutar ficheros SQL manuales.
+
+---
+
+## Seguridad y Privacidad
+
+* **Cifrado de Credenciales**: Las contrasenas de acceso se procesan mediante algoritmos de derivacion de claves de alta resistencia (Argon2 / SHA-256).
+* **Tokens de Sesion Efimeros**: Los tokens JWT se transmiten mediante fragmentos hash (#token=...), impidiendo que queden registrados en historiales de peticiones del servidor o proxies intermedios.
+* **Aislamiento Multi-Inquilino**: Cada consulta a base de datos esta estrictamente filtrada por el user_id del token verificado.
+* **Proteccion contra Inyecciones SQL**: Consultas parametrizadas tipadas con mysql2/promise.
+* **Sin Rastreadores**: Sin librerias de analitica externa ni rastreadores publicitarios.
+
+---
+
+## Contacto
+
+Desarrollado y mantenido por **Ruben Blasco Armengod**.
+
+* GitHub: [@rubenblascoa](https://github.com/rubenblascoa)
+* Correo Electronico: [rubenblascoarmengod@gmail.com](mailto:rubenblascoarmengod@gmail.com)

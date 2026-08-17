@@ -269,91 +269,93 @@ export function AddFundForm({ onAdded }: Props) {
     <div className="space-y-6">
       
       {/* ── Top Header Banner ── */}
-      <div className="bg-gradient-to-r from-[var(--color-ink-1)] to-[var(--color-ink-2)] border border-white/10 rounded-2xl p-6 sm:p-7 relative overflow-hidden shadow-xl">
+      <div className="bg-gradient-to-r from-[var(--color-ink-1)] to-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-7 relative overflow-hidden shadow-xl">
         <div className="absolute right-0 top-0 w-80 h-80 bg-[var(--color-accent)]/5 rounded-full blur-[90px] pointer-events-none" />
 
         <div className="max-w-3xl relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 text-[var(--color-accent)] rounded-full text-xs font-semibold mb-3">
+          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 text-[var(--color-accent)] rounded-full text-[11px] sm:text-xs font-semibold mb-2 sm:mb-3">
             <Plus size={13} strokeWidth={2.5} />
             <span>Registro de Inversión &amp; Catálogo Europeo</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mb-2">
+          <h1 className="text-xl sm:text-3xl font-extrabold text-[var(--color-fg-1)] tracking-tight mb-1.5 sm:mb-2">
             Añadir Posición a tu Cartera
           </h1>
-          <p className="text-sm text-gray-400 leading-relaxed">
-            Busca en nuestro catálogo de fondos indexados, ETFs y fondos bancarios o introduce directamente cualquier código ISIN con cálculo automático de participaciones.
+          <p className="text-xs sm:text-sm text-[var(--color-fg-4)] leading-relaxed">
+            Busca fondos indexados, ETFs y fondos bancarios o introduce cualquier código ISIN con cálculo automático.
           </p>
         </div>
       </div>
 
       {/* ── Step Indicator Breadcrumb ── */}
-      <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-3.5 flex items-center gap-3 text-xs font-mono">
-        <div className={`flex items-center gap-2 font-bold ${!selectedFund ? "text-[var(--color-accent)]" : "text-gray-400"}`}>
-          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${!selectedFund ? "bg-[var(--color-accent)] text-black" : "bg-white/10 text-white"}`}>
+      <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-3 sm:p-3.5 flex items-center justify-between sm:justify-start gap-2 sm:gap-3 text-xs font-mono">
+        <div className={`flex items-center gap-1.5 sm:gap-2 font-bold ${!selectedFund ? "text-[var(--color-accent)]" : "text-[var(--color-fg-4)]"}`}>
+          <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[11px] sm:text-xs ${!selectedFund ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold" : "bg-[var(--color-ink-2)] text-[var(--color-fg-1)]"}`}>
             1
           </span>
-          <span>1. Seleccionar Fondo o ETF</span>
+          <span className="hidden sm:inline">1. Seleccionar Fondo o ETF</span>
+          <span className="sm:hidden">1. Buscar Fondo</span>
         </div>
-        <div className="w-10 h-px bg-white/10" />
-        <div className={`flex items-center gap-2 font-bold ${selectedFund ? "text-[var(--color-accent)]" : "text-gray-600"}`}>
-          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${selectedFund ? "bg-[var(--color-accent)] text-black" : "bg-white/5 text-gray-500"}`}>
+        <div className="w-6 sm:w-10 h-px bg-[var(--color-ink-2)]" />
+        <div className={`flex items-center gap-1.5 sm:gap-2 font-bold ${selectedFund ? "text-[var(--color-accent)]" : "text-[var(--color-fg-5)]"}`}>
+          <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[11px] sm:text-xs ${selectedFund ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold" : "bg-[var(--color-ink-2)] text-[var(--color-fg-5)]"}`}>
             2
           </span>
-          <span>2. Datos de Suscripción &amp; Liquidativo</span>
+          <span className="hidden sm:inline">2. Datos de Suscripción &amp; Liquidativo</span>
+          <span className="sm:hidden">2. Suscripción</span>
         </div>
       </div>
 
       {/* Alert Banners */}
       {error && (
-        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-xs text-red-400 flex items-center gap-3">
+        <div className="p-3.5 sm:p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-xs text-red-400 flex items-center gap-3">
           <AlertCircle size={16} className="shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
       {success && (
-        <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-xs text-emerald-400 flex items-center gap-3">
+        <div className="p-3.5 sm:p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-xs text-emerald-400 flex items-center gap-3">
           <Check size={16} className="shrink-0" />
           <span>{success}</span>
         </div>
       )}
 
       {/* ── Main 2-Column Responsive Layout ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
         
         {/* ── Left Column: Search or Form (7 Cols) ── */}
-        <div className="lg:col-span-7 space-y-6">
+        <div className="lg:col-span-7 space-y-5 sm:space-y-6">
           
           {!selectedFund ? (
             /* ═══════════════════════════════════════════════════════════════════
                 STEP 1: CATALOG SEARCH & DISCOVERY
                ═══════════════════════════════════════════════════════════════════ */
-            <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-6 space-y-5" ref={resultsRef}>
+            <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-5" ref={resultsRef}>
               
               {/* Quick Popular Picks Chips */}
               <div className="space-y-2">
-                <span className="text-[11px] font-mono uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-fg-4)] flex items-center gap-1.5">
                   <Zap size={13} className="text-amber-400" /> Fondos &amp; ETFs Más Populares
                 </span>
-                <div className="flex overflow-x-auto sm:flex-wrap gap-2 no-scrollbar touch-scroll pb-1 sm:pb-0">
+                <div className="flex overflow-x-auto sm:flex-wrap gap-1.5 sm:gap-2 no-scrollbar touch-scroll pb-1 sm:pb-0">
                   {POPULAR_QUICK_FUNDS.map(pf => (
                     <button
                       key={pf.isin}
                       type="button"
                       onClick={() => selectFund(pf)}
-                      className="px-3 py-1.5 bg-black/40 hover:bg-white/10 border border-white/5 hover:border-[var(--color-accent)]/40 rounded-xl text-xs text-gray-300 hover:text-white transition-all flex items-center gap-2 text-left shrink-0 sm:shrink"
+                      className="px-2.5 sm:px-3 py-1.5 bg-[var(--color-ink-2)] hover:bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] hover:border-[var(--color-accent)]/40 rounded-xl text-xs text-[var(--color-fg-2)] hover:text-[var(--color-fg-1)] transition-all flex items-center gap-1.5 sm:gap-2 text-left shrink-0 sm:shrink"
                     >
                       <span className="font-mono text-[10px] text-[var(--color-accent)] font-bold">{pf.isin}</span>
-                      <span className="truncate max-w-[140px] sm:max-w-none">{pf.name}</span>
+                      <span className="truncate max-w-[130px] sm:max-w-none">{pf.name}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Search Header Bar */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 pt-1">
                 <div className="relative flex-1">
-                  <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-fg-4)]" />
                   <input
                     ref={inputRef}
                     type="text"
@@ -361,7 +363,7 @@ export function AddFundForm({ onAdded }: Props) {
                     onChange={(e) => { setSearchQuery(e.target.value); setShowResults(true); }}
                     onFocus={() => setShowResults(true)}
                     placeholder="Buscar por ISIN (ej: IE00B03HD191), nombre o gestora..."
-                    className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)] rounded-2xl pl-11 pr-10 py-3.5 text-xs font-medium text-white outline-none transition-all placeholder:text-gray-500"
+                    className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] rounded-2xl pl-11 pr-10 py-3.5 text-xs font-medium text-[var(--color-fg-1)] outline-none transition-all placeholder:text-[var(--color-fg-5)]"
                     spellCheck={false}
                   />
                   {searching ? (
@@ -371,7 +373,7 @@ export function AddFundForm({ onAdded }: Props) {
                   ) : searchQuery ? (
                     <button
                       onClick={() => { setSearchQuery(""); doSearch(""); }}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-fg-5)] hover:text-[var(--color-fg-1)]"
                     >
                       <X size={15} />
                     </button>
@@ -380,22 +382,22 @@ export function AddFundForm({ onAdded }: Props) {
 
                 {/* Bank Filter Select */}
                 <div className="sm:w-56 shrink-0 relative">
-                  <Building2 size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  <Building2 size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-fg-4)] pointer-events-none" />
                   <select
                     value={bankFilter}
                     onChange={(e) => { setBankFilter(e.target.value); doSearch(searchQuery, e.target.value); }}
-                    className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)] rounded-2xl pl-10 pr-8 py-3.5 text-xs text-gray-200 outline-none transition-all cursor-pointer appearance-none"
+                    className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] rounded-2xl pl-10 pr-8 py-3.5 text-xs text-[var(--color-fg-2)] outline-none transition-all cursor-pointer appearance-none"
                   >
-                    <option value="" className="bg-[var(--color-ink-2)] text-white">Todas las entidades</option>
+                    <option value="" className="bg-[var(--color-ink-2)] text-[var(--color-fg-1)]">Todas las entidades</option>
                     {searchResults?.banks?.map((b) => (
-                      <option key={b} value={b} className="bg-[var(--color-ink-2)] text-white">{b}</option>
+                      <option key={b} value={b} className="bg-[var(--color-ink-2)] text-[var(--color-fg-1)]">{b}</option>
                     ))}
                   </select>
                 </div>
               </div>
 
               {/* Results Counter */}
-              <div className="flex justify-between items-center px-1 text-xs text-gray-400 font-mono">
+              <div className="flex justify-between items-center px-1 text-xs text-[var(--color-fg-4)] font-mono">
                 <span>
                   {searchResults ? `${searchResults.total} fondos indexados y ETFs encontrados` : "Explora el catálogo europeo"}
                 </span>
@@ -411,7 +413,7 @@ export function AddFundForm({ onAdded }: Props) {
                     <div
                       key={f.isin}
                       onClick={() => selectFund(f)}
-                      className="p-4 bg-black/30 hover:bg-white/[0.04] border border-white/5 hover:border-[var(--color-accent)]/40 rounded-2xl cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
+                      className="p-4 bg-[var(--color-ink-2)] hover:bg-white/[0.04] border border-[var(--color-ink-3)] hover:border-[var(--color-accent)]/40 rounded-2xl cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
                     >
                       <div className="space-y-1 truncate pr-2">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -419,30 +421,30 @@ export function AddFundForm({ onAdded }: Props) {
                             {f.isin}
                           </span>
                           {f.bank && (
-                            <span className="text-[11px] font-medium px-2 py-0.5 bg-white/5 text-gray-300 rounded-md border border-white/10">
+                            <span className="text-[11px] font-medium px-2 py-0.5 bg-[var(--color-ink-2)] text-[var(--color-fg-2)] rounded-md border border-[var(--color-ink-3)]">
                               {f.bank}
                             </span>
                           )}
                           {f.category && (
-                            <span className="text-[11px] text-gray-400">
+                            <span className="text-[11px] text-[var(--color-fg-4)]">
                               • {f.category}
                             </span>
                           )}
                         </div>
-                        <p className="text-sm font-semibold text-white group-hover:text-[var(--color-accent)] transition-colors truncate">
+                        <p className="text-sm font-semibold text-[var(--color-fg-1)] group-hover:text-[var(--color-accent)] transition-colors truncate">
                           {sanitizeFundName(f.name)}
                         </p>
                       </div>
 
                       <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
                         {f.riskLevel && (
-                          <span className="text-[10px] font-mono px-2 py-1 bg-white/5 text-gray-400 rounded-md">
+                          <span className="text-[10px] font-mono px-2 py-1 bg-[var(--color-ink-2)] text-[var(--color-fg-4)] rounded-md">
                             Riesgo {f.riskLevel}/7
                           </span>
                         )}
                         <button
                           type="button"
-                          className="px-3.5 py-1.5 bg-[var(--color-accent)]/10 group-hover:bg-[var(--color-accent)] text-[var(--color-accent)] group-hover:text-black font-semibold text-xs rounded-xl transition-all flex items-center gap-1"
+                          className="px-3.5 py-1.5 bg-[var(--color-accent)]/10 group-hover:bg-[var(--color-accent)] text-[var(--color-accent)] group-hover:text-[var(--color-accent-fg)] font-semibold text-xs rounded-xl transition-all flex items-center gap-1"
                         >
                           <span>Seleccionar</span>
                           <ArrowRight size={13} />
@@ -452,15 +454,15 @@ export function AddFundForm({ onAdded }: Props) {
                   ))}
                 </div>
               ) : searchResults && (
-                <div className="p-8 text-center border border-dashed border-white/10 rounded-2xl bg-black/20 space-y-3">
-                  <p className="text-sm font-bold text-white">¿No encuentras el fondo?</p>
-                  <p className="text-xs text-gray-400 max-w-sm mx-auto">
+                <div className="p-8 text-center border border-dashed border-[var(--color-ink-3)] rounded-2xl bg-black/20 space-y-3">
+                  <p className="text-sm font-bold text-[var(--color-fg-1)]">¿No encuentras el fondo?</p>
+                  <p className="text-xs text-[var(--color-fg-4)] max-w-sm mx-auto">
                     Puedes introducir cualquier código ISIN válido de 12 dígitos arriba y el sistema lo registrará automáticamente con su precio de mercado.
                   </p>
                   {/^[A-Z]{2}[A-Z0-9]{10}$/i.test(searchQuery.trim()) && (
                     <button
                       onClick={() => selectFund({ isin: searchQuery.trim().toUpperCase(), name: `Fondo ${searchQuery.trim().toUpperCase()}`, bank: "Otro", category: "Inversión Directa" })}
-                      className="px-4 py-2 bg-[var(--color-accent)] text-black font-bold text-xs rounded-xl shadow-lg transition-all"
+                      className="px-4 py-2 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold text-xs rounded-xl shadow-lg transition-all"
                     >
                       Registrar ISIN: {searchQuery.trim().toUpperCase()}
                     </button>
@@ -473,34 +475,34 @@ export function AddFundForm({ onAdded }: Props) {
             /* ═══════════════════════════════════════════════════════════════════
                 STEP 2: PURCHASE DETAILS FORM
                ═══════════════════════════════════════════════════════════════════ */
-            <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-6">
-              <form onSubmit={submit} className="space-y-6">
+            <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-6">
+              <form onSubmit={submit} className="space-y-4 sm:space-y-6">
                 
                 {/* Selected Fund Banner */}
-                <div className="bg-black/40 border border-[var(--color-accent)]/30 rounded-2xl p-5 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="bg-[var(--color-ink-2)] border border-[var(--color-accent)]/30 rounded-2xl p-3.5 sm:p-5 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono font-bold px-2.5 py-1 bg-[var(--color-accent)] text-black rounded-lg">
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                      <span className="text-xs font-mono font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 bg-[var(--color-accent)] text-[var(--color-accent-fg)] rounded-lg">
                         {selectedFund.isin}
                       </span>
                       {selectedFund.bank && (
-                        <span className="text-xs font-medium px-2.5 py-1 bg-white/10 text-white rounded-lg">
+                        <span className="text-xs font-medium px-2 py-0.5 sm:px-2.5 sm:py-1 bg-[var(--color-ink-2)] text-[var(--color-fg-1)] rounded-lg">
                           {selectedFund.bank}
                         </span>
                       )}
                       {selectedFund.category && (
-                        <span className="text-xs text-gray-400">
+                        <span className="text-[11px] sm:text-xs text-[var(--color-fg-4)]">
                           {selectedFund.category}
                         </span>
                       )}
                     </div>
-                    <h3 className="text-base font-bold text-white leading-snug">{sanitizeFundName(selectedFund.name)}</h3>
+                    <h3 className="text-sm sm:text-base font-bold text-[var(--color-fg-1)] leading-snug">{sanitizeFundName(selectedFund.name)}</h3>
                   </div>
 
                   <button
                     type="button"
                     onClick={deselectFund}
-                    className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 hover:text-white rounded-xl transition-all self-start sm:self-center flex items-center gap-1.5"
+                    className="px-3 py-1.5 bg-[var(--color-ink-2)] hover:bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] text-xs text-[var(--color-fg-2)] hover:text-[var(--color-fg-1)] rounded-xl transition-all self-start sm:self-center flex items-center gap-1.5 shrink-0"
                   >
                     <X size={14} /> Cambiar fondo
                   </button>
@@ -508,44 +510,44 @@ export function AddFundForm({ onAdded }: Props) {
 
                 {/* Mode Switcher */}
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-mono uppercase tracking-wider text-gray-400 block">
+                  <label className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-fg-4)] block">
                     Modalidad de Registro
                   </label>
-                  <div className="grid grid-cols-2 gap-2 p-1 bg-black/40 border border-white/10 rounded-2xl max-w-md">
+                  <div className="grid grid-cols-2 gap-1.5 sm:gap-2 p-1 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-2xl w-full max-w-md">
                     <button
                       type="button"
                       onClick={() => setMode("amount")}
-                      className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 ${
+                      className={`py-2 px-2.5 sm:px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 sm:gap-2 ${
                         mode === "amount"
-                          ? "bg-[var(--color-accent)] text-black shadow-[0_0_15px_rgba(57,255,136,0.2)] font-bold"
-                          : "text-gray-400 hover:text-white"
+                          ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_15px_rgba(57,255,136,0.2)] font-bold"
+                          : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
                       }`}
                     >
-                      <CreditCard size={14} />
-                      <span>Por Importe Total (€)</span>
+                      <CreditCard size={13} />
+                      <span>Por Importe (€)</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setMode("shares")}
-                      className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 ${
+                      className={`py-2 px-2.5 sm:px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 sm:gap-2 ${
                         mode === "shares"
-                          ? "bg-[var(--color-accent)] text-black shadow-[0_0_15px_rgba(57,255,136,0.2)] font-bold"
-                          : "text-gray-400 hover:text-white"
+                          ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_15px_rgba(57,255,136,0.2)] font-bold"
+                          : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
                       }`}
                     >
-                      <Layers size={14} />
-                      <span>Por Participaciones</span>
+                      <Layers size={13} />
+                      <span>Por Títulos</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Fields */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                   
                   {mode === "amount" ? (
                     <div className="space-y-1.5">
-                      <label className="text-[11px] font-mono uppercase tracking-wider text-gray-400 block">
+                      <label className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-fg-4)] block">
                         Importe Invertido (€) *
                       </label>
                       <div className="relative">
@@ -555,15 +557,15 @@ export function AddFundForm({ onAdded }: Props) {
                           value={amount}
                           onChange={(e) => setAmount(e.target.value)}
                           placeholder="1000.00"
-                          className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)] rounded-2xl pl-4 pr-10 py-3.5 text-base font-mono font-bold text-white outline-none transition-all"
+                          className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] rounded-2xl pl-4 pr-10 py-3 sm:py-3.5 text-base font-mono font-bold text-[var(--color-fg-1)] outline-none transition-all"
                           required
                         />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 font-mono text-sm text-gray-400 font-bold">€</span>
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 font-mono text-sm text-[var(--color-fg-4)] font-bold">€</span>
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-1.5">
-                      <label className="text-[11px] font-mono uppercase tracking-wider text-gray-400 block">
+                      <label className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-fg-4)] block">
                         Participaciones *
                       </label>
                       <input
@@ -572,28 +574,28 @@ export function AddFundForm({ onAdded }: Props) {
                         value={shares}
                         onChange={(e) => setShares(e.target.value)}
                         placeholder="50.2541"
-                        className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)] rounded-2xl px-4 py-3.5 text-base font-mono font-bold text-white outline-none transition-all"
+                        className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] rounded-2xl px-4 py-3 sm:py-3.5 text-base font-mono font-bold text-[var(--color-fg-1)] outline-none transition-all"
                         required
                       />
                     </div>
                   )}
 
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-mono uppercase tracking-wider text-gray-400 block">
+                    <label className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-fg-4)] block">
                       Fecha de Compra *
                     </label>
                     <input
                       type="date"
                       value={purchaseDate}
                       onChange={(e) => setPurchaseDate(e.target.value)}
-                      className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)] rounded-2xl px-4 py-3.5 text-xs font-mono text-white outline-none transition-all cursor-pointer"
+                      className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] rounded-2xl px-4 py-3 sm:py-3.5 text-sm sm:text-xs font-mono text-[var(--color-fg-1)] outline-none transition-all cursor-pointer"
                       required
                     />
                   </div>
 
                   <div className="space-y-1.5">
                     <div className="flex justify-between items-center">
-                      <label className="text-[11px] font-mono uppercase tracking-wider text-gray-400">
+                      <label className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-fg-4)]">
                         Precio (NAV) *
                       </label>
                       {loadingChart && (
@@ -609,10 +611,10 @@ export function AddFundForm({ onAdded }: Props) {
                         value={purchasePrice}
                         onChange={(e) => setPurchasePrice(e.target.value)}
                         placeholder="125.45"
-                        className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)] rounded-2xl pl-4 pr-10 py-3.5 text-base font-mono font-bold text-white outline-none transition-all"
+                        className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] rounded-2xl pl-4 pr-10 py-3 sm:py-3.5 text-base font-mono font-bold text-[var(--color-fg-1)] outline-none transition-all"
                         required
                       />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 font-mono text-sm text-gray-400 font-bold">€</span>
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 font-mono text-sm text-[var(--color-fg-4)] font-bold">€</span>
                     </div>
                   </div>
 
@@ -620,7 +622,7 @@ export function AddFundForm({ onAdded }: Props) {
 
                 {/* Notes */}
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-mono uppercase tracking-wider text-gray-400 block">
+                  <label className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-fg-4)] block">
                     Notas u Observaciones (Opcional)
                   </label>
                   <textarea
@@ -628,23 +630,23 @@ export function AddFundForm({ onAdded }: Props) {
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Ej: Aportación mensual periódica, traspaso de cartera..."
                     rows={2}
-                    className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)]/50 rounded-2xl p-3.5 text-xs text-white outline-none transition-all placeholder:text-gray-600 resize-none"
+                    className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)]/50 rounded-2xl p-3 sm:p-3.5 text-xs text-[var(--color-fg-1)] outline-none transition-all placeholder:text-[var(--color-fg-5)] resize-none"
                   />
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center justify-end gap-3 pt-2">
+                <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-2">
                   <button
                     type="button"
                     onClick={deselectFund}
-                    className="px-5 py-3 text-xs font-semibold text-gray-400 hover:text-white rounded-xl hover:bg-white/5 transition-colors"
+                    className="w-full sm:w-auto px-5 py-2.5 sm:py-3 text-xs font-semibold text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] rounded-xl hover:bg-[var(--color-ink-2)] transition-colors text-center"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-8 py-3.5 bg-[var(--color-accent)] text-black font-bold text-xs rounded-xl shadow-[0_0_20px_rgba(57,255,136,0.3)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+                    className="w-full sm:w-auto px-8 py-3.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold text-xs rounded-xl shadow-[0_0_20px_rgba(57,255,136,0.3)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {loading ? (
                       <>
@@ -667,50 +669,50 @@ export function AddFundForm({ onAdded }: Props) {
         </div>
 
         {/* ── Right Column: Live Order Simulation & Information Hub (5 Cols) ── */}
-        <div className="lg:col-span-5 space-y-6">
+        <div className="lg:col-span-5 space-y-5 sm:space-y-6">
           
           {selectedFund ? (
             /* Selected Fund Live Simulation Card */
-            <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-6 space-y-5 shadow-xl">
-              <div className="border-b border-white/5 pb-4">
+            <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-5 shadow-xl">
+              <div className="border-b border-[var(--color-ink-3)] pb-3 sm:pb-4">
                 <span className="text-[10px] font-mono text-[var(--color-accent)] uppercase tracking-wider font-bold block mb-1">
                   Resumen de la Orden en Vivo
                 </span>
-                <h3 className="text-base font-bold text-white leading-snug">
+                <h3 className="text-sm sm:text-base font-bold text-[var(--color-fg-1)] leading-snug">
                   {sanitizeFundName(selectedFund.name)}
                 </h3>
               </div>
 
               {/* Live Metric Badges */}
-              <div className="grid grid-cols-2 gap-3 font-mono">
-                <div className="bg-black/30 p-3 rounded-xl border border-white/5">
-                  <div className="text-[10px] text-gray-400 uppercase">Capital a Invertir</div>
-                  <div className="text-lg font-bold text-white mt-0.5">{fmtEur(totalEstimate)}</div>
+              <div className="grid grid-cols-2 gap-2 sm:gap-3 font-mono">
+                <div className="bg-[var(--color-ink-2)] p-2.5 sm:p-3 rounded-xl border border-[var(--color-ink-3)]">
+                  <div className="text-[10px] text-[var(--color-fg-4)] uppercase">Capital a Invertir</div>
+                  <div className="text-base sm:text-lg font-bold text-[var(--color-fg-1)] mt-0.5">{fmtEur(totalEstimate)}</div>
                 </div>
-                <div className="bg-black/30 p-3 rounded-xl border border-white/5">
-                  <div className="text-[10px] text-gray-400 uppercase">Participaciones</div>
-                  <div className="text-lg font-bold text-[var(--color-accent)] mt-0.5">
+                <div className="bg-[var(--color-ink-2)] p-2.5 sm:p-3 rounded-xl border border-[var(--color-ink-3)]">
+                  <div className="text-[10px] text-[var(--color-fg-4)] uppercase">Participaciones</div>
+                  <div className="text-base sm:text-lg font-bold text-[var(--color-accent)] mt-0.5">
                     {calculatedShares ? calculatedShares.toFixed(4) : "0.0000"}
                   </div>
                 </div>
-                <div className="bg-black/30 p-3 rounded-xl border border-white/5">
-                  <div className="text-[10px] text-gray-400 uppercase">Precio NAV Entrada</div>
-                  <div className="text-sm font-bold text-gray-300 mt-0.5">{purchasePrice ? `${purchasePrice} €` : "—"}</div>
+                <div className="bg-[var(--color-ink-2)] p-2.5 sm:p-3 rounded-xl border border-[var(--color-ink-3)]">
+                  <div className="text-[10px] text-[var(--color-fg-4)] uppercase">Precio NAV Entrada</div>
+                  <div className="text-xs sm:text-sm font-bold text-[var(--color-fg-2)] mt-0.5">{purchasePrice ? `${purchasePrice} €` : "—"}</div>
                 </div>
-                <div className="bg-black/30 p-3 rounded-xl border border-white/5">
-                  <div className="text-[10px] text-gray-400 uppercase">Entidad Custodia</div>
-                  <div className="text-sm font-bold text-gray-300 mt-0.5 truncate">{selectedFund.bank || "General"}</div>
+                <div className="bg-[var(--color-ink-2)] p-2.5 sm:p-3 rounded-xl border border-[var(--color-ink-3)]">
+                  <div className="text-[10px] text-[var(--color-fg-4)] uppercase">Entidad Custodia</div>
+                  <div className="text-xs sm:text-sm font-bold text-[var(--color-fg-2)] mt-0.5 truncate">{selectedFund.bank || "General"}</div>
                 </div>
               </div>
 
               {/* Sparkline / Historical Trend Chart Preview */}
               {miniChartData.length > 0 && (
-                <div className="space-y-2 pt-2 border-t border-white/5">
+                <div className="space-y-2 pt-2 border-t border-[var(--color-ink-3)]">
                   <div className="flex justify-between items-center text-xs font-mono">
-                    <span className="text-gray-400">Evolución Reciente del NAV</span>
+                    <span className="text-[var(--color-fg-4)]">Evolución Reciente del NAV</span>
                     <span className="text-[var(--color-accent)] font-bold">{selectedFundChart?.currentPrice?.toFixed(2)} €</span>
                   </div>
-                  <div className="h-28 w-full">
+                  <div className="h-24 sm:h-28 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={miniChartData}>
                         <defs>
@@ -742,34 +744,34 @@ export function AddFundForm({ onAdded }: Props) {
             </div>
           ) : (
             /* Educational / Features Info Card */
-            <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-6 space-y-5 shadow-xl">
+            <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-5 shadow-xl">
               <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2 mb-1.5">
-                  <Landmark size={18} className="text-[var(--color-accent)]" />
+                <h3 className="text-sm sm:text-base font-bold text-[var(--color-fg-1)] flex items-center gap-2 mb-1">
+                  <Landmark size={18} className="text-[var(--color-accent)] shrink-0" />
                   Ventajas del Catálogo FondTracker
                 </h3>
-                <p className="text-xs text-gray-400 leading-relaxed">
-                  Todos los fondos registrados se actualizan diariamente al cierre del mercado con las cotizaciones oficiales de QueFondos y Yahoo Finance.
+                <p className="text-xs text-[var(--color-fg-4)] leading-relaxed">
+                  Todos los fondos registrados se actualizan diariamente con las cotizaciones oficiales de QueFondos y Yahoo Finance.
                 </p>
               </div>
 
-              <div className="space-y-3 text-xs text-gray-300">
-                <div className="bg-black/30 p-3.5 rounded-xl border border-white/5 space-y-1">
-                  <span className="text-white font-bold flex items-center gap-1.5">
+              <div className="space-y-2.5 sm:space-y-3 text-xs text-[var(--color-fg-2)]">
+                <div className="bg-[var(--color-ink-2)] p-3 sm:p-3.5 rounded-xl border border-[var(--color-ink-3)] space-y-1">
+                  <span className="text-[var(--color-fg-1)] font-bold flex items-center gap-1.5">
                     <Shield size={14} className="text-blue-400" />
                     Diferimiento Fiscal Español
                   </span>
-                  <p className="text-[11px] text-gray-400">
+                  <p className="text-[11px] text-[var(--color-fg-4)]">
                     Los fondos traspasables te permiten cambiar de estrategia sin pagar peaje fiscal por plusvalías acumuladas.
                   </p>
                 </div>
 
-                <div className="bg-black/30 p-3.5 rounded-xl border border-white/5 space-y-1">
-                  <span className="text-white font-bold flex items-center gap-1.5">
+                <div className="bg-[var(--color-ink-2)] p-3 sm:p-3.5 rounded-xl border border-[var(--color-ink-3)] space-y-1">
+                  <span className="text-[var(--color-fg-1)] font-bold flex items-center gap-1.5">
                     <Clock size={14} className="text-amber-400" />
                     Liquidación Diaria
                   </span>
-                  <p className="text-[11px] text-gray-400">
+                  <p className="text-[11px] text-[var(--color-fg-4)]">
                     El precio liquidativo oficial de los fondos de inversión se publica al cierre de la sesión de mercado.
                   </p>
                 </div>

@@ -50,7 +50,7 @@ export function DashboardLoader({ onComplete, minDurationMs = 1100 }: DashboardL
   const StepIcon = currentStep.icon;
 
   return (
-    <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-[var(--color-ink-0)] text-white overflow-hidden select-none transition-opacity duration-300 ${isFinishing ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+    <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-[var(--color-ink-0)] text-[var(--color-fg-1)] overflow-hidden select-none transition-opacity duration-300 ${isFinishing ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
       
       {/* Background Animated Ambient Lights */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -84,7 +84,7 @@ export function DashboardLoader({ onComplete, minDurationMs = 1100 }: DashboardL
 
           {/* Outer Orbital Ring 2 (Counter-rotation) */}
           <div 
-            className="absolute inset-2 rounded-full border border-dashed border-white/10 border-b-[var(--color-accent)]/60 animate-spin"
+            className="absolute inset-2 rounded-full border border-dashed border-[var(--color-ink-3)] border-b-[var(--color-accent)]/60 animate-spin"
             style={{ animationDuration: '6s', animationDirection: 'reverse' }}
           />
 
@@ -100,21 +100,21 @@ export function DashboardLoader({ onComplete, minDurationMs = 1100 }: DashboardL
         {/* Brand Name */}
         <div className="space-y-1">
           <div className="flex items-center justify-center gap-2">
-            <span className="text-xl sm:text-2xl font-extrabold tracking-wider font-heading text-white">
+            <span className="text-xl sm:text-2xl font-extrabold tracking-wider font-heading text-[var(--color-fg-1)]">
               Fond<span className="text-[var(--color-accent)] glow">Tracker</span>
             </span>
             <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[var(--color-accent)]/15 text-[var(--color-accent)] font-bold border border-[var(--color-accent)]/30">
               PRO
             </span>
           </div>
-          <p className="text-xs text-gray-400 font-mono tracking-tight">
+          <p className="text-xs text-[var(--color-fg-4)] font-mono tracking-tight">
             Gestión Patrimonial &amp; Analítica de Inversión
           </p>
         </div>
 
         {/* Progress Bar with Glowing Tip */}
         <div className="w-full space-y-2 pt-2">
-          <div className="h-1.5 w-full bg-white/5 border border-white/10 rounded-full overflow-hidden p-0.5 relative">
+          <div className="h-1.5 w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-full overflow-hidden p-0.5 relative">
             <div 
               className="h-full bg-gradient-to-r from-emerald-500 via-[var(--color-accent)] to-teal-300 rounded-full transition-all duration-300 ease-out relative shadow-[0_0_12px_rgba(57,255,136,0.5)]"
               style={{ width: `${progress}%` }}
@@ -125,8 +125,8 @@ export function DashboardLoader({ onComplete, minDurationMs = 1100 }: DashboardL
           </div>
 
           {/* Dynamic Percentage & Step Label */}
-          <div className="flex items-center justify-between text-[11px] font-mono text-gray-400 px-1">
-            <div className="flex items-center gap-1.5 text-gray-300">
+          <div className="flex items-center justify-between text-[11px] font-mono text-[var(--color-fg-4)] px-1">
+            <div className="flex items-center gap-1.5 text-[var(--color-fg-2)]">
               <StepIcon size={12} className="text-[var(--color-accent)] shrink-0 animate-pulse" />
               <span className="truncate max-w-[220px] text-left">{currentStep.text}</span>
             </div>
@@ -135,12 +135,12 @@ export function DashboardLoader({ onComplete, minDurationMs = 1100 }: DashboardL
         </div>
 
         {/* HUD Telemetry Badges */}
-        <div className="grid grid-cols-2 gap-2 w-full pt-4 border-t border-white/5 text-[10px] font-mono text-gray-400">
-          <div className="flex items-center justify-center gap-1.5 p-1.5 bg-black/40 border border-white/5 rounded-xl">
+        <div className="grid grid-cols-2 gap-2 w-full pt-4 border-t border-[var(--color-ink-3)] text-[10px] font-mono text-[var(--color-fg-4)]">
+          <div className="flex items-center justify-center gap-1.5 p-1.5 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_#39ff88]" />
             <span>SISTEMA: EN LÍNEA</span>
           </div>
-          <div className="flex items-center justify-center gap-1.5 p-1.5 bg-black/40 border border-white/5 rounded-xl">
+          <div className="flex items-center justify-center gap-1.5 p-1.5 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl">
             <Lock size={10} className="text-[var(--color-accent)]" />
             <span>CIFRADO: AES-256</span>
           </div>
@@ -149,7 +149,7 @@ export function DashboardLoader({ onComplete, minDurationMs = 1100 }: DashboardL
       </div>
 
       {/* Subtle Bottom Watermark */}
-      <div className="absolute bottom-5 text-[10px] font-mono text-gray-600 flex items-center gap-2 pointer-events-none">
+      <div className="absolute bottom-5 text-[10px] font-mono text-[var(--color-fg-5)] flex items-center gap-2 pointer-events-none">
         <span>BUN RUNTIME 1.3+</span>
         <span>•</span>
         <span>MERCADO ESPAÑOL &amp; EUROPEO</span>

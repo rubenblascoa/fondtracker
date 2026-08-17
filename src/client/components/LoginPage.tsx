@@ -133,7 +133,7 @@ export function LoginPage({ onAuth, onSuccess, onSwitchToRegister }: Props) {
         </div>
 
         {/* RIGHT COLUMN: Form */}
-        <div className="w-full lg:w-[50%] p-8 sm:p-12 bg-[var(--color-ink-1)] border-t lg:border-t-0 lg:border-l border-[var(--color-ink-3)] flex flex-col justify-center">
+        <div className="w-full lg:w-[50%] p-5 sm:p-12 bg-[var(--color-ink-1)] border-t lg:border-t-0 lg:border-l border-[var(--color-ink-3)] flex flex-col justify-center">
           
           <div className="lg:hidden flex items-center gap-3 mb-8">
             <div className="w-8 h-8 bg-[var(--color-accent)]/20 rounded-lg flex items-center justify-center border border-[var(--color-accent)]/30">

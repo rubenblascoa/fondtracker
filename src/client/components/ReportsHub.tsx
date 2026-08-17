@@ -108,7 +108,7 @@ export function ReportsHub({
     <div className="space-y-6">
       
       {/* ── Top Header Banner ── */}
-      <div className="bg-gradient-to-r from-[var(--color-ink-1)] to-[var(--color-ink-2)] border border-white/10 rounded-2xl p-6 sm:p-7 relative overflow-hidden shadow-xl">
+      <div className="bg-gradient-to-r from-[var(--color-ink-1)] to-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-7 relative overflow-hidden shadow-xl">
         <div className="absolute right-0 top-0 w-80 h-80 bg-blue-500/5 rounded-full blur-[90px] pointer-events-none" />
 
         <div className="max-w-3xl relative z-10">
@@ -116,30 +116,30 @@ export function ReportsHub({
             <FileText size={13} />
             <span>Centro de Informes &amp; Fiscalidad</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mb-2">
+          <h1 className="text-xl sm:text-3xl font-extrabold text-[var(--color-fg-1)] tracking-tight mb-2">
             Informes Ejecutivos &amp; Simulador Fiscal IRPF
           </h1>
-          <p className="text-sm text-gray-400 leading-relaxed">
+          <p className="text-xs sm:text-sm text-[var(--color-fg-4)] leading-relaxed">
             Genera memorias oficiales de patrimonio en PDF en alta definición, exporta bases de datos en formato tabular y calcula la tributación de plusvalías y traspasos.
           </p>
         </div>
       </div>
 
       {/* ── Grid of 3 Main Export Options ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
         
         {/* 1. PDF Executive Document */}
-        <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-6 flex flex-col justify-between group hover:border-[var(--color-accent)]/30 transition-all shadow-lg">
+        <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-6 flex flex-col justify-between group hover:border-[var(--color-accent)]/30 transition-all shadow-lg">
           <div>
-            <div className="w-12 h-12 rounded-xl bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-accent)] mb-4 shadow-[0_0_12px_rgba(57,255,136,0.15)] group-hover:scale-105 transition-transform">
-              <FileText size={22} />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-accent)] mb-3 sm:mb-4 shadow-[0_0_12px_rgba(57,255,136,0.15)] group-hover:scale-105 transition-transform">
+              <FileText size={20} />
             </div>
-            <h3 className="text-base font-bold text-white mb-1.5">Informe Ejecutivo PDF</h3>
-            <p className="text-xs text-gray-400 leading-relaxed mb-5">
+            <h3 className="text-sm sm:text-base font-bold text-[var(--color-fg-1)] mb-1">Informe Ejecutivo PDF</h3>
+            <p className="text-xs text-[var(--color-fg-4)] leading-relaxed mb-5">
               Documento formal estructurado con gráficas de evolución, tabla de posiciones, desglose por entidad bancaria y métricas de rentabilidad.
             </p>
 
-            <div className="space-y-2 py-3 border-t border-white/5 text-xs text-gray-300 font-medium">
+            <div className="space-y-2 py-3 border-t border-[var(--color-ink-3)] text-xs text-[var(--color-fg-2)] font-medium">
               <div className="flex items-center gap-2">
                 <Check size={13} className="text-[var(--color-accent)]" />
                 <span>Gráficas vectoriales en alta resolución</span>
@@ -162,17 +162,17 @@ export function ReportsHub({
         </div>
 
         {/* 2. CSV / Excel Tabular Export */}
-        <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-6 flex flex-col justify-between group hover:border-blue-500/30 transition-all shadow-lg">
+        <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-6 flex flex-col justify-between group hover:border-blue-500/30 transition-all shadow-lg">
           <div>
             <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-4 group-hover:scale-105 transition-transform">
               <Table size={22} />
             </div>
-            <h3 className="text-base font-bold text-white mb-1.5">Exportación CSV / Excel</h3>
-            <p className="text-xs text-gray-400 leading-relaxed mb-5">
+            <h3 className="text-base font-bold text-[var(--color-fg-1)] mb-1.5">Exportación CSV / Excel</h3>
+            <p className="text-xs text-[var(--color-fg-4)] leading-relaxed mb-5">
               Hoja de cálculo universal compatible con Microsoft Excel, Apple Numbers y Google Sheets para análisis financiero personalizado.
             </p>
 
-            <div className="space-y-2 py-3 border-t border-white/5 text-xs text-gray-300 font-medium">
+            <div className="space-y-2 py-3 border-t border-[var(--color-ink-3)] text-xs text-[var(--color-fg-2)] font-medium">
               <div className="flex items-center gap-2">
                 <Check size={13} className="text-blue-400" />
                 <span>Formatos numéricos adaptados con decimales</span>
@@ -187,7 +187,7 @@ export function ReportsHub({
           <button
             onClick={onExportCsv}
             disabled={funds.length === 0}
-            className="w-full py-3 bg-blue-500 text-white font-bold text-xs rounded-xl shadow-[0_0_15px_rgba(59,130,246,0.25)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-4"
+            className="w-full py-3 bg-blue-500 text-[var(--color-fg-1)] font-bold text-xs rounded-xl shadow-[0_0_15px_rgba(59,130,246,0.25)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-4"
           >
             <Download size={14} />
             <span>Descargar Archivo CSV</span>
@@ -195,17 +195,17 @@ export function ReportsHub({
         </div>
 
         {/* 3. JSON Backup */}
-        <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-6 flex flex-col justify-between group hover:border-purple-500/30 transition-all shadow-lg">
+        <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-6 flex flex-col justify-between group hover:border-purple-500/30 transition-all shadow-lg">
           <div>
             <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-4 group-hover:scale-105 transition-transform">
               <Database size={22} />
             </div>
-            <h3 className="text-base font-bold text-white mb-1.5">Copia de Seguridad JSON</h3>
-            <p className="text-xs text-gray-400 leading-relaxed mb-5">
+            <h3 className="text-base font-bold text-[var(--color-fg-1)] mb-1.5">Copia de Seguridad JSON</h3>
+            <p className="text-xs text-[var(--color-fg-4)] leading-relaxed mb-5">
               Exportación completa de datos estructurados con metadatos de fondos, claves de usuario y registros de cotizaciones para copias de respaldo.
             </p>
 
-            <div className="space-y-2 py-3 border-t border-white/5 text-xs text-gray-300 font-medium">
+            <div className="space-y-2 py-3 border-t border-[var(--color-ink-3)] text-xs text-[var(--color-fg-2)] font-medium">
               <div className="flex items-center gap-2">
                 <Check size={13} className="text-purple-400" />
                 <span>Backup 100% portable y restaurable</span>
@@ -220,7 +220,7 @@ export function ReportsHub({
           <button
             onClick={onExportJson}
             disabled={funds.length === 0}
-            className="w-full py-3 bg-purple-500 text-white font-bold text-xs rounded-xl shadow-[0_0_15px_rgba(168,85,247,0.25)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-4"
+            className="w-full py-3 bg-purple-500 text-[var(--color-fg-1)] font-bold text-xs rounded-xl shadow-[0_0_15px_rgba(168,85,247,0.25)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-4"
           >
             <Download size={14} />
             <span>Descargar Backup JSON</span>
@@ -230,14 +230,14 @@ export function ReportsHub({
       </div>
 
       {/* ── Tax Simulation & Fiscalidad IRPF ── */}
-      <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-6 sm:p-7 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
+      <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-6 sm:p-7 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--color-ink-3)] pb-4">
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-bold text-[var(--color-fg-1)] flex items-center gap-2">
               <Receipt size={18} className="text-amber-400" />
               Simulador Fiscal de Plusvalías &amp; Traspasos (IRPF España)
             </h2>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-[var(--color-fg-4)]">
               Estimación de tributación en base imponible del ahorro según la Ley 35/2006 del IRPF
             </p>
           </div>
@@ -249,19 +249,19 @@ export function ReportsHub({
         </div>
 
         {/* Advantage Box */}
-        <div className="bg-black/30 border border-white/5 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
-            <p className="text-xs font-bold text-white flex items-center gap-2">
+            <p className="text-xs font-bold text-[var(--color-fg-1)] flex items-center gap-2">
               <Landmark size={15} className="text-[var(--color-accent)]" />
               Ventaja Fiscal de los Fondos de Inversión (Diferimiento Fiscal)
             </p>
-            <p className="text-xs text-gray-400 leading-relaxed max-w-2xl">
+            <p className="text-xs text-[var(--color-fg-4)] leading-relaxed max-w-2xl">
               En España, puedes traspasar tu capital entre fondos de inversión sin tributar por las plusvalías latentes acumuladas. Solo pagarás impuestos cuando realices un <strong>reembolso definitivo</strong> a tu cuenta corriente.
             </p>
           </div>
 
-          <div className="bg-black/50 border border-white/10 px-4 py-3 rounded-xl text-right font-mono shrink-0">
-            <div className="text-[10px] text-gray-400 uppercase">Plusvalía Latente Total</div>
+          <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] px-4 py-3 rounded-xl text-right font-mono shrink-0">
+            <div className="text-[10px] text-[var(--color-fg-4)] uppercase">Plusvalía Latente Total</div>
             <div className={`text-lg font-bold ${totalProfitLoss >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"}`}>
               {totalProfitLoss >= 0 ? "+" : ""}{fmtEur(totalProfitLoss)}
             </div>
@@ -271,41 +271,41 @@ export function ReportsHub({
         {/* Brackets Breakdown Table */}
         {totalProfitLoss > 0 && (
           <div className="space-y-3 pt-2">
-            <h3 className="text-xs font-mono font-bold text-gray-300 uppercase tracking-wider">
+            <h3 className="text-xs font-mono font-bold text-[var(--color-fg-2)] uppercase tracking-wider">
               Simulación de Reembolso Total (Tramos del Ahorro)
             </h3>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left font-mono text-xs">
+            <div className="overflow-x-auto touch-scroll">
+              <table className="w-full text-left font-mono text-xs min-w-[520px]">
                 <thead>
-                  <tr className="border-b border-white/10 text-gray-400">
+                  <tr className="border-b border-[var(--color-ink-3)] text-[var(--color-fg-4)]">
                     <th className="pb-2 font-medium">Tramo de Ganancia</th>
                     <th className="pb-2 font-medium">Tipo Impositivo</th>
                     <th className="pb-2 font-medium text-right">Base Imponible en Tramo</th>
                     <th className="pb-2 font-medium text-right">Impuesto Estimado</th>
                   </tr>
                 </thead>
-                <tbody className="text-gray-300 divide-y divide-white/5">
+                <tbody className="text-[var(--color-fg-2)] divide-y divide-[var(--color-ink-3)]">
                   {taxEstimation.brackets.map((b, i) => (
-                    <tr key={i} className="hover:bg-white/[0.02]">
-                      <td className="py-2.5 text-white">{b.label}</td>
+                    <tr key={i} className="hover:bg-[var(--color-ink-2)]">
+                      <td className="py-2.5 text-[var(--color-fg-1)]">{b.label}</td>
                       <td className="py-2.5 font-bold text-amber-400">{b.rate}</td>
                       <td className="py-2.5 text-right">{fmtEur(b.base)}</td>
                       <td className="py-2.5 text-right text-red-400 font-bold">{fmtEur(b.tax)}</td>
                     </tr>
                   ))}
-                  <tr className="border-t border-white/20 font-bold bg-white/[0.02]">
-                    <td className="py-3 text-white">Total Tributación Estimada</td>
+                  <tr className="border-t border-[var(--color-ink-3)] font-bold bg-[var(--color-ink-2)]">
+                    <td className="py-3 text-[var(--color-fg-1)]">Total Tributación Estimada</td>
                     <td className="py-3 text-[var(--color-accent)]">{taxEstimation.effectiveRate}% tipo efectivo</td>
-                    <td className="py-3 text-right text-white">{fmtEur(totalProfitLoss)}</td>
+                    <td className="py-3 text-right text-[var(--color-fg-1)]">{fmtEur(totalProfitLoss)}</td>
                     <td className="py-3 text-right text-red-400 text-sm">{fmtEur(taxEstimation.totalTax)}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
-            <div className="p-3 bg-black/40 border border-white/5 rounded-xl flex items-center justify-between text-xs font-mono">
-              <span className="text-gray-400">Capital Neto tras Impuestos:</span>
+            <div className="p-3 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl flex items-center justify-between text-xs font-mono">
+              <span className="text-[var(--color-fg-4)]">Capital Neto tras Impuestos:</span>
               <span className="text-[var(--color-accent)] text-sm font-bold">{fmtEur(totalCurrent - taxEstimation.totalTax)}</span>
             </div>
           </div>

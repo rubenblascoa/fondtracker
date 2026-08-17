@@ -147,7 +147,7 @@ export function NotifyPanel({ status, onChange }: Props) {
     <div className="space-y-6">
       
       {/* ── Top Status Banner ── */}
-      <div className="bg-gradient-to-r from-[var(--color-ink-1)] to-[var(--color-ink-2)] border border-white/10 rounded-2xl p-6 sm:p-7 relative overflow-hidden shadow-xl">
+      <div className="bg-gradient-to-r from-[var(--color-ink-1)] to-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-2xl p-6 sm:p-7 relative overflow-hidden shadow-xl">
         <div className="absolute right-0 top-0 w-80 h-80 bg-[var(--color-accent)]/5 rounded-full blur-[90px] pointer-events-none" />
 
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
@@ -157,27 +157,27 @@ export function NotifyPanel({ status, onChange }: Props) {
                 <Smartphone size={18} />
               </div>
               <div>
-                <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
+                <h2 className="text-lg sm:text-xl font-extrabold text-[var(--color-fg-1)] tracking-tight">
                   Bot de Alertas &amp; Resúmenes Diarios por WhatsApp
                 </h2>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-[var(--color-fg-4)]">
                   Recibe automáticamente el valor de tu patrimonio, ganancias del día y rentabilidades sin abrir la app
                 </p>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-3 mt-4 text-xs font-mono">
-              <div className="flex items-center gap-2 bg-black/40 border border-white/10 px-3 py-1.5 rounded-xl">
+              <div className="flex items-center gap-2 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] px-3 py-1.5 rounded-xl">
                 <span className={`w-2.5 h-2.5 rounded-full ${isEnabled && wa?.configured ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_#39ff88]" : "bg-gray-500"}`} />
-                <span className="text-gray-300 font-medium">
-                  Estado: <strong className={isEnabled && wa?.configured ? "text-emerald-400" : "text-gray-400"}>{isEnabled && wa?.configured ? "Activo" : "Pendiente de configurar"}</strong>
+                <span className="text-[var(--color-fg-2)] font-medium">
+                  Estado: <strong className={isEnabled && wa?.configured ? "text-emerald-400" : "text-[var(--color-fg-4)]"}>{isEnabled && wa?.configured ? "Activo" : "Pendiente de configurar"}</strong>
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 bg-black/40 border border-white/10 px-3 py-1.5 rounded-xl">
+              <div className="flex items-center gap-2 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] px-3 py-1.5 rounded-xl">
                 <Clock size={13} className="text-[var(--color-accent)]" />
-                <span className="text-gray-300">
-                  Próximo Envío: <strong className="text-white">{nextRunText()}</strong>
+                <span className="text-[var(--color-fg-2)]">
+                  Próximo Envío: <strong className="text-[var(--color-fg-1)]">{nextRunText()}</strong>
                 </span>
               </div>
             </div>
@@ -222,23 +222,23 @@ export function NotifyPanel({ status, onChange }: Props) {
         <div className="lg:col-span-7 space-y-6">
           
           {/* Step 1 & 2: WhatsApp Setup Box */}
-          <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-6 space-y-5">
-            <div className="flex items-center justify-between border-b border-white/5 pb-3">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+          <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-6 space-y-5">
+            <div className="flex items-center justify-between border-b border-[var(--color-ink-3)] pb-3">
+              <h3 className="text-sm font-bold text-[var(--color-fg-1)] flex items-center gap-2">
                 <Settings size={16} className="text-[var(--color-accent)]" />
                 Configuración del Destinatario &amp; CallMeBot
               </h3>
-              <span className="text-[10px] font-mono bg-white/5 px-2 py-0.5 rounded text-gray-400">Paso 1 y 2</span>
+              <span className="text-[10px] font-mono bg-[var(--color-ink-2)] px-2 py-0.5 rounded text-[var(--color-fg-4)]">Paso 1 y 2</span>
             </div>
 
             {/* Step 1 Quick Link CallMeBot */}
-            <div className="bg-black/30 border border-emerald-500/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="bg-[var(--color-ink-2)] border border-emerald-500/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                <p className="text-xs font-bold text-[var(--color-fg-1)] flex items-center gap-1.5">
                   <Sparkles size={14} className="text-emerald-400" />
                   ¿Cómo obtener tu clave CallMeBot en 10 segundos?
                 </p>
-                <p className="text-[11px] text-gray-400 mt-1">
+                <p className="text-[11px] text-[var(--color-fg-4)] mt-1">
                   Envía el mensaje de autorización por WhatsApp al bot oficial de CallMeBot y te devolverá tu API Key al instante.
                 </p>
               </div>
@@ -258,37 +258,37 @@ export function NotifyPanel({ status, onChange }: Props) {
               
               {/* Phone Input with Country Code */}
               <div>
-                <label className="text-[11px] font-mono uppercase text-gray-400 mb-1.5 block">
+                <label className="text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-1.5 block">
                   Teléfono WhatsApp
                 </label>
                 <div className="flex gap-2 relative">
                   <button
                     type="button"
                     onClick={() => setShowCountryPicker(!showCountryPicker)}
-                    className="flex items-center gap-1.5 bg-black/40 border border-white/10 px-2.5 py-2.5 rounded-xl text-xs text-white hover:border-[var(--color-accent)] transition-all shrink-0"
+                    className="flex items-center gap-1.5 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] px-2.5 py-2.5 rounded-xl text-xs text-[var(--color-fg-1)] hover:border-[var(--color-accent)] transition-all shrink-0"
                   >
                     <span>{phoneCountry.flag}</span>
-                    <span className="font-mono text-gray-400">{phoneCountry.dial}</span>
+                    <span className="font-mono text-[var(--color-fg-4)]">{phoneCountry.dial}</span>
                   </button>
 
                   {showCountryPicker && (
-                    <div className="absolute left-0 top-full mt-2 w-64 bg-[var(--color-ink-2)] border border-white/10 rounded-2xl shadow-2xl z-50 p-2 max-h-52 overflow-y-auto">
+                    <div className="absolute left-0 top-full mt-2 w-64 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-2xl shadow-2xl z-50 p-2 max-h-52 overflow-y-auto">
                       <input
                         type="text"
                         placeholder="Buscar país..."
                         value={countrySearch}
                         onChange={(e) => setCountrySearch(e.target.value)}
-                        className="w-full bg-black/40 border border-white/10 px-2.5 py-1.5 rounded-lg text-xs text-white mb-2 outline-none"
+                        className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] px-2.5 py-1.5 rounded-lg text-xs text-[var(--color-fg-1)] mb-2 outline-none"
                       />
                       {COUNTRIES.filter(c => !countrySearch || c.name.toLowerCase().includes(countrySearch.toLowerCase()) || c.dial.includes(countrySearch)).map(c => (
                         <button
                           key={c.code}
                           type="button"
                           onClick={() => { setPhoneCountry(c); setShowCountryPicker(false); }}
-                          className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-left hover:bg-white/5 rounded-lg text-gray-300 hover:text-white"
+                          className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-left hover:bg-[var(--color-ink-2)] rounded-lg text-[var(--color-fg-2)] hover:text-[var(--color-fg-1)]"
                         >
                           <span>{c.flag}</span>
-                          <span className="font-mono text-gray-400 text-[10px] w-10">{c.dial}</span>
+                          <span className="font-mono text-[var(--color-fg-4)] text-[10px] w-10">{c.dial}</span>
                           <span className="truncate">{c.name}</span>
                         </button>
                       ))}
@@ -300,14 +300,14 @@ export function NotifyPanel({ status, onChange }: Props) {
                     value={localNumber}
                     onChange={(e) => setLocalNumber(e.target.value.replace(/\D/g, ""))}
                     placeholder="612345678"
-                    className="flex-1 bg-black/40 border border-white/10 focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-xs font-mono text-white outline-none transition-all"
+                    className="flex-1 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-xs font-mono text-[var(--color-fg-1)] outline-none transition-all"
                   />
                 </div>
               </div>
 
               {/* API Key */}
               <div>
-                <label className="text-[11px] font-mono uppercase text-gray-400 mb-1.5 block">
+                <label className="text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-1.5 block">
                   API Key CallMeBot
                 </label>
                 <div className="relative">
@@ -316,12 +316,12 @@ export function NotifyPanel({ status, onChange }: Props) {
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
                     placeholder="Ej: 123456"
-                    className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)] px-3 py-2.5 pr-9 rounded-xl text-xs font-mono text-white outline-none transition-all"
+                    className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] px-3 py-2.5 pr-9 rounded-xl text-xs font-mono text-[var(--color-fg-1)] outline-none transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowApiKey(!showApiKey)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
                   >
                     {showApiKey ? <EyeOff size={13} /> : <Eye size={13} />}
                   </button>
@@ -332,7 +332,7 @@ export function NotifyPanel({ status, onChange }: Props) {
 
             {/* Schedule Selector */}
             <div className="space-y-3 pt-2">
-              <label className="text-[11px] font-mono uppercase text-gray-400 flex items-center justify-between">
+              <label className="text-[11px] font-mono uppercase text-[var(--color-fg-4)] flex items-center justify-between">
                 <span>Horas de Envío Diario (Horario España UTC+1/2)</span>
                 <span className="text-[var(--color-accent)] font-bold">{selectedHours.length} horas seleccionadas</span>
               </label>
@@ -354,7 +354,7 @@ export function NotifyPanel({ status, onChange }: Props) {
                       className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
                         active 
                           ? "bg-[var(--color-accent)]/15 border-[var(--color-accent)] text-[var(--color-accent)] font-bold" 
-                          : "bg-black/30 border-white/10 text-gray-400 hover:text-white"
+                          : "bg-[var(--color-ink-2)] border-[var(--color-ink-3)] text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
                       }`}
                     >
                       {p.label}
@@ -374,8 +374,8 @@ export function NotifyPanel({ status, onChange }: Props) {
                       onClick={() => toggleHour(h)}
                       className={`py-2 rounded-lg text-xs font-mono font-bold transition-all ${
                         active 
-                          ? "bg-[var(--color-accent)] text-black shadow-[0_0_8px_rgba(57,255,136,0.2)]" 
-                          : "bg-black/40 text-gray-400 hover:bg-white/5 hover:text-white border border-white/5"
+                          ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_8px_rgba(57,255,136,0.2)]" 
+                          : "bg-[var(--color-ink-2)] text-[var(--color-fg-4)] hover:bg-[var(--color-ink-2)] hover:text-[var(--color-fg-1)] border border-[var(--color-ink-3)]"
                       }`}
                     >
                       {String(h).padStart(2, '0')}h
@@ -386,7 +386,7 @@ export function NotifyPanel({ status, onChange }: Props) {
             </div>
 
             {/* Save Button & Toggle */}
-            <div className="pt-4 border-t border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="pt-4 border-t border-[var(--color-ink-3)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input
                   type="checkbox"
@@ -394,13 +394,13 @@ export function NotifyPanel({ status, onChange }: Props) {
                   onChange={(e) => setIsEnabled(e.target.checked)}
                   className="rounded accent-[var(--color-accent)] w-4 h-4 cursor-pointer"
                 />
-                <span className="text-xs text-white font-medium">Habilitar envíos automáticos</span>
+                <span className="text-xs text-[var(--color-fg-1)] font-medium">Habilitar envíos automáticos</span>
               </label>
 
               <button
                 onClick={handleSaveConfig}
                 disabled={saving}
-                className="w-full sm:w-auto px-6 py-2.5 bg-white text-black font-bold text-xs rounded-xl hover:bg-gray-200 transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
+                className="w-full sm:w-auto px-6 py-2.5 bg-white text-[var(--color-accent-fg)] font-bold text-xs rounded-xl hover:bg-gray-200 transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
               >
                 {saving ? <RefreshCw size={13} className="animate-spin" /> : <Check size={13} />}
                 <span>{saving ? "Guardando..." : "Guardar Cambios"}</span>
@@ -414,16 +414,16 @@ export function NotifyPanel({ status, onChange }: Props) {
         {/* ── Right Column: Smartphone Live Preview Mockup ── */}
         <div className="lg:col-span-5 space-y-4">
           
-          <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-5">
+          <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-5">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <h3 className="text-sm font-bold text-[var(--color-fg-1)] flex items-center gap-2">
                 <MessageSquare size={16} className="text-emerald-400" />
                 Vista Previa en Smartphone (WhatsApp Live)
               </h3>
               <button
                 onClick={loadPreview}
                 disabled={loadingPreview}
-                className="p-1 text-gray-400 hover:text-white transition-colors"
+                className="p-1 text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] transition-colors"
                 title="Refrescar vista previa"
               >
                 <RefreshCw size={13} className={loadingPreview ? "animate-spin" : ""} />
@@ -436,13 +436,13 @@ export function NotifyPanel({ status, onChange }: Props) {
               {/* WhatsApp Chat Header */}
               <div className="bg-[#202c33] px-3.5 py-2.5 flex items-center justify-between border-b border-[#2a3942]">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center text-black font-bold text-xs shadow-sm">
+                  <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center text-[var(--color-accent-fg)] font-bold text-xs shadow-sm">
                     FT
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-white flex items-center gap-1">
+                    <div className="text-xs font-bold text-[var(--color-fg-1)] flex items-center gap-1">
                       <span>FondTracker Bot</span>
-                      <CheckCircle2 size={12} className="text-emerald-400 fill-emerald-400 text-black" />
+                      <CheckCircle2 size={12} className="text-emerald-400 fill-emerald-400 text-[var(--color-accent-fg)]" />
                     </div>
                     <span className="text-[9px] text-[#8696a0]">en línea</span>
                   </div>
@@ -466,7 +466,7 @@ export function NotifyPanel({ status, onChange }: Props) {
 
             </div>
 
-            <p className="text-[11px] text-gray-500 text-center mt-3">
+            <p className="text-[11px] text-[var(--color-fg-5)] text-center mt-3">
               Los mensajes se envían de forma encriptada de extremo a extremo respetando los límites de longitud de WhatsApp.
             </p>
           </div>

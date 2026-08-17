@@ -210,11 +210,29 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   }
 
   if (!res.ok) {
-    const data = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new ApiError(
-      data.error ?? `Error ${res.status}: ${res.statusText}`,
-      res.status
-    );
+    let errorMsg = `Error ${res.status}: ${res.statusText}`;
+    try {
+      const data = await res.json();
+      if (data && typeof data === "object" && data.error) {
+        errorMsg = data.error;
+      }
+    } catch {
+      // non-json error body
+    }
+    throw new ApiError(errorMsg, res.status);
+  }
+
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    const text = await res.text();
+    if (text.startsWith("<!DOCTYPE") || text.startsWith("<html")) {
+      throw new ApiError(`Respuesta no válida del servidor (${url})`, res.status);
+    }
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      throw new ApiError("Formato de datos no válido", res.status);
+    }
   }
 
   return (await res.json()) as T;
@@ -237,91 +255,82 @@ export function getSpecificFundUrl(isin: string, bank?: string, name?: string): 
   const cleanIsin = typeof isin === "string" ? isin.toUpperCase().trim() : "";
   const cleanName = typeof name === "string" ? name.trim() : "";
 
-  // 1. Ibercaja specific dynamic routing
-  if (normBank.includes("ibercaja")) {
-    let slug = cleanName.toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, ""); // remove accents
-
-    // Clean common suffixes like " a fi", " fi a", " fi", " fi b"
-    slug = slug.replace(/,?\s+fi\s+[a-z]$/g, "")
-               .replace(/,?\s+[a-z]\s+fi$/g, "")
-               .replace(/,?\s+fi$/g, "")
-               .replace(/[^a-z0-9\s-]/g, "")
-               .trim()
-               .replace(/\s+/g, "-")
-               .replace(/-+/g, "-");
-
-    return `https://www.ibercaja.es/fondos-de-inversion/ficha/${slug}-fi/`;
-  }
-
-  // 2. Hardcoded exact pages for popular funds on the bank's main site
-  const hardcoded: Record<string, string> = {
-    "ES0109360000": "https://www.bancosantander.es/particulares/fondos-inversion/santander-dividendo-europa-clase-b-es0109360000",
-    "ES0175224031": "https://www.bancosantander.es/particulares/fondos-inversion/santander-small-caps-espana-fi-clase-a-es0175224031",
-    "ES0113691010": "https://www.abanca.com/es/fondos-inversion/abanca-ahorro/",
-    "ES0113691002": "https://www.abanca.com/es/fondos-inversion/abanca-ahorro/",
-    "ES0113691036": "https://www.abanca.com/es/fondos-inversion/abanca-ahorro/",
-    "ES0106933007": "https://www.abanca.com/es/fondos-inversion/abanca-ahorro/",
-    "ES0106933031": "https://www.abanca.com/es/fondos-inversion/abanca-ahorro/",
-    "ES0106933023": "https://www.abanca.com/es/fondos-inversion/abanca-ahorro/",
-    "ES0147597035": "https://www.abanca.com/es/fondos-inversion/abanca-bonos-corporativos/",
-    "ES0147597019": "https://www.abanca.com/es/fondos-inversion/abanca-bonos-corporativos/",
-    "ES0147597001": "https://www.abanca.com/es/fondos-inversion/abanca-bonos-corporativos/"
-  };
-
-  if (hardcoded[cleanIsin]) {
-    return hardcoded[cleanIsin];
-  }
-
-  // 2. Known ETF managers search portals
+  // 1. Known ETF and Fund managers official search tools (URL parameters that never 404)
   if (normBank.includes("ishares") || normBank.includes("blackrock")) {
-    return `https://www.blackrock.com/es/productos/buscador-de-productos#!type=all&style=All&view=perf&search=${cleanIsin}`;
+    return `https://www.blackrock.com/es/productos/buscador-de-productos#!type=all&style=All&view=perf&search=${encodeURIComponent(cleanIsin)}`;
   }
   if (normBank.includes("vanguard")) {
-    return `https://www.vanguard.com/es/productos/buscador-de-productos?search=${cleanIsin}`;
+    return `https://www.vanguard.com/es/productos/buscador-de-productos?search=${encodeURIComponent(cleanIsin)}`;
   }
   if (normBank.includes("amundi")) {
-    return `https://www.amundi.es/particular/search/securities?q=${cleanIsin}`;
+    return `https://www.amundi.es/particular/search/securities?q=${encodeURIComponent(cleanIsin)}`;
   }
   if (normBank.includes("dws") || normBank.includes("xtrackers")) {
-    return `https://etf.dws.com/es-es/buscar/?q=${cleanIsin}`;
+    return `https://etf.dws.com/es-es/buscar/?q=${encodeURIComponent(cleanIsin)}`;
+  }
+  if (normBank.includes("fidelity")) {
+    return `https://www.fidelity.es/fondos/buscador?q=${encodeURIComponent(cleanIsin)}`;
+  }
+  if (normBank.includes("pictet")) {
+    return `https://am.pictet/es/espana/global-fund-selector?search=${encodeURIComponent(cleanIsin)}`;
+  }
+  if (normBank.includes("invesco")) {
+    return `https://www.invesco.com/es/es/search.html?q=${encodeURIComponent(cleanIsin)}`;
+  }
+  if (normBank.includes("jpmorgan") || normBank.includes("jp morgan")) {
+    return `https://am.jpmorgan.com/es/es/asset-management/per/products/search?q=${encodeURIComponent(cleanIsin)}`;
   }
 
-  // 3. Known Spanish bank domains for Google Search redirect to exact page
-  const domains: Record<string, string> = {
-    "santander": "bancosantander.es",
-    "bbva": "bbva.es",
-    "caixabank": "caixabank.es",
-    "bankinter": "bankinter.com",
-    "sabadell": "bancsabadell.com",
-    "kutxabank": "kutxabank.es",
-    "ibercaja": "ibercaja.es",
-    "unicaja": "unicajabanco.es",
-    "abanca": "abanca.com",
-    "ing": "ing.es",
-    "openbank": "openbank.es",
-    "myinvestor": "myinvestor.es",
-    "renta 4": "r4.com",
-    "bestinver": "bestinver.es",
-    "cobas": "cobasam.com",
-    "azvalor": "azvalor.com",
-    "magallanes": "magallanesvalueinvestors.com"
-  };
-
-  for (const [key, domain] of Object.entries(domains)) {
-    if (normBank.includes(key)) {
-      return `https://www.google.com/search?q=site:${domain}+${cleanIsin}`;
-    }
+  // 2. If a bank or entity name is specified, generate a targeted verified search for the official fund page
+  if (bank && bank.trim().length > 0) {
+    const query = `${bank.trim()} fondos ${cleanIsin}`.trim();
+    return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
   }
 
-  // 4. Default fallbacks
+  // 3. Default fallbacks (QueFondos for Spanish/European funds, Yahoo Finance for others)
   const isIsin = /^[A-Z]{2}[A-Z0-9]{10}$/.test(cleanIsin);
   if (isIsin) {
-    return `https://www.quefondos.com/es/fondos/ficha/index.html?isin=${cleanIsin}`;
+    return `https://www.quefondos.com/es/fondos/ficha/index.html?isin=${encodeURIComponent(cleanIsin)}`;
   }
 
   return `https://finance.yahoo.com/quote/${encodeURIComponent(cleanIsin)}/`;
+}
+
+export function getFundMorningstarUrl(isin: string): string {
+  const cleanIsin = typeof isin === "string" ? isin.toUpperCase().trim() : "";
+  return `https://www.google.com/search?q=${encodeURIComponent(`morningstar ${cleanIsin}`)}`;
+}
+
+export function getFundDataSourceInfo(
+  fund: { isin: string; ticker?: string | null }, 
+  dataSource?: string
+): { name: "QueFondos" | "Yahoo Finance"; url: string; domain: string; description: string } {
+  const isQuefondos = dataSource === "quefondos" || (!fund.ticker && /^[A-Z]{2}[A-Z0-9]{10}$/.test(fund.isin)) || (fund.isin && fund.isin.startsWith("ES01"));
+  if (isQuefondos) {
+    return {
+      name: "QueFondos",
+      url: `https://www.quefondos.com/es/fondos/ficha/index.html?isin=${encodeURIComponent(fund.isin)}`,
+      domain: "quefondos.com",
+      description: "Fuente de cotización diaria y valor liquidativo (NAV)"
+    };
+  }
+  const query = fund.ticker || fund.isin;
+  return {
+    name: "Yahoo Finance",
+    url: `https://finance.yahoo.com/quote/${encodeURIComponent(query)}/`,
+    domain: "finance.yahoo.com",
+    description: "Fuente de cotización en tiempo real e histórico bursátil"
+  };
+}
+
+export function getBankPortalInfo(fund: { isin: string; bank?: string; name?: string }): { name: string; url: string; description: string } | null {
+  if (!fund.bank || !fund.bank.trim()) return null;
+  const url = getSpecificFundUrl(fund.isin, fund.bank, fund.name);
+  return {
+    name: fund.bank.trim(),
+    url,
+    description: `Ficha oficial del fondo en ${fund.bank.trim()}`
+  };
 }
 
 export const api = {
@@ -357,6 +366,9 @@ export const api = {
       if (offset) params.set("offset", String(offset));
       return request<{ users: any[]; total: number }>(`/api/admin/users?${params}`);
     },
+    userDetail: (id: number) => request<any>(`/api/admin/users/${id}`),
+    testUserWhatsApp: (id: number) =>
+      request<{ ok: true; sent_to: string }>(`/api/admin/users/${id}/test-whatsapp`, { method: "POST" }),
     deleteUser: (id: number) =>
       request<{ ok: true }>(`/api/admin/users/${id}/delete`, { method: "POST" }),
     restoreUser: (id: number) =>
@@ -371,18 +383,58 @@ export const api = {
       const params = q ? `?q=${encodeURIComponent(q)}` : "";
       return request<any>(`/api/admin/catalog${params}`);
     },
+    addCatalogFund: (data: {
+      isin: string;
+      name: string;
+      bank: string;
+      category: string;
+      risk_level?: number;
+      currency?: string;
+      yahoo_ticker?: string;
+      base_price?: number;
+    }) =>
+      request<{ ok: true; isin: string }>("/api/admin/catalog", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    updateCatalogFund: (isin: string, data: {
+      name?: string;
+      bank?: string;
+      category?: string;
+      risk_level?: number;
+      yahoo_ticker?: string;
+    }) =>
+      request<{ ok: true }>(`/api/admin/catalog/${isin}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    deleteCatalogFund: (isin: string) =>
+      request<{ ok: true }>(`/api/admin/catalog/${isin}`, { method: "DELETE" }),
     updateTicker: (isin: string, ticker: string) =>
       request<{ ok: true }>(`/api/admin/catalog/${isin}/ticker`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ticker }),
       }),
+    refreshFundPrice: (isin: string) =>
+      request<{ ok: true; isin: string; price: number; source: string }>(`/api/admin/catalog/${isin}/refresh-price`, {
+        method: "POST",
+      }),
+    refreshAllPrices: () =>
+      request<{ ok: true; total: number }>("/api/admin/catalog-refresh-all", { method: "POST" }),
     invalidatePrice: (isin: string) =>
       request<{ ok: true }>(`/api/admin/catalog/${isin}/invalidate-price`, { method: "POST" }),
     notifications: () => request<any>("/api/admin/notifications"),
+    previewNotification: (userId?: number) =>
+      request<{ userId: number; message: string }>(userId ? `/api/admin/notifications/preview/${userId}` : "/api/admin/notifications/preview"),
     triggerDigest: () =>
       request<{ ok: true; message: string }>("/api/admin/notifications/trigger", { method: "POST" }),
+    activityLogs: () => request<{ logs: any[] }>("/api/admin/activity-logs"),
     system: () => request<any>("/api/admin/system"),
+    clearCache: () =>
+      request<{ ok: true; message: string }>("/api/admin/system/clear-cache", { method: "POST" }),
   },
 
   searchFunds: (q: string, bank?: string, category?: string) => {

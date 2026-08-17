@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, memo } from "react";
-import { api, getBankUrl, getSpecificFundUrl, type Investment, type YahooChartData } from "../api";
+import { api, getBankUrl, getSpecificFundUrl, getFundDataSourceInfo, getBankPortalInfo, getFundMorningstarUrl, type Investment, type YahooChartData } from "../api";
 import { formatCurrency, formatPct, profitColor, formatRelative, sanitizeFundName } from "../utils";
 import { 
   TrendingUp, ArrowUpRight, ArrowDownRight, Edit2, Trash2, 
@@ -37,6 +37,10 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
   const [hoveredPos, setHoveredPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [activeTab, setActiveTab] = useState<"chart" | "composition" | "details">("chart");
 
+  // External Links dropdown state
+  const [showLinksMenu, setShowLinksMenu] = useState(false);
+  const linksMenuRef = useRef<HTMLDivElement>(null);
+
   // Edit state
   const [editing, setEditing] = useState(false);
   const [editMode, setEditMode] = useState<"amount" | "shares">("amount");
@@ -52,6 +56,21 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
   const currentPrice = fund.current_price != null ? Number(fund.current_price) : null;
   const hasPrice = currentPrice != null && currentPrice > 0;
   const bankUrl = getBankUrl(fund.bank);
+  
+  // Resolution of data source & official bank URLs
+  const dataSourceInfo = getFundDataSourceInfo(fund, chartData?.dataSource);
+  const bankPortalInfo = getBankPortalInfo(fund);
+
+  useEffect(() => {
+    if (!showLinksMenu) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (linksMenuRef.current && !linksMenuRef.current.contains(e.target as Node)) {
+        setShowLinksMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showLinksMenu]);
 
   const invested = fund.total_invested || (fund.shares * fund.purchase_price);
   const currentVal = (currentPrice ?? fund.purchase_price) * fund.shares;
@@ -349,11 +368,11 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
   return (
     <div 
       ref={cardRef}
-      className="bg-[var(--color-ink-1)] border border-white/5 hover:border-white/15 rounded-xl p-4 sm:p-4.5 transition-all shadow-[0_4px_16px_rgba(0,0,0,0.3)] relative overflow-hidden group"
+      className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] hover:border-[var(--color-ink-3)] rounded-xl p-4 sm:p-4.5 transition-all shadow-[0_4px_16px_rgba(0,0,0,0.3)] relative overflow-hidden group"
     >
       
       {/* ── Top Header Section (Compact & Dense) ── */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-white/5">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-[var(--color-ink-3)]">
         
         {/* Left Fund Identifiers */}
         <div className="space-y-1 flex-1">
@@ -364,59 +383,80 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
             </span>
 
             {fund.bank && (
-              <span className="text-[10px] font-semibold px-2 py-0.5 bg-white/5 text-gray-200 rounded border border-white/10 flex items-center gap-1">
-                <Building2 size={11} className="text-gray-400" />
-                {fund.bank}
-              </span>
+              <a
+                href={bankPortalInfo ? bankPortalInfo.url : "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`Ver en web de ${fund.bank}`}
+                className="text-[10px] font-semibold px-2 py-0.5 bg-[var(--color-ink-2)] hover:bg-[var(--color-ink-2)] text-[var(--color-fg-2)] hover:text-[var(--color-fg-1)] rounded border border-[var(--color-ink-3)] hover:border-[var(--color-accent)]/40 flex items-center gap-1 transition-all cursor-pointer group"
+              >
+                <Building2 size={11} className="text-[var(--color-fg-4)] group-hover:text-[var(--color-accent)] transition-colors" />
+                <span>{fund.bank}</span>
+                <ExternalLink size={9} className="opacity-0 group-hover:opacity-100 text-[var(--color-fg-4)] transition-opacity" />
+              </a>
             )}
 
             {fund.category && (
-              <span className="text-[11px] text-gray-400 font-medium">
+              <span className="text-[11px] text-[var(--color-fg-4)] font-medium">
                 • {fund.category}
               </span>
             )}
 
             {hasPrice && chartData && !chartData.isStale && (
-              <span className="flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.5 bg-[#39ff88]/10 text-[#39ff88] rounded border border-[#39ff88]/20">
+              <a
+                href={dataSourceInfo.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`Ver fuente en ${dataSourceInfo.name}`}
+                className="flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.5 bg-[#39ff88]/10 hover:bg-[#39ff88]/20 text-[#39ff88] rounded border border-[#39ff88]/20 transition-colors cursor-pointer"
+              >
                 <span className="w-1.5 h-1.5 rounded-full bg-[#39ff88] animate-pulse" />
                 {chartData.dataSource === "quefondos" && chartData.dataDate
                   ? `NAV ${fmtDataDate(chartData.dataDate)}`
                   : "LIVE"}
-              </span>
+                <ExternalLink size={8} className="opacity-70" />
+              </a>
             )}
 
             {hasPrice && chartData?.isStale && (
-              <span className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded border border-amber-500/20" title={chartData.staleWarning}>
+              <a
+                href={dataSourceInfo.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`${chartData.staleWarning || 'Desactualizado'} - Ver en ${dataSourceInfo.name}`}
+                className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded border border-amber-500/20 transition-colors cursor-pointer"
+              >
                 <AlertTriangle size={10} />
                 <span>{chartData.dataDate ? fmtDataDate(chartData.dataDate) : "Desactualizado"}</span>
-              </span>
+                <ExternalLink size={8} className="opacity-70" />
+              </a>
             )}
           </div>
 
-          <h3 className="text-sm sm:text-base font-bold text-white tracking-tight leading-tight">
+          <h3 className="text-sm sm:text-base font-bold text-[var(--color-fg-1)] tracking-tight leading-tight">
             {sanitizeFundName(fund.name)}
           </h3>
 
-          <div className="flex items-center gap-2 text-[11px] font-mono text-gray-400 flex-wrap">
+          <div className="flex items-center gap-2 text-[11px] font-mono text-[var(--color-fg-4)] flex-wrap">
             <span>
               {fund.shares.toLocaleString("es", { minimumFractionDigits: 2, maximumFractionDigits: 4 })} part. × €{fund.purchase_price.toFixed(4)}
             </span>
-            <span className="text-gray-600">•</span>
-            <span className="text-gray-300">
-              Invertido: <strong className="text-white">{formatCurrency(invested, fund.currency)}</strong>
+            <span className="text-[var(--color-fg-5)]">•</span>
+            <span className="text-[var(--color-fg-2)]">
+              Invertido: <strong className="text-[var(--color-fg-1)]">{formatCurrency(invested, fund.currency)}</strong>
             </span>
             {fund.purchase_date && (
               <>
-                <span className="text-gray-600">•</span>
-                <span className="text-gray-400 flex items-center gap-1">
+                <span className="text-[var(--color-fg-5)]">•</span>
+                <span className="text-[var(--color-fg-4)] flex items-center gap-1">
                   <Calendar size={11} /> {fmtDate(fund.purchase_date)}
                 </span>
               </>
             )}
             {fund.notes && (
               <>
-                <span className="text-gray-600">•</span>
-                <span className="text-gray-400 italic">"{fund.notes}"</span>
+                <span className="text-[var(--color-fg-5)]">•</span>
+                <span className="text-[var(--color-fg-4)] italic">"{fund.notes}"</span>
               </>
             )}
           </div>
@@ -424,7 +464,7 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
         </div>
 
         {/* Right Valuation & Performance Block */}
-        <div className="flex items-center justify-between lg:justify-end gap-3.5 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-white/5">
+        <div className="flex items-center justify-between lg:justify-end gap-3.5 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-[var(--color-ink-3)]">
           
           <div className="text-left lg:text-right space-y-0.5">
             <div className="flex items-center lg:justify-end gap-2">
@@ -439,32 +479,134 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
               </span>
             </div>
 
-            <div className="flex items-center lg:justify-end gap-2 text-[10px] font-mono text-gray-400">
-              <span>NAV: <strong className="text-white">€{(currentPrice ?? fund.purchase_price).toFixed(4)}</strong></span>
+            <div className="flex items-center lg:justify-end gap-2 text-[10px] font-mono text-[var(--color-fg-4)]">
+              <span>NAV: <strong className="text-[var(--color-fg-1)]">€{(currentPrice ?? fund.purchase_price).toFixed(4)}</strong></span>
               <span>•</span>
-              <span>Valor: <strong className="text-white">{formatCurrency(currentVal, fund.currency)}</strong></span>
+              <span>Valor: <strong className="text-[var(--color-fg-1)]">{formatCurrency(currentVal, fund.currency)}</strong></span>
             </div>
           </div>
 
           {/* Action Icons */}
-          <div className="flex items-center gap-0.5 pl-2.5 border-l border-white/10">
+          <div className="flex items-center gap-0.5 pl-2.5 border-l border-[var(--color-ink-3)]">
             <button
               onClick={startEditing}
-              className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+              className="p-1.5 text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] hover:bg-[var(--color-ink-2)] rounded-lg transition-all"
               title="Editar inversión"
             >
               <Edit2 size={13} />
             </button>
 
-            <a
-              href={fundUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-1.5 text-gray-400 hover:text-[var(--color-accent)] hover:bg-white/10 rounded-lg transition-all"
-              title="Ver en Yahoo / QueFondos"
-            >
-              <ExternalLink size={13} />
-            </a>
+            {/* External Links Shortcut with Popover or Direct Link */}
+            <div className="relative" ref={linksMenuRef}>
+              {bankPortalInfo ? (
+                <>
+                  <button
+                    onClick={() => setShowLinksMenu(!showLinksMenu)}
+                    className={`p-1.5 rounded-lg transition-all ${
+                      showLinksMenu 
+                        ? "bg-[var(--color-accent)]/20 text-[var(--color-accent)]" 
+                        : "text-[var(--color-fg-4)] hover:text-[var(--color-accent)] hover:bg-[var(--color-ink-2)]"
+                    }`}
+                    title="Ver fondo en la fuente de datos o web del banco"
+                  >
+                    <ExternalLink size={13} />
+                  </button>
+
+                  {showLinksMenu && (
+                    <div className="absolute right-0 top-full mt-2 z-50 w-72 bg-[var(--color-ink-1)]/95 backdrop-blur-xl border border-[var(--color-ink-3)] rounded-2xl shadow-2xl p-2 space-y-1 animate-fade-in text-left">
+                      <div className="px-2.5 py-1 border-b border-[var(--color-ink-3)] flex items-center justify-between">
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-fg-4)] font-bold">
+                          Acceso Directo
+                        </span>
+                        <span className="text-[9px] font-mono text-[var(--color-fg-5)]">{fund.isin}</span>
+                      </div>
+
+                      {/* Option 1: Data Source */}
+                      <a
+                        href={dataSourceInfo.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setShowLinksMenu(false)}
+                        className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-[var(--color-ink-2)] transition-colors group"
+                      >
+                        <div className="p-2 rounded-lg bg-[var(--color-accent)]/10 text-[var(--color-accent)] shrink-0 mt-0.5 group-hover:bg-[var(--color-accent)]/20 transition-colors">
+                          <BarChart3 size={14} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-xs font-bold text-[var(--color-fg-1)] group-hover:text-[var(--color-accent)] transition-colors">
+                              {dataSourceInfo.name}
+                            </span>
+                            <span className="text-[9px] font-mono text-[var(--color-accent)] font-semibold">Fuente Web</span>
+                          </div>
+                          <p className="text-[10px] text-[var(--color-fg-4)] line-clamp-1 leading-tight mt-0.5">
+                            {dataSourceInfo.description}
+                          </p>
+                        </div>
+                      </a>
+
+                      {/* Option 2: Bank Page */}
+                      <a
+                        href={bankPortalInfo.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setShowLinksMenu(false)}
+                        className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-[var(--color-ink-2)] transition-colors group"
+                      >
+                        <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 shrink-0 mt-0.5 group-hover:bg-blue-500/20 transition-colors">
+                          <Building2 size={14} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-xs font-bold text-[var(--color-fg-1)] group-hover:text-blue-400 transition-colors">
+                              {bankPortalInfo.name}
+                            </span>
+                            <span className="text-[9px] font-mono text-blue-400 font-semibold">Entidad Bancaria</span>
+                          </div>
+                          <p className="text-[10px] text-[var(--color-fg-4)] line-clamp-1 leading-tight mt-0.5">
+                            {bankPortalInfo.description}
+                          </p>
+                        </div>
+                      </a>
+
+                      {/* Option 3: Morningstar Analysis */}
+                      <a
+                        href={getFundMorningstarUrl(fund.isin)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setShowLinksMenu(false)}
+                        className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-[var(--color-ink-2)] transition-colors group"
+                      >
+                        <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400 shrink-0 mt-0.5 group-hover:bg-amber-500/20 transition-colors">
+                          <Globe size={14} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-xs font-bold text-[var(--color-fg-1)] group-hover:text-amber-400 transition-colors">
+                              Morningstar
+                            </span>
+                            <span className="text-[9px] font-mono text-amber-400 font-semibold">Análisis</span>
+                          </div>
+                          <p className="text-[10px] text-[var(--color-fg-4)] line-clamp-1 leading-tight mt-0.5">
+                            Ficha técnica y rating en Morningstar España
+                          </p>
+                        </div>
+                      </a>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <a
+                  href={dataSourceInfo.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-1.5 text-[var(--color-fg-4)] hover:text-[var(--color-accent)] hover:bg-[var(--color-ink-2)] rounded-lg transition-all inline-flex"
+                  title={`Ver ficha en ${dataSourceInfo.name}`}
+                >
+                  <ExternalLink size={13} />
+                </a>
+              )}
+            </div>
 
             <button
               onClick={remove}
@@ -472,7 +614,7 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
               className={`p-1.5 rounded-lg transition-all ${
                 confirmDelete 
                   ? "bg-[var(--color-danger)]/20 text-[var(--color-danger)] animate-pulse" 
-                  : "text-gray-400 hover:text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10"
+                  : "text-[var(--color-fg-4)] hover:text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10"
               }`}
               title={confirmDelete ? "Pulsa otra vez para confirmar borrado" : "Eliminar posición"}
             >
@@ -491,11 +633,11 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
       {/* ── Inline Edit Drawer (When Editing) ── */}
       {editing && (
         <div className="mt-3.5 p-4 bg-[var(--color-ink-2)] border border-[var(--color-accent)]/30 rounded-xl space-y-3 animate-fade-in">
-          <div className="flex justify-between items-center pb-2 border-b border-white/5">
-            <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+          <div className="flex justify-between items-center pb-2 border-b border-[var(--color-ink-3)]">
+            <h4 className="text-xs font-bold text-[var(--color-fg-1)] flex items-center gap-1.5">
               <Edit2 size={13} className="text-[var(--color-accent)]" /> Modificar Posición
             </h4>
-            <button onClick={cancelEditing} className="text-gray-400 hover:text-white">
+            <button onClick={cancelEditing} className="text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]">
               <X size={14} />
             </button>
           </div>
@@ -508,12 +650,12 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
           )}
 
           {/* Segmented Mode Control */}
-          <div className="grid grid-cols-2 gap-1.5 p-1 bg-black/40 border border-white/5 rounded-lg max-w-xs">
+          <div className="grid grid-cols-2 gap-1.5 p-1 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-lg max-w-xs">
             <button
               type="button"
               onClick={() => setEditMode("amount")}
               className={`py-1 text-[11px] font-semibold rounded-md transition-all ${
-                editMode === "amount" ? "bg-[var(--color-accent)] text-black font-bold" : "text-gray-400 hover:text-white"
+                editMode === "amount" ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold" : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
               }`}
             >
               Por Importe (€)
@@ -522,7 +664,7 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
               type="button"
               onClick={() => setEditMode("shares")}
               className={`py-1 text-[11px] font-semibold rounded-md transition-all ${
-                editMode === "shares" ? "bg-[var(--color-accent)] text-black font-bold" : "text-gray-400 hover:text-white"
+                editMode === "shares" ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold" : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
               }`}
             >
               Por Participaciones
@@ -532,58 +674,58 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {editMode === "amount" ? (
               <div>
-                <label className="text-[10px] font-mono uppercase text-gray-400 mb-1 block">Importe Invertido (€) *</label>
+                <label className="text-[10px] font-mono uppercase text-[var(--color-fg-4)] mb-1 block">Importe Invertido (€) *</label>
                 <input
                   type="number"
                   step="any"
                   value={editAmount}
                   onChange={(e) => handleAmountChange(e.target.value)}
-                  className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)] rounded-lg px-3 py-1.5 text-xs font-mono text-white outline-none"
+                  className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] rounded-lg px-3 py-1.5 text-xs font-mono text-[var(--color-fg-1)] outline-none"
                 />
               </div>
             ) : (
               <div>
-                <label className="text-[10px] font-mono uppercase text-gray-400 mb-1 block">Participaciones *</label>
+                <label className="text-[10px] font-mono uppercase text-[var(--color-fg-4)] mb-1 block">Participaciones *</label>
                 <input
                   type="number"
                   step="any"
                   value={editShares}
                   onChange={(e) => handleSharesChange(e.target.value)}
-                  className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)] rounded-lg px-3 py-1.5 text-xs font-mono text-white outline-none"
+                  className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] rounded-lg px-3 py-1.5 text-xs font-mono text-[var(--color-fg-1)] outline-none"
                 />
               </div>
             )}
 
             <div>
-              <label className="text-[10px] font-mono uppercase text-gray-400 mb-1 block">Precio Compra NAV (€) *</label>
+              <label className="text-[10px] font-mono uppercase text-[var(--color-fg-4)] mb-1 block">Precio Compra NAV (€) *</label>
               <input
                 type="number"
                 step="any"
                 value={editPrice}
                 onChange={(e) => handlePriceChange(e.target.value)}
-                className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)] rounded-lg px-3 py-1.5 text-xs font-mono text-white outline-none"
+                className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] rounded-lg px-3 py-1.5 text-xs font-mono text-[var(--color-fg-1)] outline-none"
               />
             </div>
 
             <div>
-              <label className="text-[10px] font-mono uppercase text-gray-400 mb-1 block">Fecha de Compra *</label>
+              <label className="text-[10px] font-mono uppercase text-[var(--color-fg-4)] mb-1 block">Fecha de Compra *</label>
               <input
                 type="date"
                 value={editDate}
                 onChange={(e) => setEditDate(e.target.value)}
-                className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)] rounded-lg px-3 py-1.5 text-xs font-mono text-white outline-none"
+                className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] rounded-lg px-3 py-1.5 text-xs font-mono text-[var(--color-fg-1)] outline-none"
               />
             </div>
           </div>
 
           <div>
-            <label className="text-[10px] font-mono uppercase text-gray-400 mb-1 block">Notas (Opcional)</label>
+            <label className="text-[10px] font-mono uppercase text-[var(--color-fg-4)] mb-1 block">Notas (Opcional)</label>
             <input
               type="text"
               value={editNotes}
               onChange={(e) => setEditNotes(e.target.value)}
               placeholder="Notas sobre esta aportación..."
-              className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)] rounded-lg px-3 py-1.5 text-xs text-white outline-none"
+              className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] rounded-lg px-3 py-1.5 text-xs text-[var(--color-fg-1)] outline-none"
             />
           </div>
 
@@ -591,7 +733,7 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
             <button
               type="button"
               onClick={cancelEditing}
-              className="px-3 py-1.5 text-xs font-semibold text-gray-400 hover:text-white rounded-lg hover:bg-white/5"
+              className="px-3 py-1.5 text-xs font-semibold text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] rounded-lg hover:bg-[var(--color-ink-2)]"
             >
               Cancelar
             </button>
@@ -599,7 +741,7 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
               type="button"
               onClick={saveEdit}
               disabled={editLoading}
-              className="px-4 py-1.5 bg-[var(--color-accent)] text-black font-bold text-xs rounded-lg shadow-[0_0_10px_rgba(57,255,136,0.2)] hover:brightness-110 disabled:opacity-50 flex items-center gap-1.5"
+              className="px-4 py-1.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold text-xs rounded-lg shadow-[0_0_10px_rgba(57,255,136,0.2)] hover:brightness-110 disabled:opacity-50 flex items-center gap-1.5"
             >
               {editLoading ? "Guardando..." : "Actualizar Inversión"}
             </button>
@@ -612,17 +754,17 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
         <div className="mt-3 space-y-2.5">
           
           {/* Tabs Toolbar */}
-          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-white/5">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[var(--color-ink-3)]">
             
             {/* View Selectors */}
-            <div className="flex items-center gap-1 p-0.5 bg-[var(--color-ink-2)] border border-white/10 rounded-lg">
+            <div className="flex items-center gap-1 p-0.5 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-lg">
               <button
                 type="button"
                 onClick={() => setActiveTab("chart")}
                 className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center gap-1 ${
                   activeTab === "chart" 
-                    ? "bg-[var(--color-accent)] text-black shadow-[0_0_8px_rgba(57,255,136,0.2)]" 
-                    : "text-gray-400 hover:text-white"
+                    ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_8px_rgba(57,255,136,0.2)]" 
+                    : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
                 }`}
               >
                 <Activity size={11} />
@@ -634,8 +776,8 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
                 onClick={() => setActiveTab("composition")}
                 className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center gap-1 ${
                   activeTab === "composition" 
-                    ? "bg-[var(--color-accent)] text-black shadow-[0_0_8px_rgba(57,255,136,0.2)]" 
-                    : "text-gray-400 hover:text-white"
+                    ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_8px_rgba(57,255,136,0.2)]" 
+                    : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
                 }`}
               >
                 <PieIcon size={11} />
@@ -647,8 +789,8 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
                 onClick={() => setActiveTab("details")}
                 className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center gap-1 ${
                   activeTab === "details" 
-                    ? "bg-[var(--color-accent)] text-black shadow-[0_0_8px_rgba(57,255,136,0.2)]" 
-                    : "text-gray-400 hover:text-white"
+                    ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_8px_rgba(57,255,136,0.2)]" 
+                    : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
                 }`}
               >
                 <FileText size={11} />
@@ -666,8 +808,8 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
                     onClick={() => setChartRange(r)}
                     className={`px-2 py-0.5 text-[10px] font-mono font-medium rounded uppercase transition-all shrink-0 ${
                       chartRange === r
-                        ? "bg-white/10 text-white border border-white/20 font-bold"
-                        : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
+                        ? "bg-[var(--color-ink-2)] text-[var(--color-fg-1)] border border-[var(--color-ink-3)] font-bold"
+                        : "text-[var(--color-fg-5)] hover:text-[var(--color-fg-2)] hover:bg-[var(--color-ink-2)]"
                     }`}
                   >
                     {r}
@@ -684,17 +826,17 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
           {activeTab === "chart" && (
             <div className="space-y-1.5 animate-fade-in">
               {chartLoading && !chartData ? (
-                <div className="h-28 flex items-center justify-center gap-2 text-xs text-gray-500 font-mono">
+                <div className="h-28 flex items-center justify-center gap-2 text-xs text-[var(--color-fg-5)] font-mono">
                   <div className="w-3.5 h-3.5 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin" />
                   <span>Cargando datos...</span>
                 </div>
               ) : chartError || !chartData || chartData.dataPoints < 2 ? (
-                <div className="h-20 flex items-center justify-center text-xs text-gray-500 border border-dashed border-white/10 rounded-lg font-mono">
+                <div className="h-20 flex items-center justify-center text-xs text-[var(--color-fg-5)] border border-dashed border-[var(--color-ink-3)] rounded-lg font-mono">
                   Histórico no disponible para este fondo.
                 </div>
               ) : (
                 <>
-                  <div className="relative bg-[var(--color-ink-2)]/40 border border-white/5 rounded-xl p-2 overflow-hidden">
+                  <div className="relative bg-[var(--color-ink-2)]/40 border border-[var(--color-ink-3)] rounded-xl p-2 overflow-hidden">
                     <canvas
                       ref={canvasRef}
                       className="w-full h-28 cursor-crosshair"
@@ -709,26 +851,26 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
 
                     {hoveredIndex !== null && hoveredPoint && (
                       <div
-                        className="absolute pointer-events-none bg-[var(--color-ink-2)]/95 border border-white/20 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] font-mono shadow-2xl z-20 flex flex-col gap-0.5"
+                        className="absolute pointer-events-none bg-[var(--color-ink-2)]/95 border border-[var(--color-ink-3)] backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] font-mono shadow-2xl z-20 flex flex-col gap-0.5"
                         style={{
                           left: `${Math.max(60, Math.min(canvasRef.current ? canvasRef.current.clientWidth - 70 : 600, hoveredPos.x))}px`,
                           top: `${Math.max(5, hoveredPos.y - 42)}px`,
                           transform: "translateX(-50%)",
                         }}
                       >
-                        <span className="text-gray-400 text-[9px]">
+                        <span className="text-[var(--color-fg-4)] text-[9px]">
                           {new Date(hoveredPoint.timestamp * 1000).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </span>
-                        <span className="text-white font-bold text-[11px]">
+                        <span className="text-[var(--color-fg-1)] font-bold text-[11px]">
                           €{hoveredPoint.close.toFixed(4)}
                         </span>
                       </div>
                     )}
                   </div>
 
-                  <div className="flex justify-between items-center text-[10px] font-mono text-gray-500 px-1">
+                  <div className="flex justify-between items-center text-[10px] font-mono text-[var(--color-fg-5)] px-1">
                     <span>{chartData.dataPoints} pts • {chartData.symbol}</span>
-                    <span>Último NAV: <strong className="text-gray-300">€{chartData.currentPrice.toFixed(4)} {chartData.currency}</strong></span>
+                    <span>Último NAV: <strong className="text-[var(--color-fg-2)]">€{chartData.currentPrice.toFixed(4)} {chartData.currency}</strong></span>
                   </div>
                 </>
               )}
@@ -737,77 +879,77 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
 
           {/* TAB 2: COMPOSITION */}
           {activeTab === "composition" && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 p-3 bg-[var(--color-ink-2)]/40 border border-white/5 rounded-xl text-[11px] animate-fade-in">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 p-3 bg-[var(--color-ink-2)]/40 border border-[var(--color-ink-3)] rounded-xl text-[11px] animate-fade-in">
               
               {/* Top Holdings */}
               <div className="space-y-1.5">
-                <h4 className="font-bold text-white uppercase tracking-wider text-[10px] flex items-center gap-1">
+                <h4 className="font-bold text-[var(--color-fg-1)] uppercase tracking-wider text-[10px] flex items-center gap-1">
                   <Building2 size={11} className="text-[var(--color-accent)]" /> Top Posiciones
                 </h4>
                 {chartData?.topHoldings && chartData.topHoldings.length > 0 ? (
                   <div className="space-y-1">
                     {chartData.topHoldings.slice(0, 4).map((h, idx) => (
                       <div key={idx} className="space-y-0.5">
-                        <div className="flex justify-between text-gray-300 text-[10px]">
+                        <div className="flex justify-between text-[var(--color-fg-2)] text-[10px]">
                           <span className="truncate max-w-[120px]" title={h.name}>{h.name}</span>
                           <span className="font-mono text-[var(--color-accent)] font-bold">{h.weight.toFixed(1)}%</span>
                         </div>
-                        <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                        <div className="w-full h-1 bg-[var(--color-ink-2)] rounded-full overflow-hidden">
                           <div className="h-full bg-[var(--color-accent)] rounded-full" style={{ width: `${Math.min(100, h.weight * 10)}%` }} />
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[10px] text-gray-500 italic">No disponible</p>
+                  <p className="text-[10px] text-[var(--color-fg-5)] italic">No disponible</p>
                 )}
               </div>
 
               {/* Sectors */}
               <div className="space-y-1.5">
-                <h4 className="font-bold text-white uppercase tracking-wider text-[10px] flex items-center gap-1">
+                <h4 className="font-bold text-[var(--color-fg-1)] uppercase tracking-wider text-[10px] flex items-center gap-1">
                   <PieIcon size={11} className="text-blue-400" /> Sectores
                 </h4>
                 {chartData?.sectors && chartData.sectors.length > 0 ? (
                   <div className="space-y-1">
                     {chartData.sectors.slice(0, 4).map((s, idx) => (
                       <div key={idx} className="space-y-0.5">
-                        <div className="flex justify-between text-gray-300 text-[10px]">
+                        <div className="flex justify-between text-[var(--color-fg-2)] text-[10px]">
                           <span className="truncate max-w-[120px]">{s.name}</span>
                           <span className="font-mono text-blue-400 font-bold">{s.weight.toFixed(1)}%</span>
                         </div>
-                        <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                        <div className="w-full h-1 bg-[var(--color-ink-2)] rounded-full overflow-hidden">
                           <div className="h-full bg-blue-400 rounded-full" style={{ width: `${Math.min(100, s.weight * 2.5)}%` }} />
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[10px] text-gray-500 italic">No disponible</p>
+                  <p className="text-[10px] text-[var(--color-fg-5)] italic">No disponible</p>
                 )}
               </div>
 
               {/* Geography */}
               <div className="space-y-1.5">
-                <h4 className="font-bold text-white uppercase tracking-wider text-[10px] flex items-center gap-1">
+                <h4 className="font-bold text-[var(--color-fg-1)] uppercase tracking-wider text-[10px] flex items-center gap-1">
                   <Globe size={11} className="text-purple-400" /> Geografía
                 </h4>
                 {chartData?.geography && chartData.geography.length > 0 ? (
                   <div className="space-y-1">
                     {chartData.geography.slice(0, 4).map((g, idx) => (
                       <div key={idx} className="space-y-0.5">
-                        <div className="flex justify-between text-gray-300 text-[10px]">
+                        <div className="flex justify-between text-[var(--color-fg-2)] text-[10px]">
                           <span className="truncate max-w-[120px]">{g.name}</span>
                           <span className="font-mono text-purple-400 font-bold">{g.weight.toFixed(1)}%</span>
                         </div>
-                        <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                        <div className="w-full h-1 bg-[var(--color-ink-2)] rounded-full overflow-hidden">
                           <div className="h-full bg-purple-400 rounded-full" style={{ width: `${Math.min(100, g.weight * 2)}%` }} />
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[10px] text-gray-500 italic">No disponible</p>
+                  <p className="text-[10px] text-[var(--color-fg-5)] italic">No disponible</p>
                 )}
               </div>
 
@@ -816,29 +958,61 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
 
           {/* TAB 3: DETAILS */}
           {activeTab === "details" && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-[var(--color-ink-2)]/40 border border-white/5 rounded-xl text-xs font-mono animate-fade-in">
-              <div>
-                <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">TER Anual</p>
-                <p className="font-bold text-[#ffb547] text-xs">
-                  {chartData?.ter != null ? `${chartData.ter.toFixed(2)}%` : "0.20%"}
-                </p>
+            <div className="space-y-2.5 animate-fade-in">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-[var(--color-ink-2)]/40 border border-[var(--color-ink-3)] rounded-xl text-xs font-mono">
+                <div>
+                  <p className="text-[9px] text-[var(--color-fg-5)] uppercase tracking-wider mb-0.5">TER Anual</p>
+                  <p className="font-bold text-[#ffb547] text-xs">
+                    {chartData?.ter != null ? `${chartData.ter.toFixed(2)}%` : "0.20%"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-[9px] text-[var(--color-fg-5)] uppercase tracking-wider mb-0.5">Retorno 1A</p>
+                  <p className="font-bold text-[var(--color-accent)] text-xs">
+                    {chartData?.return1Y != null ? `${chartData.return1Y.toFixed(2)}%` : "+14.20%"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-[9px] text-[var(--color-fg-5)] uppercase tracking-wider mb-0.5">Divisa</p>
+                  <p className="font-bold text-[var(--color-fg-1)] text-xs">{fund.currency || "EUR"}</p>
+                </div>
+
+                <div>
+                  <p className="text-[9px] text-[var(--color-fg-5)] uppercase tracking-wider mb-0.5">Ticker</p>
+                  <p className="font-bold text-[var(--color-fg-2)] text-xs">{fund.ticker || "—"}</p>
+                </div>
               </div>
 
-              <div>
-                <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">Retorno 1A</p>
-                <p className="font-bold text-[var(--color-accent)] text-xs">
-                  {chartData?.return1Y != null ? `${chartData.return1Y.toFixed(2)}%` : "+14.20%"}
-                </p>
-              </div>
+              {/* Direct Web Portals / Source Links Row */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 p-2.5 bg-[var(--color-ink-2)]/20 border border-[var(--color-ink-3)] rounded-xl text-xs">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[11px] text-[var(--color-fg-4)]">Enlaces web oficiales:</span>
+                  <a
+                    href={dataSourceInfo.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--color-accent)]/10 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/20 text-[11px] font-semibold transition-colors"
+                  >
+                    <BarChart3 size={11} />
+                    <span>Fuente: {dataSourceInfo.name}</span>
+                    <ExternalLink size={10} />
+                  </a>
+                </div>
 
-              <div>
-                <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">Divisa</p>
-                <p className="font-bold text-white text-xs">{fund.currency || "EUR"}</p>
-              </div>
-
-              <div>
-                <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">Ticker</p>
-                <p className="font-bold text-gray-300 text-xs">{fund.ticker || "—"}</p>
+                {bankPortalInfo && (
+                  <a
+                    href={bankPortalInfo.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 text-[11px] font-semibold transition-colors"
+                  >
+                    <Building2 size={11} />
+                    <span>Web de {bankPortalInfo.name}</span>
+                    <ExternalLink size={10} />
+                  </a>
+                )}
               </div>
             </div>
           )}

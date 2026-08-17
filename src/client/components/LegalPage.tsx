@@ -44,30 +44,30 @@ export function LegalPage({ view, user, onLogout }: LegalPageProps) {
         <div className="w-full max-w-4xl space-y-6">
 
           {/* Top Return Link */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <a 
               href={user ? "/dashboard" : "/"} 
-              className="inline-flex items-center gap-2 text-xs font-semibold text-gray-400 hover:text-[var(--color-accent)] transition-colors px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-[var(--color-fg-4)] hover:text-[var(--color-accent)] transition-colors px-3 py-1.5 rounded-xl bg-[var(--color-ink-2)] hover:bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] w-fit"
             >
               <ArrowLeft size={13} />
               <span>Volver {user ? "al Dashboard" : "al Inicio"}</span>
             </a>
 
-            <span className="text-[11px] font-mono text-gray-500">
+            <span className="text-[11px] font-mono text-[var(--color-fg-5)]">
               Última actualización: Agosto 2026
             </span>
           </div>
 
           {/* Header Card with Tab Switcher */}
-          <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-3xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl space-y-6">
+          <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl sm:rounded-3xl p-4 sm:p-8 backdrop-blur-xl shadow-2xl space-y-5 sm:space-y-6">
             
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 text-[var(--color-accent)] text-xs font-semibold mb-3">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 text-[var(--color-accent)] text-xs font-semibold mb-2 sm:mb-3">
                   {isPrivacy ? <ShieldCheck size={13} /> : <Scale size={13} />}
                   <span>Documentación Legal Oficial</span>
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--color-fg-1)] tracking-tight">
+                <h1 className="text-xl sm:text-3xl font-extrabold text-[var(--color-fg-1)] tracking-tight">
                   {isPrivacy ? "Política de Privacidad y RGPD" : "Términos y Condiciones de Uso"}
                 </h1>
                 <p className="text-xs text-[var(--color-fg-4)] mt-1">
@@ -78,14 +78,14 @@ export function LegalPage({ view, user, onLogout }: LegalPageProps) {
               </div>
 
               {/* Tab Selector Buttons */}
-              <div className="flex items-center gap-1.5 p-1.5 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-2xl shrink-0 self-start sm:self-center">
+              <div className="flex items-center gap-1.5 p-1.5 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-2xl w-full sm:w-auto shrink-0">
                 <button
                   type="button"
                   onClick={() => {
                     setActiveTab("privacy");
                     window.history.pushState({}, "", "/legal/privacy-policy");
                   }}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+                  className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
                     isPrivacy
                       ? "bg-[var(--color-accent)] text-[#0a0a0c] shadow-[0_0_12px_rgba(57,255,136,0.25)] font-bold"
                       : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] hover:bg-[var(--color-ink-3)]/50"
@@ -100,7 +100,7 @@ export function LegalPage({ view, user, onLogout }: LegalPageProps) {
                     setActiveTab("terms");
                     window.history.pushState({}, "", "/legal/terms-of-service");
                   }}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+                  className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
                     !isPrivacy
                       ? "bg-[var(--color-accent)] text-[#0a0a0c] shadow-[0_0_12px_rgba(57,255,136,0.25)] font-bold"
                       : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] hover:bg-[var(--color-ink-3)]/50"
@@ -113,33 +113,33 @@ export function LegalPage({ view, user, onLogout }: LegalPageProps) {
             </div>
 
             {/* Quick Guarantee Badges */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-[var(--color-ink-3)]">
-              <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-3 text-center">
-                <Lock size={16} className="text-[var(--color-accent)] mx-auto mb-1" />
-                <span className="text-xs text-[var(--color-fg-1)] font-semibold block">Cifrado bcrypt & JWT</span>
-                <span className="text-[10px] text-[var(--color-fg-4)]">Contraseñas seguras</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 pt-4 border-t border-[var(--color-ink-3)]">
+              <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-2.5 sm:p-3 text-center">
+                <Lock size={15} className="text-[var(--color-accent)] mx-auto mb-1" />
+                <span className="text-[11px] sm:text-xs text-[var(--color-fg-1)] font-semibold block">Cifrado bcrypt & JWT</span>
+                <span className="text-[9px] sm:text-[10px] text-[var(--color-fg-4)]">Contraseñas seguras</span>
               </div>
-              <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-3 text-center">
-                <Eye size={16} className="text-blue-500 mx-auto mb-1" />
-                <span className="text-xs text-[var(--color-fg-1)] font-semibold block">Cero Venta de Datos</span>
-                <span className="text-[10px] text-[var(--color-fg-4)]">100% privado</span>
+              <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-2.5 sm:p-3 text-center">
+                <Eye size={15} className="text-blue-500 mx-auto mb-1" />
+                <span className="text-[11px] sm:text-xs text-[var(--color-fg-1)] font-semibold block">Cero Venta de Datos</span>
+                <span className="text-[9px] sm:text-[10px] text-[var(--color-fg-4)]">100% privado</span>
               </div>
-              <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-3 text-center">
-                <Globe size={16} className="text-[var(--color-warn)] mx-auto mb-1" />
-                <span className="text-xs text-[var(--color-fg-1)] font-semibold block">Regulación UE</span>
-                <span className="text-[10px] text-[var(--color-fg-4)]">Conforme al RGPD</span>
+              <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-2.5 sm:p-3 text-center">
+                <Globe size={15} className="text-[var(--color-warn)] mx-auto mb-1" />
+                <span className="text-[11px] sm:text-xs text-[var(--color-fg-1)] font-semibold block">Regulación UE</span>
+                <span className="text-[9px] sm:text-[10px] text-[var(--color-fg-4)]">Conforme al RGPD</span>
               </div>
-              <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-3 text-center">
-                <Trash2 size={16} className="text-[var(--color-danger)] mx-auto mb-1" />
-                <span className="text-xs text-[var(--color-fg-1)] font-semibold block">Derecho al Olvido</span>
-                <span className="text-[10px] text-[var(--color-fg-4)]">Borrado en 1 clic</span>
+              <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-2.5 sm:p-3 text-center">
+                <Trash2 size={15} className="text-[var(--color-danger)] mx-auto mb-1" />
+                <span className="text-[11px] sm:text-xs text-[var(--color-fg-1)] font-semibold block">Derecho al Olvido</span>
+                <span className="text-[9px] sm:text-[10px] text-[var(--color-fg-4)]">Borrado en 1 clic</span>
               </div>
             </div>
 
           </div>
 
           {/* Main Legal Content Container */}
-          <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-3xl p-6 sm:p-10 backdrop-blur-xl shadow-2xl space-y-8 text-xs sm:text-sm text-[var(--color-fg-3)] leading-relaxed">
+          <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl sm:rounded-3xl p-4.5 sm:p-10 backdrop-blur-xl shadow-2xl space-y-7 sm:space-y-8 text-xs sm:text-sm text-[var(--color-fg-3)] leading-relaxed">
             {isPrivacy ? (
               <>
                 <section className="space-y-2">

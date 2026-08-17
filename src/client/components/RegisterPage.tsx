@@ -378,7 +378,7 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
         </div>
 
         {/* RIGHT COLUMN: Form */}
-        <div className="w-full lg:w-[50%] p-8 sm:p-12 bg-[var(--color-ink-1)] border-t lg:border-t-0 lg:border-l border-[var(--color-ink-3)] flex flex-col justify-center">
+        <div className="w-full lg:w-[50%] p-5 sm:p-12 bg-[var(--color-ink-1)] border-t lg:border-t-0 lg:border-l border-[var(--color-ink-3)] flex flex-col justify-center">
           
           <div className="lg:hidden flex items-center gap-3 mb-8">
             <div className="w-8 h-8 bg-[var(--color-accent)]/20 rounded-lg flex items-center justify-center border border-[var(--color-accent)]/30">
@@ -495,7 +495,7 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
                   {showCountryPicker && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setShowCountryPicker(false)} />
-                      <div className="absolute bottom-full left-0 mb-2 z-50 w-72 bg-[var(--color-ink-1)]/95 backdrop-blur-xl border border-[var(--color-ink-3)] rounded-2xl shadow-2xl overflow-hidden">
+                      <div className="absolute bottom-full left-0 mb-2 z-50 w-72 max-w-[85vw] bg-[var(--color-ink-1)]/95 backdrop-blur-xl border border-[var(--color-ink-3)] rounded-2xl shadow-2xl overflow-hidden">
                         <div className="p-2 border-b border-[var(--color-ink-3)]">
                           <div className="relative">
                             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--color-fg-4)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
