@@ -242,14 +242,8 @@ export function App() {
 
   if (checking) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <AnimatedBackground />
-        <div className="flex items-center gap-3 relative z-10">
-          <div className="w-1.5 h-1.5 bg-[var(--color-accent)] rounded-full animate-pulse" />
-          <span className="font-pixel text-xs text-[var(--color-fg-4)] tracking-widest uppercase">
-            cargando
-          </span>
-        </div>
+      <div className="min-h-screen bg-[var(--color-ink-0)] flex items-center justify-center">
+        <div className="w-5 h-5 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }

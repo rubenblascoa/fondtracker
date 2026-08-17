@@ -224,6 +224,38 @@
   .pulse-dot {
     animation: pulseDot 2s ease-in-out infinite;
   }
+
+  .shimmer {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.07) 50%, rgba(255, 255, 255, 0.02) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite ease-in-out;
+  }
+
+  .dash-cascade {
+    animation: dashCascadeDown 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .animate-scanline {
+    animation: scanline 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+}
+
+@keyframes dashCascadeDown {
+  0% {
+    opacity: 0.15;
+    transform: translateY(-20px);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0px);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 @keyframes slideDown {
@@ -249,6 +281,12 @@
 @keyframes pulseDot {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
+}
+
+
+@keyframes scanline {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 @keyframes shimmer {

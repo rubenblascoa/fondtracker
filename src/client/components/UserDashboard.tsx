@@ -974,6 +974,11 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
             </button>
 
           </div>
+
+          {/* Laser sync scanline beam */}
+          {isRefreshing && (
+            <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[var(--color-accent)] to-transparent animate-scanline z-30" />
+          )}
         </header>
 
         {/* ── Scrollable View Container (with extra bottom padding on mobile for the Bottom Bar and scroll-to-top ref) ── */}
@@ -987,7 +992,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                 TAB 1: OVERVIEW / RESUMEN
                ═══════════════════════════════════════════════════════════════════ */}
             {section === "overview" && (
-              <div className="space-y-5">
+              <div key="overview" className="space-y-5 dash-cascade">
                 
                 {/* ── Key Stat Cards (Neon Glass Style) ── */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">

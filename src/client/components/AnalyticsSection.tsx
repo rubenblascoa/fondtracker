@@ -340,7 +340,7 @@ export function AnalyticsSection({ funds, status }: AnalyticsSectionProps) {
   };
 
   return (
-    <div ref={sectionRef} className="space-y-6">
+    <div ref={sectionRef} className="space-y-6 dash-cascade">
       
       {/* ── Top Executive KPI Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
