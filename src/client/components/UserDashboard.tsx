@@ -11,7 +11,8 @@ import {
   Download, Sparkles, Filter, ChevronRight, CheckCircle2,
   AlertTriangle, ExternalLink, Calendar, Plus, Globe, Building2,
   PieChart as PieIcon, ArrowUpDown, Table, LayoutGrid, Eye, Check, X,
-  Key, Mail, Lock, Phone, UserCheck, ShieldAlert, Sun, Moon, Palette, BookOpen
+  Key, Mail, Lock, Phone, UserCheck, ShieldAlert, Sun, Moon, Palette, BookOpen,
+  Menu, MoreHorizontal
 } from 'lucide-react';
 import { FundCard } from "./FundCard";
 import { AddFundForm } from "./AddFundForm";
@@ -88,6 +89,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
   const [adminSubSection, setAdminSubSection] = useState<"overview" | "users" | "catalog" | "notifications" | "system" | "docs">("overview");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(new Date());
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   
   // Search & Filter in Portfolio tab
   const [searchQuery, setSearchQuery] = useState("");
@@ -531,7 +533,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
     <div className="flex h-screen bg-[var(--color-ink-0)] text-[var(--color-fg-1)] font-sans overflow-hidden">
       
       {/* ── Sidebar Navigation (Desktop) ── */}
-      <aside className="w-60 bg-black/40 backdrop-blur-xl border-r border-white/5 flex flex-col relative z-20 shrink-0">
+      <aside className="hidden md:flex w-60 bg-black/40 backdrop-blur-xl border-r border-white/5 flex-col relative z-20 shrink-0">
         
         {/* Brand */}
         <div className="h-16 flex items-center px-5 border-b border-white/5 justify-between">
@@ -726,6 +728,172 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
 
       </aside>
 
+      {/* ── Mobile Slide-out Drawer & Overlay ── */}
+      {mobileDrawerOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/75 backdrop-blur-md transition-opacity animate-fade-in"
+            onClick={() => setMobileDrawerOpen(false)}
+          />
+          
+          {/* Drawer Panel */}
+          <div className="relative w-[285px] max-w-[85vw] bg-[var(--color-ink-1)] border-r border-white/10 h-full flex flex-col z-10 shadow-2xl animate-slide-left">
+            
+            {/* Header */}
+            <div className="h-16 flex items-center justify-between px-4 border-b border-white/5">
+              <a href="/" className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[var(--color-accent)]/10 flex items-center justify-center border border-[var(--color-accent)]/20">
+                  <Activity size={16} className="text-[var(--color-accent)]" />
+                </div>
+                <span className="font-bold text-white text-base tracking-wide">
+                  Fond<span className="text-[var(--color-accent)]">Tracker</span>
+                </span>
+              </a>
+              <button 
+                onClick={() => setMobileDrawerOpen(false)}
+                className="p-2 text-gray-400 hover:text-white rounded-xl hover:bg-white/5 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Navigation Items */}
+            <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1 scrollbar-thin">
+              <p className="text-[10px] font-mono uppercase tracking-widest text-[var(--color-fg-4)] px-3 mb-2">
+                Navegación
+              </p>
+
+              {NAV_ITEMS.map(item => {
+                const active = section === item.key;
+                return (
+                  <button 
+                    key={item.key} 
+                    onClick={() => { setSection(item.key); setMobileDrawerOpen(false); }}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                      active 
+                        ? "bg-[var(--color-accent)]/10 text-[var(--color-accent)] shadow-[inset_3px_0_0_0_var(--color-accent)] font-bold" 
+                        : "text-[var(--color-fg-4)] hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      {item.icon}
+                      <span>{item.label}</span>
+                    </div>
+                    {item.badge !== undefined && (
+                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                        active ? "bg-[var(--color-accent)]/20 text-[var(--color-accent)]" : "bg-white/10 text-gray-300"
+                      }`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+
+              {/* Admin Links */}
+              {user.is_admin && (
+                <div className="pt-3 mt-3 border-t border-white/5 space-y-1">
+                  <p className="text-[10px] font-mono uppercase tracking-widest text-[var(--color-warn)] px-3 mb-2 flex items-center gap-1.5">
+                    <Shield size={11} /> Administración
+                  </p>
+                  
+                  <button 
+                    onClick={() => { setSection("admin"); setMobileDrawerOpen(false); }}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                      section === "admin"
+                        ? "bg-[var(--color-accent)]/10 text-[var(--color-accent)] shadow-[inset_3px_0_0_0_var(--color-accent)] font-bold border border-[var(--color-accent)]/30"
+                        : "text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Shield size={16} />
+                      <span>Panel de Admin</span>
+                    </div>
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded font-bold bg-[var(--color-warn)]/20 text-[var(--color-warn)]">
+                      ADMIN
+                    </span>
+                  </button>
+
+                  <button 
+                    onClick={() => { setSection("docs"); setMobileDrawerOpen(false); }}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                      section === "docs"
+                        ? "bg-blue-500/10 text-blue-400 shadow-[inset_3px_0_0_0_#3b82f6] font-bold border border-blue-500/30"
+                        : "text-gray-400 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <BookOpen size={16} className={section === "docs" ? "text-blue-400" : "text-gray-400"} />
+                      <span>Documentación &amp; APIs</span>
+                    </div>
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded font-bold bg-blue-500/20 text-blue-400">
+                      DOCS
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {/* Quick Theme Switcher in Mobile Drawer */}
+              <div className="pt-3 mt-3 border-t border-white/5 px-2">
+                <p className="text-[10px] font-mono uppercase tracking-widest text-[var(--color-fg-4)] px-1 mb-2">
+                  Tema Visual
+                </p>
+                <div className="grid grid-cols-2 gap-1.5 p-1 bg-black/40 rounded-xl border border-white/5">
+                  <button
+                    onClick={() => setTheme("dark")}
+                    className={`py-1.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
+                      isDark ? "bg-[var(--color-accent)]/20 text-[var(--color-accent)] font-bold shadow-sm" : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    <Moon size={13} /> Oscuro
+                  </button>
+                  <button
+                    onClick={() => setTheme("light")}
+                    className={`py-1.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
+                      isLight ? "bg-[var(--color-accent)]/20 text-[var(--color-accent)] font-bold shadow-sm" : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    <Sun size={13} /> Blanco
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile Drawer Footer with Profile & Actions */}
+            <div className="p-3.5 border-t border-white/5 flex items-center justify-between bg-black/20">
+              <div className="flex items-center gap-2.5 truncate">
+                <div className="w-8 h-8 rounded-full bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 flex items-center justify-center text-xs font-bold text-[var(--color-accent)] shrink-0">
+                  {user.username[0].toUpperCase()}
+                </div>
+                <div className="truncate">
+                  <p className="text-xs font-medium text-white truncate">{user.username}</p>
+                  <p className="text-[10px] text-[var(--color-fg-4)] truncate">{user.email}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <button 
+                  onClick={() => { setSettingsOpen(true); setMobileDrawerOpen(false); }}
+                  className="p-2 text-[var(--color-fg-4)] hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                  title="Ajustes de cuenta"
+                >
+                  <Settings size={15} />
+                </button>
+                <button 
+                  onClick={onLogout}
+                  className="p-2 text-[var(--color-fg-4)] hover:text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 rounded-lg transition-colors"
+                  title="Cerrar sesión"
+                >
+                  <LogOut size={15} />
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
       {/* ── Main Content Shell ── */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
         
@@ -734,35 +902,46 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
         <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-[var(--color-warn)]/5 rounded-full blur-[100px] pointer-events-none" />
 
         {/* ── Top Header Bar ── */}
-        <header className="h-16 flex items-center justify-between px-8 border-b border-white/5 bg-[var(--color-ink-0)]/80 backdrop-blur-xl relative z-10 shrink-0">
-          <div>
-            <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight flex items-center gap-2.5">
-              {section === "overview" && "Resumen de Cartera"}
-              {section === "portfolio" && "Mis Inversiones"}
-              {section === "add" && "Añadir Nueva Inversión"}
-              {section === "analytics" && "Analítica & Distribución"}
-              {section === "notifications" && "Alertas & WhatsApp"}
-              {section === "reports" && "Informes & Exportación"}
-              {section === "admin" && "Panel de Administración"}
-              {section === "docs" && "Documentación & APIs"}
-            </h1>
-            <p className="text-xs text-[var(--color-fg-4)] mt-0.5">
-              {section === "overview" && "Visión global de tu patrimonio, rentabilidad y distribución"}
-              {section === "portfolio" && `${funds.length} ${funds.length === 1 ? 'posición activa' : 'posiciones activas'} sincronizadas`}
-              {section === "add" && "Busca fondos por ISIN o nombre en nuestro catálogo europeo"}
-              {section === "analytics" && "Exposición sectorial, geográfica y activos subyacentes"}
-              {section === "notifications" && "Configura alertas automatizadas vía WhatsApp"}
-              {section === "reports" && "Genera informes ejecutivos en PDF o exporta en CSV y JSON"}
-              {section === "admin" && "Control global de usuarios, catálogo, envíos WhatsApp y servidor"}
-              {section === "docs" && "Referencia completa de arquitectura, endpoints REST, scraping y base de datos"}
-            </p>
+        <header className="h-16 flex items-center justify-between px-4 sm:px-8 border-b border-white/5 bg-[var(--color-ink-0)]/80 backdrop-blur-xl relative z-10 shrink-0 gap-2">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Hamburger Toggle (Mobile Only) */}
+            <button
+              onClick={() => setMobileDrawerOpen(true)}
+              className="md:hidden p-2 text-gray-300 hover:text-white rounded-xl bg-white/5 border border-white/10 shrink-0 active:scale-95 transition-all"
+              aria-label="Abrir menú"
+            >
+              <Menu size={18} />
+            </button>
+
+            <div className="truncate">
+              <h1 className="text-base sm:text-xl font-bold text-white tracking-tight flex items-center gap-2 truncate">
+                {section === "overview" && "Resumen"}
+                {section === "portfolio" && "Mis Inversiones"}
+                {section === "add" && "Añadir Fondo"}
+                {section === "analytics" && "Analítica & Asset"}
+                {section === "notifications" && "Alertas WhatsApp"}
+                {section === "reports" && "Informes & Fiscalidad"}
+                {section === "admin" && "Panel de Admin"}
+                {section === "docs" && "Documentación & APIs"}
+              </h1>
+              <p className="hidden sm:block text-xs text-[var(--color-fg-4)] mt-0.5 truncate">
+                {section === "overview" && "Visión global de tu patrimonio, rentabilidad y distribución"}
+                {section === "portfolio" && `${funds.length} ${funds.length === 1 ? 'posición activa' : 'posiciones activas'} sincronizadas`}
+                {section === "add" && "Busca fondos por ISIN o nombre en nuestro catálogo europeo"}
+                {section === "analytics" && "Exposición sectorial, geográfica y activos subyacentes"}
+                {section === "notifications" && "Configura alertas automatizadas vía WhatsApp"}
+                {section === "reports" && "Genera informes ejecutivos en PDF o exporta en CSV y JSON"}
+                {section === "admin" && "Control global de usuarios, catálogo, envíos WhatsApp y servidor"}
+                {section === "docs" && "Referencia completa de arquitectura, endpoints REST, scraping y base de datos"}
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             
             {/* Last updated & Refresh button */}
-            <div className="flex items-center gap-2 bg-[var(--color-ink-2)] border border-white/10 px-3 py-1.5 rounded-full text-xs text-[var(--color-fg-4)]">
-              <span className="hidden sm:inline">Actualizado {timeAgo(lastRefreshedAt)}</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-[var(--color-ink-2)] border border-white/10 px-2.5 sm:px-3 py-1.5 rounded-full text-xs text-[var(--color-fg-4)]">
+              <span className="hidden md:inline">Actualizado {timeAgo(lastRefreshedAt)}</span>
               <button 
                 onClick={handleManualRefresh}
                 disabled={isRefreshing}
@@ -776,17 +955,17 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
             {/* Quick Add Button */}
             <button 
               onClick={() => setSection("add")}
-              className="flex items-center gap-2 px-3.5 py-2 bg-[var(--color-accent)] text-[#0a0a0c] hover:brightness-110 font-semibold text-xs rounded-xl shadow-[0_0_15px_rgba(57,255,136,0.2)] transition-all"
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 bg-[var(--color-accent)] text-[#0a0a0c] hover:brightness-110 font-semibold text-xs rounded-xl shadow-[0_0_15px_rgba(57,255,136,0.2)] active:scale-95 transition-all"
             >
               <Plus size={14} strokeWidth={2.5} />
-              <span>Añadir Fondo</span>
+              <span className="hidden sm:inline">Añadir Fondo</span>
             </button>
 
           </div>
         </header>
 
-        {/* ── Scrollable View Container ── */}
-        <div className="flex-1 overflow-y-auto p-6 sm:p-7 relative z-10 scrollbar-thin">
+        {/* ── Scrollable View Container (with extra bottom padding on mobile for the Bottom Bar) ── */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-7 pb-28 md:pb-7 relative z-10 scrollbar-thin touch-scroll">
           <div className="max-w-[1360px] mx-auto space-y-5">
 
             {/* ═══════════════════════════════════════════════════════════════════
@@ -1568,6 +1747,73 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
           </div>
         </div>
       )}
+
+      {/* ── Mobile Bottom Navigation Bar (Fixed for quick thumb access) ── */}
+      <nav 
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--color-ink-1)]/95 backdrop-blur-2xl border-t border-white/10 px-2 py-1.5 flex items-center justify-around shadow-[0_-4px_25px_rgba(0,0,0,0.6)]"
+        style={{ paddingBottom: 'max(0.375rem, env(safe-area-inset-bottom))' }}
+      >
+        {/* Dashboard */}
+        <button
+          onClick={() => setSection("overview")}
+          className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all ${
+            section === "overview" ? "text-[var(--color-accent)] font-bold" : "text-gray-400 hover:text-white"
+          }`}
+        >
+          <LayoutDashboard size={18} />
+          <span className="text-[10px] tracking-tight">Inicio</span>
+        </button>
+
+        {/* Cartera */}
+        <button
+          onClick={() => setSection("portfolio")}
+          className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all relative ${
+            section === "portfolio" ? "text-[var(--color-accent)] font-bold" : "text-gray-400 hover:text-white"
+          }`}
+        >
+          <Database size={18} />
+          <span className="text-[10px] tracking-tight">Cartera</span>
+          {funds.length > 0 && (
+            <span className="absolute top-0 right-1.5 w-3.5 h-3.5 bg-[var(--color-accent)] text-black text-[9px] font-mono font-bold rounded-full flex items-center justify-center">
+              {funds.length > 9 ? "9+" : funds.length}
+            </span>
+          )}
+        </button>
+
+        {/* Center Floating Plus (Añadir) */}
+        <button
+          onClick={() => setSection("add")}
+          className="flex flex-col items-center -mt-5 group"
+          aria-label="Añadir Inversión"
+        >
+          <div className="w-12 h-12 rounded-full bg-[var(--color-accent)] text-black flex items-center justify-center shadow-[0_0_16px_rgba(57,255,136,0.4)] group-active:scale-95 transition-transform border-2 border-[var(--color-ink-0)]">
+            <Plus size={24} strokeWidth={2.8} />
+          </div>
+          <span className="text-[10px] font-semibold text-white mt-0.5">Añadir</span>
+        </button>
+
+        {/* Analítica */}
+        <button
+          onClick={() => setSection("analytics")}
+          className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all ${
+            section === "analytics" ? "text-[var(--color-accent)] font-bold" : "text-gray-400 hover:text-white"
+          }`}
+        >
+          <BarChart3 size={18} />
+          <span className="text-[10px] tracking-tight">Analítica</span>
+        </button>
+
+        {/* Más / Drawer Toggle */}
+        <button
+          onClick={() => setMobileDrawerOpen(true)}
+          className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all ${
+            mobileDrawerOpen ? "text-[var(--color-accent)] font-bold" : "text-gray-400 hover:text-white"
+          }`}
+        >
+          <Menu size={18} />
+          <span className="text-[10px] tracking-tight">Más</span>
+        </button>
+      </nav>
 
       {/* Hidden PDF Capture Template (Offscreen for clean export) */}
       <div style={{ position: "fixed", left: "-9999px", top: "-9999px", pointerEvents: "none", opacity: 0, overflow: "hidden", zIndex: -9999 }} aria-hidden="true">

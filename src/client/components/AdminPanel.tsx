@@ -576,7 +576,7 @@ export function AdminSectionContent({ user, initialSubSection }: { user: User; i
   return (
     <div className="space-y-4">
       {/* ── Sub Navigation Selector Pills ── */}
-      <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-2 flex items-center gap-1.5 overflow-x-auto">
+      <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar touch-scroll">
         {SUB_NAV.map(item => {
           const active = subSection === item.key;
           return (

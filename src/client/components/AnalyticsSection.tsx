@@ -414,7 +414,7 @@ export function AnalyticsSection({ funds, status }: AnalyticsSectionProps) {
       </div>
 
       {/* ── Sub-Navigation Tabs ── */}
-      <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-2 flex items-center gap-1.5 overflow-x-auto">
+      <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar touch-scroll">
         {[
           { key: "allocation", label: "Clases de Activos", icon: <PieIcon size={14} /> },
           { key: "sectors", label: "Exposición Sectorial", icon: <BarChart3 size={14} /> },

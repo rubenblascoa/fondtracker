@@ -318,6 +318,26 @@ export function FundCard({ fund, onChange }: Props) {
     setHoveredPos({ x, y });
   };
 
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas || !chartData || chartData.quotes.length < 2) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    const padding = { left: 8, right: 8 };
+    const chartW = rect.width - padding.left - padding.right;
+    const ratio = Math.max(0, Math.min(1, (x - padding.left) / chartW));
+    const idx = Math.round(ratio * (chartData.quotes.length - 1));
+    setHoveredIndex(idx);
+    setHoveredPos({ x, y });
+  };
+
+  const handleTouchEnd = () => {
+    setHoveredIndex(null);
+  };
+
   const handleMouseLeave = () => {
     setHoveredIndex(null);
   };
@@ -638,13 +658,13 @@ export function FundCard({ fund, onChange }: Props) {
 
             {/* Timeframe selector (when in chart tab) */}
             {activeTab === "chart" && (
-              <div className="flex items-center gap-0.5 overflow-x-auto">
+              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar touch-scroll py-0.5">
                 {(["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "max"] as const).map((r) => (
                   <button
                     key={r}
                     type="button"
                     onClick={() => setChartRange(r)}
-                    className={`px-2 py-0.5 text-[10px] font-mono font-medium rounded uppercase transition-all ${
+                    className={`px-2 py-0.5 text-[10px] font-mono font-medium rounded uppercase transition-all shrink-0 ${
                       chartRange === r
                         ? "bg-white/10 text-white border border-white/20 font-bold"
                         : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
@@ -677,9 +697,13 @@ export function FundCard({ fund, onChange }: Props) {
                   <div className="relative bg-[var(--color-ink-2)]/40 border border-white/5 rounded-xl p-2 overflow-hidden">
                     <canvas
                       ref={canvasRef}
-                      className="w-full h-28 cursor-crosshair"
+                      className="w-full h-28 cursor-crosshair touch-none"
                       onMouseMove={handleMouseMove}
                       onMouseLeave={handleMouseLeave}
+                      onTouchStart={handleTouchMove}
+                      onTouchMove={handleTouchMove}
+                      onTouchEnd={handleTouchEnd}
+                      onTouchCancel={handleTouchEnd}
                     />
 
                     {hoveredIndex !== null && hoveredPoint && (

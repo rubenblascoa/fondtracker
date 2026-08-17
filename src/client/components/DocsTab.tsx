@@ -306,7 +306,7 @@ export function DocsTab() {
         </div>
 
         {/* Category Navigation Pills */}
-        <div className="flex flex-wrap gap-2 mt-6 pt-6 border-t border-white/5">
+        <div className="flex overflow-x-auto no-scrollbar touch-scroll gap-2 mt-6 pt-6 border-t border-white/5 pb-1">
           {[
             { key: "overview", label: "Arquitectura", icon: <Layers size={14} /> },
             { key: "apis", label: "Consola & APIs REST", icon: <Code2 size={14} /> },
@@ -319,7 +319,7 @@ export function DocsTab() {
             <button
               key={tab.key}
               onClick={() => setActiveCategory(tab.key as any)}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all shrink-0 ${
                 activeCategory === tab.key
                   ? "bg-[var(--color-accent)] text-black shadow-[0_0_12px_rgba(57,255,136,0.25)]"
                   : "bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white"

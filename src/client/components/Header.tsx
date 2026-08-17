@@ -26,6 +26,7 @@ export function Header({ status, user, onLogout, onOpenApiDocs, landingNav, show
   const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mobilePublicNavOpen, setMobilePublicNavOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -431,21 +432,105 @@ export function Header({ status, user, onLogout, onOpenApiDocs, landingNav, show
             </div>
         </div>
         ) : landingNav ? (
-          <div className="ml-auto hidden md:flex items-center gap-4">
-            <a href="/login" className="text-sm font-semibold text-[var(--color-fg-3)] hover:text-[var(--color-fg-1)] transition-colors">Log in</a>
-            <a href="/register" className="px-5 py-2.5 bg-[var(--color-accent)] text-black font-semibold text-sm rounded-lg shadow-[0_0_15px_rgba(57,255,136,0.2)] hover:shadow-[0_0_25px_rgba(57,255,136,0.4)] transition-all">
-              Get Started
-            </a>
-          </div>
+          <>
+            <div className="ml-auto hidden md:flex items-center gap-4">
+              <a href="/login" className="text-sm font-semibold text-[var(--color-fg-3)] hover:text-[var(--color-fg-1)] transition-colors">Log in</a>
+              <a href="/register" className="px-5 py-2.5 bg-[var(--color-accent)] text-black font-semibold text-sm rounded-lg shadow-[0_0_15px_rgba(57,255,136,0.2)] hover:shadow-[0_0_25px_rgba(57,255,136,0.4)] transition-all">
+                Get Started
+              </a>
+            </div>
+
+            {/* Mobile Hamburger for Public / Landing */}
+            <div className="ml-auto md:hidden flex items-center gap-2">
+              <a href="/register" className="px-3.5 py-1.5 bg-[var(--color-accent)] text-black font-bold text-xs rounded-lg shadow-[0_0_10px_rgba(57,255,136,0.2)]">
+                Empezar
+              </a>
+              <button
+                onClick={() => setMobilePublicNavOpen(!mobilePublicNavOpen)}
+                className="p-2 text-gray-300 hover:text-white rounded-lg bg-white/5 border border-white/10"
+                aria-label="Toggle menu"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  {mobilePublicNavOpen ? (
+                    <>
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </>
+                  ) : (
+                    <>
+                      <line x1="3" y1="12" x2="21" y2="12" />
+                      <line x1="3" y1="6" x2="21" y2="6" />
+                      <line x1="3" y1="18" x2="21" y2="18" />
+                    </>
+                  )}
+                </svg>
+              </button>
+            </div>
+          </>
         ) : (
-          <div className="ml-auto flex items-center gap-4">
-            <a href="/login" className="text-sm font-semibold text-[var(--color-fg-3)] hover:text-white transition-colors">Log in</a>
-            <a href="/register" className="px-5 py-2.5 bg-[var(--color-accent)] text-black font-semibold text-sm rounded-lg shadow-[0_0_15px_rgba(57,255,136,0.2)] hover:shadow-[0_0_25px_rgba(57,255,136,0.4)] transition-all">
+          <div className="ml-auto flex items-center gap-3">
+            <a href="/login" className="text-xs sm:text-sm font-semibold text-[var(--color-fg-3)] hover:text-white transition-colors">Log in</a>
+            <a href="/register" className="px-3.5 sm:px-5 py-1.5 sm:py-2.5 bg-[var(--color-accent)] text-black font-semibold text-xs sm:text-sm rounded-lg shadow-[0_0_15px_rgba(57,255,136,0.2)] hover:shadow-[0_0_25px_rgba(57,255,136,0.4)] transition-all">
               Get Started
             </a>
           </div>
         )}
       </div>
+
+      {/* ── Mobile Dropdown for Landing Navigation ── */}
+      {landingNav && mobilePublicNavOpen && (
+        <div className="md:hidden border-t border-[var(--color-ink-3)] bg-[var(--color-ink-1)]/95 backdrop-blur-2xl px-6 py-5 space-y-4 animate-slide-down">
+          {showSectionLinks && (
+            <div className="flex flex-col space-y-3 pb-4 border-b border-white/5 font-medium text-sm">
+              <a 
+                href="#features" 
+                onClick={() => setMobilePublicNavOpen(false)}
+                className="text-[var(--color-fg-2)] hover:text-[var(--color-accent)] transition-colors py-1 flex items-center justify-between"
+              >
+                <span>Características</span>
+                <span className="text-xs text-[var(--color-fg-4)] font-mono">→</span>
+              </a>
+              <a 
+                href="#how-it-works" 
+                onClick={() => setMobilePublicNavOpen(false)}
+                className="text-[var(--color-fg-2)] hover:text-[var(--color-accent)] transition-colors py-1 flex items-center justify-between"
+              >
+                <span>Cómo Funciona</span>
+                <span className="text-xs text-[var(--color-fg-4)] font-mono">→</span>
+              </a>
+              <a 
+                href="#tech-stack" 
+                onClick={() => setMobilePublicNavOpen(false)}
+                className="text-[var(--color-fg-2)] hover:text-[var(--color-accent)] transition-colors py-1 flex items-center justify-between"
+              >
+                <span>Tecnología</span>
+                <span className="text-xs text-[var(--color-fg-4)] font-mono">→</span>
+              </a>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2 pt-1">
+            <a 
+              href="/login" 
+              className="w-full py-2.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl text-center text-xs font-semibold transition-all"
+            >
+              Iniciar Sesión
+            </a>
+            <a 
+              href="/register" 
+              className="w-full py-2.5 px-4 bg-[var(--color-accent)] text-black rounded-xl text-center text-xs font-bold shadow-[0_0_12px_rgba(57,255,136,0.25)] transition-all"
+            >
+              Crear Cuenta Gratuita
+            </a>
+          </div>
+
+          <div className="flex items-center justify-center gap-4 pt-3 border-t border-white/5 text-[11px] text-[var(--color-fg-4)] font-mono">
+            <a href="/legal/privacy-policy" className="hover:text-white transition-colors">Privacidad</a>
+            <span>•</span>
+            <a href="/legal/terms-of-service" className="hover:text-white transition-colors">Términos</a>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

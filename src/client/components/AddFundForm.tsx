@@ -335,13 +335,13 @@ export function AddFundForm({ onAdded }: Props) {
                 <span className="text-[11px] font-mono uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
                   <Zap size={13} className="text-amber-400" /> Fondos &amp; ETFs Más Populares
                 </span>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex overflow-x-auto sm:flex-wrap gap-2 no-scrollbar touch-scroll pb-1 sm:pb-0">
                   {POPULAR_QUICK_FUNDS.map(pf => (
                     <button
                       key={pf.isin}
                       type="button"
                       onClick={() => selectFund(pf)}
-                      className="px-3 py-1.5 bg-black/40 hover:bg-white/10 border border-white/5 hover:border-[var(--color-accent)]/40 rounded-xl text-xs text-gray-300 hover:text-white transition-all flex items-center gap-2 text-left"
+                      className="px-3 py-1.5 bg-black/40 hover:bg-white/10 border border-white/5 hover:border-[var(--color-accent)]/40 rounded-xl text-xs text-gray-300 hover:text-white transition-all flex items-center gap-2 text-left shrink-0 sm:shrink"
                     >
                       <span className="font-mono text-[10px] text-[var(--color-accent)] font-bold">{pf.isin}</span>
                       <span className="truncate max-w-[140px] sm:max-w-none">{pf.name}</span>

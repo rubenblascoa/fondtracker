@@ -153,28 +153,28 @@ export function PortfolioSection({ funds, status, onRefresh, onNavigateAdd }: Po
       {/* ── Search, Filters & View Toggle Toolbar ── */}
       <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-4 space-y-3">
         
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           
           {/* Search Input */}
-          <div className="relative flex-1 min-w-[260px]">
+          <div className="relative w-full sm:flex-1 sm:min-w-[220px]">
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input 
               type="text" 
-              placeholder="Buscar por nombre, ISIN, entidad bancaria..." 
+              placeholder="Buscar por nombre, ISIN, entidad..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-black/40 border border-white/10 focus:border-[var(--color-accent)] rounded-xl pl-10 pr-4 py-2.5 text-xs text-white outline-none transition-all placeholder:text-gray-500 font-medium"
             />
           </div>
 
-          {/* Sort Selector */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 px-3 py-2 rounded-xl text-xs">
-              <ArrowUpDown size={13} className="text-[var(--color-accent)]" />
+          {/* Sort Selector, View Mode & Add Button */}
+          <div className="flex items-center justify-between sm:justify-end gap-2">
+            <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 px-2.5 sm:px-3 py-2 rounded-xl text-xs flex-1 sm:flex-initial justify-center sm:justify-start">
+              <ArrowUpDown size={13} className="text-[var(--color-accent)] shrink-0" />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-transparent text-white outline-none cursor-pointer text-xs font-medium"
+                className="bg-transparent text-white outline-none cursor-pointer text-xs font-medium truncate"
               >
                 <option value="value" className="bg-[var(--color-ink-2)] text-white">Mayor Valor</option>
                 <option value="profit" className="bg-[var(--color-ink-2)] text-white">Mayor Ganancia (€)</option>
@@ -184,7 +184,7 @@ export function PortfolioSection({ funds, status, onRefresh, onNavigateAdd }: Po
             </div>
 
             {/* View Mode Toggle (Cards vs Table) */}
-            <div className="flex items-center bg-black/40 border border-white/10 p-1 rounded-xl">
+            <div className="flex items-center bg-black/40 border border-white/10 p-1 rounded-xl shrink-0">
               <button
                 onClick={() => setViewMode("cards")}
                 className={`p-1.5 rounded-lg transition-all ${viewMode === "cards" ? "bg-[var(--color-accent)] text-black" : "text-gray-400 hover:text-white"}`}
@@ -204,32 +204,32 @@ export function PortfolioSection({ funds, status, onRefresh, onNavigateAdd }: Po
             {/* Add Fund CTA */}
             <button 
               onClick={onNavigateAdd}
-              className="px-4 py-2 bg-[var(--color-accent)] text-black font-bold text-xs rounded-xl shadow-[0_0_12px_rgba(57,255,136,0.2)] hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5"
+              className="px-3 sm:px-4 py-2 bg-[var(--color-accent)] text-black font-bold text-xs rounded-xl shadow-[0_0_12px_rgba(57,255,136,0.2)] hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5 shrink-0"
             >
               <Plus size={14} strokeWidth={2.5} />
-              <span className="hidden sm:inline">Añadir Fondo</span>
+              <span className="hidden sm:inline">Añadir</span>
             </button>
           </div>
 
         </div>
 
-        {/* Bank Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-0.5">
+        {/* Bank Filter Pills (Horizontally Touch Scrollable) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar touch-scroll pt-1 pb-0.5">
           <button
             onClick={() => setSelectedBankFilter("all")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
               selectedBankFilter === "all"
                 ? "bg-white text-black font-bold shadow-sm"
                 : "bg-black/30 text-gray-400 hover:text-white border border-white/5"
             }`}
           >
-            Todas las Entidades ({funds.length})
+            Todas ({funds.length})
           </button>
           {availableBanks.map(b => (
             <button
               key={b}
               onClick={() => setSelectedBankFilter(b)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
                 selectedBankFilter === b
                   ? "bg-white text-black font-bold shadow-sm"
                   : "bg-black/30 text-gray-400 hover:text-white border border-white/5"
