@@ -20,6 +20,16 @@ export function DocsTab() {
   const [consoleStatus, setConsoleStatus] = useState<{ code: number; text: string; ms: number } | null>(null);
   const [selectedLang, setSelectedLang] = useState<"curl" | "fetch" | "python">("curl");
 
+  const sectionRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (sectionRef.current) {
+      const scrollParent = sectionRef.current.closest('.overflow-y-auto');
+      if (scrollParent) {
+        scrollParent.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      }
+    }
+  }, [activeCategory]);
+
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
     setCopiedCode(id);
@@ -286,7 +296,7 @@ export function DocsTab() {
   };
 
   return (
-    <div className="space-y-6">
+    <div ref={sectionRef} className="space-y-6">
       
       {/* ── Top Header Banner ── */}
       <div className="bg-gradient-to-r from-[var(--color-ink-1)] to-[var(--color-ink-2)] border border-white/10 rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-xl">

@@ -38,6 +38,16 @@ export function AnalyticsSection({ funds, status }: AnalyticsSectionProps) {
   const [rebalanceTargets, setRebalanceTargets] = useState<Record<number, number>>({});
   const [extraContribution, setExtraContribution] = useState<number>(0);
 
+  const sectionRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (sectionRef.current) {
+      const scrollParent = sectionRef.current.closest('.overflow-y-auto');
+      if (scrollParent) {
+        scrollParent.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      }
+    }
+  }, [activeTab]);
+
   const totalInvested = status?.total_initial ?? funds.reduce((acc, f) => acc + (f.total_invested || f.shares * f.purchase_price), 0);
   const totalCurrent = status?.total_current ?? funds.reduce((acc, f) => acc + ((f.current_price ?? f.purchase_price) * f.shares), 0);
   const totalProfitLoss = totalCurrent - totalInvested;
@@ -330,7 +340,7 @@ export function AnalyticsSection({ funds, status }: AnalyticsSectionProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div ref={sectionRef} className="space-y-6">
       
       {/* ── Top Executive KPI Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

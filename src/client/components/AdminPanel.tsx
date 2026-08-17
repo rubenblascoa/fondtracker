@@ -565,6 +565,16 @@ export function AdminSectionContent({ user, initialSubSection }: { user: User; i
     ].filter(d => d.value > 0);
   }, [data?.auth_google, data?.auth_github, data?.auth_password]);
 
+  const sectionRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (sectionRef.current) {
+      const scrollParent = sectionRef.current.closest('.overflow-y-auto');
+      if (scrollParent) {
+        scrollParent.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      }
+    }
+  }, [subSection]);
+
   const SUB_NAV: { key: AdminSubSection; label: string; icon: JSX.Element }[] = [
     { key: "overview", label: "Dashboard Admin", icon: <LayoutDashboard size={14} /> },
     { key: "users", label: "Usuarios", icon: <Users size={14} /> },
@@ -574,7 +584,7 @@ export function AdminSectionContent({ user, initialSubSection }: { user: User; i
   ];
 
   return (
-    <div className="space-y-4">
+    <div ref={sectionRef} className="space-y-4">
       {/* ── Sub Navigation Selector Pills ── */}
       <div className="bg-[var(--color-ink-1)] border border-white/5 rounded-2xl p-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar touch-scroll">
         {SUB_NAV.map(item => {

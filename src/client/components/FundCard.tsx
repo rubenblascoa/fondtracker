@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, memo } from "react";
 import { api, getBankUrl, getSpecificFundUrl, type Investment, type YahooChartData } from "../api";
 import { formatCurrency, formatPct, profitColor, formatRelative, sanitizeFundName } from "../utils";
 import { 
@@ -20,7 +20,7 @@ type Props = {
   onChange: () => void;
 };
 
-export function FundCard({ fund, onChange }: Props) {
+export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
   const [chartData, setChartData] = useState<YahooChartData | null>(null);
   const [chartLoading, setChartLoading] = useState(false);
   const [chartRange, setChartRange] = useState("max");
@@ -697,7 +697,8 @@ export function FundCard({ fund, onChange }: Props) {
                   <div className="relative bg-[var(--color-ink-2)]/40 border border-white/5 rounded-xl p-2 overflow-hidden">
                     <canvas
                       ref={canvasRef}
-                      className="w-full h-28 cursor-crosshair touch-none"
+                      className="w-full h-28 cursor-crosshair"
+                      style={{ touchAction: 'pan-y' }}
                       onMouseMove={handleMouseMove}
                       onMouseLeave={handleMouseLeave}
                       onTouchStart={handleTouchMove}
@@ -847,4 +848,4 @@ export function FundCard({ fund, onChange }: Props) {
 
     </div>
   );
-}
+});

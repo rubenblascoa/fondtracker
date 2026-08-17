@@ -193,6 +193,8 @@
   .touch-scroll {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-x: contain;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
   }
 
   .safe-bottom {
