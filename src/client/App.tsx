@@ -222,8 +222,11 @@ export function App() {
     }
   }, [isRootPath, isPrivacyPath, isTermsPath, isAdminPath, user]);
 
-  function handleLogout() {
+  async function handleLogout() {
     clearToken();
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {}
     window.location.replace("/login");
   }
 

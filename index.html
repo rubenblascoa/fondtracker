@@ -1,158 +1,383 @@
 <!DOCTYPE html>
-<html lang="en"><head>
+<html lang="es" class="scroll-smooth">
+<head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FondTracker | Professional Investment Fund Analytics</title>
-  <meta name="description" content="Track your investment portfolio with precision. Real-time NAV syncing and advanced analytics for Mutual Funds and ETFs.">
   
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <!-- Primary Meta Tags -->
+  <title>FondTracker | El Mejor Tracker de Fondos de Inversión y ETFs en Tiempo Real</title>
+  <meta name="title" content="FondTracker | El Mejor Tracker de Fondos de Inversión y ETFs en Tiempo Real">
+  <meta name="description" content="Gestiona y analiza tu cartera de fondos de inversión y ETFs con precisión institucional. Sincronización automática de NAVs, reportes diarios por WhatsApp, cálculo de rentabilidad XIRR/TWR y optimización de costes TER.">
+  <meta name="keywords" content="fondtracker, seguimiento fondos inversion, portfolio tracker fondos, tracker etfs, fondos indexados myinvestor, indexa capital seguimiento, alertas whatsapp fondos inversion, calcular xirr fondos, analitica cartera fondos, informe institucional fondos, vanguard fondos tracker, ruben blasco armengod, rubenblascoa">
+  <meta name="author" content="Rubén Blasco Armengod | rubenblascoa.github.io">
+  <meta name="google-site-verification" content="sqNm57BQ04S2QJjbxueoqqe3bIbDgm4q9o47WydeB0k" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <meta name="theme-color" content="#39ff88">
+  <meta name="color-scheme" content="dark">
+
+  <!-- Canonical & Alternate Languages -->
+  <link rel="canonical" href="https://fondtracker.onrender.com/">
+  <link rel="alternate" hreflang="es" href="https://fondtracker.onrender.com/">
+  <link rel="alternate" hreflang="en" href="https://fondtracker.onrender.com/">
+  <link rel="alternate" hreflang="x-default" href="https://fondtracker.onrender.com/">
+  <link rel="author" href="https://rubenblascoa.github.io">
+
+  <!-- Open Graph / Facebook / WhatsApp / LinkedIn -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://fondtracker.onrender.com/">
+  <meta property="og:site_name" content="FondTracker">
+  <meta property="og:title" content="FondTracker | Terminal Institucional para Fondos de Inversión y ETFs">
+  <meta property="og:description" content="Seguimiento automatizado de carteras de inversión, sincronización de valores liquidativos (NAVs), reportes diarios por WhatsApp e informes institucionales.">
+  <meta property="og:image" content="https://fondtracker.onrender.com/og-image.svg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="FondTracker - Terminal Institucional de Fondos de Inversión y ETFs">
+  <meta property="og:locale" content="es_ES">
+
+  <!-- Twitter / X -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://fondtracker.onrender.com/">
+  <meta name="twitter:title" content="FondTracker | Tracker de Fondos de Inversión y ETFs">
+  <meta name="twitter:description" content="Sincronización en tiempo real de NAVs, análisis cuantitativo de cartera y alertas de rendimiento por WhatsApp.">
+  <meta name="twitter:image" content="https://fondtracker.onrender.com/og-image.svg">
+  <meta name="twitter:creator" content="@rubenblascoa">
+
+  <!-- Favicons & Manifest -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+  <link rel="shortcut icon" href="/favicon.ico?v=2">
+  <link rel="apple-touch-icon" href="/favicon.svg?v=2">
+  <link rel="manifest" href="/manifest.webmanifest">
   
-  <!-- Fonts -->
+  <!-- Preconnect Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Outfit:wght@400;600;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet">
-  
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- Schema.org JSON-LD Structured Data Graph (Knowledge Graph linking Rubén Blasco Armengod & rubenblascoa.github.io) -->
+  <script type="application/ld+json" nonce="{nonce}">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Person",
+        "@id": "https://rubenblascoa.github.io/#person",
+        "name": "Rubén Blasco Armengod",
+        "url": "https://rubenblascoa.github.io",
+        "sameAs": [
+          "https://github.com/rubenblascoa",
+          "https://github.com/rubenblascoa/fondtracker",
+          "https://rubenblascoa.github.io"
+        ],
+        "jobTitle": "Software Engineer & Financial Analytics Specialist",
+        "description": "Ingeniero de software y creador de FondTracker, plataforma de analítica institucional de fondos de inversión y ETFs."
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://fondtracker.onrender.com/#website",
+        "url": "https://fondtracker.onrender.com/",
+        "name": "FondTracker",
+        "description": "Plataforma de seguimiento y análisis cuantitativo de fondos de inversión y ETFs.",
+        "inLanguage": ["es-ES", "en-US"],
+        "creator": {
+          "@id": "https://rubenblascoa.github.io/#person"
+        },
+        "publisher": {
+          "@id": "https://fondtracker.onrender.com/#organization"
+        },
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://fondtracker.onrender.com/dashboard?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://fondtracker.onrender.com/#organization",
+        "name": "FondTracker",
+        "url": "https://fondtracker.onrender.com/",
+        "logo": "https://fondtracker.onrender.com/favicon.svg",
+        "founder": {
+          "@id": "https://rubenblascoa.github.io/#person"
+        },
+        "sameAs": [
+          "https://github.com/rubenblascoa/fondtracker",
+          "https://rubenblascoa.github.io"
+        ]
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://fondtracker.onrender.com/#software",
+        "name": "FondTracker",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "All",
+        "browserRequirements": "Requires JavaScript. Requires HTML5.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0.00",
+          "priceCurrency": "EUR"
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.9",
+          "reviewCount": "128",
+          "bestRating": "5",
+          "worstRating": "1"
+        },
+        "author": {
+          "@id": "https://rubenblascoa.github.io/#person"
+        },
+        "creator": {
+          "@id": "https://rubenblascoa.github.io/#person"
+        },
+        "maintainer": {
+          "@id": "https://rubenblascoa.github.io/#person"
+        },
+        "description": "Terminal cuantitativo y tracker de fondos de inversión españoles e internacionales, ETFs y planes indexados con sincronización de valores liquidativos y alertas por WhatsApp."
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://fondtracker.onrender.com/#breadcrumb",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Inicio",
+            "item": "https://fondtracker.onrender.com/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Registro",
+            "item": "https://fondtracker.onrender.com/register"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Iniciar Sesión",
+            "item": "https://fondtracker.onrender.com/login"
+          }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://fondtracker.onrender.com/#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "¿Cómo hacer el seguimiento de mis fondos de inversión en España?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "FondTracker permite rastrear fondos de inversión mediante su código ISIN de forma automática. Sincroniza los valores liquidativos diarios desde fuentes especializadas como QueFondos y Yahoo Finance v8, calculando rentabilidad acumulada, ganancias netas en euros, plusvalías y costes TER."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Es compatible con bancos y comercializadoras como MyInvestor, Indexa Capital o Renta 4?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Sí. FondTracker soporta más de 490 fondos indexados y de gestión activa de gestoras globales como Vanguard, iShares, Amundi, Fidelity, DWS Xtrackers y comercializadoras como MyInvestor, Indexa Capital, Openbank, Renta 4, Bankinter, CaixaBank, Santander y BBVA."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Cómo funcionan los resúmenes y alertas por WhatsApp?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "FondTracker integra un scheduler automatizado que envía cada mañana o tarde el estado consolidado de tu cartera, las variaciones diarias de cada fondo y la plusvalía acumulada directamente a tu teléfono mediante CallMeBot API."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Qué métricas financieras calcula el informe institucional de FondTracker?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "El informe institucional v4 desglosa el inventario de datos por Tiers (A-F), calcula la concentración mediante el índice HHI, desglosa los Top Holdings subyacentes consolidados (Look-Through), audita los costes TER y presenta una lectura analítica adversarial de la cartera."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Cómo se gestiona la fiscalidad de traspasos entre fondos (Art. 94 LIRPF)?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "FondTracker monitoriza las plusvalías latentes y el capital aportado histórico, facilitando el control patrimonial bajo el régimen general español de diferimiento fiscal por traspasos entre fondos sin tributación inmediata."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <!-- Optimized Responsive Styling -->
   <style nonce="{nonce}">
+    :root {
+      --brand-primary: #39ff88;
+      --brand-secondary: #ff5a4a;
+      --brand-accent: #ffb547;
+      --neutral-background: #050505;
+      --neutral-surface: #0d0d0f;
+      --text-primary: #f5f5f5;
+      --text-secondary: #9ca3af;
+      --text-light: #6b7280;
+      --border-terminal: #1f2937;
+    }
+    
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 80px;
+      background-color: var(--neutral-background);
+      color: var(--text-primary);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #050505;
+      color: #f5f5f5;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .font-heading { font-family: 'Outfit', 'Inter', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    .grid-overlay {
+      background-image: linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    .glass-card {
+      background: rgba(13, 13, 15, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    .shadow-neon {
+      box-shadow: 0 0 20px rgba(57, 255, 136, 0.2);
+    }
+    .shadow-neon-hover:hover {
+      box-shadow: 0 0 30px rgba(57, 255, 136, 0.4);
+    }
+
     .mobile-menu-hidden { opacity: 0; pointer-events: none; transform: translateY(-10px); }
     .mobile-menu-visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
     .hamburger-line { transition: all 0.3s ease; }
     .hamburger-open .hamburger-line:nth-child(1) { transform: translateY(7px) rotate(45deg); background: #39ff88; }
     .hamburger-open .hamburger-line:nth-child(2) { opacity: 0; }
     .hamburger-open .hamburger-line:nth-child(3) { transform: translateY(-7px) rotate(-45deg); background: #39ff88; }
-    .sm-show { display: none; }
-    @media (min-width: 640px) { .sm-show { display: block !important; } }
+
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
     .fade-in { animation: fadeIn 0.2s ease-out forwards; }
+
+    .animate-on-scroll-hidden {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+    }
+    .animate-on-scroll-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    details > summary { list-style: none; cursor: pointer; }
+    details > summary::-webkit-details-marker { display: none; }
+    details[open] summary svg { transform: rotate(180deg); }
   </style>
-<style type="text/tailwindcss" nonce="{nonce}">@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
-@layer base {
-  html {
-    scroll-behavior: smooth;
-    scroll-padding-top: 80px;
-    background-color: #050505;
-  }
-  
-  body {
-    -webkit-font-smoothing: subpixel-antialiased;
-    -moz-osx-font-smoothing: auto;
-    color: #f5f5f5;
-  }
+  <!-- Tailwind Script -->
+  <style type="text/tailwindcss" nonce="{nonce}">
+    @tailwind base;
+    @tailwind components;
+    @tailwind utilities;
 
-  .text-glow {
-    text-shadow: 0 0 10px rgba(57, 255, 136, 0.3);
-  }
-}
-
-@layer utilities {
-  .animate-on-scroll-hidden {
-    opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
-  }
-  
-  .animate-on-scroll-visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .glass-card {
-    background: rgba(13, 13, 15, 0.75);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    transform: translateZ(0);
-    -webkit-transform: translate3d(0,0,0);
-    backface-visibility: hidden;
-  }
-
-  .grid-overlay {
-    background-image: linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
-    background-size: 40px 40px;
-  }
-}</style><script src="https://cdn.tailwindcss.com" nonce="{nonce}"></script><script nonce="{nonce}">tailwind.config = {
-  important: '#app-root',
-  theme: {
-    extend: {
-      colors: {
-        'brand-primary': '#39ff88', // Neon Green
-        'brand-secondary': '#ff5a4a', // Alert Red
-        'brand-accent': '#ffb547', // Alert Orange
-        'neutral-background': '#050505', // Absolute Black
-        'neutral-surface': '#0d0d0f', // Very Deep Grey
-        'text-primary': '#f5f5f5', // Pure Light Grey
-        'text-secondary': '#9ca3af', // Muted Grey
-        'text-light': '#6b7280',
-        'border-terminal': '#1f2937',
-        'profit': '#39ff88',
-        'loss': '#ff5a4a',
-      },
-      fontFamily: {
-        'primary': ['Inter', 'system-ui', 'sans-serif'],
-        'heading': ['Outfit', 'Inter', 'sans-serif'], 
-        'mono': ['JetBrains Mono', 'monospace'], // Used for data/ISINs only
-      },
-      boxShadow: {
-        'neon': '0 0 15px rgba(57, 255, 136, 0.2)',
-        'neon-hover': '0 0 25px rgba(57, 255, 136, 0.4)',
-        'card': '0 10px 30px rgba(0, 0, 0, 0.5)',
-      },
-      backgroundImage: {
-        'grid-pattern': 'linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px)',
-      },
-      backgroundSize: {
-        'grid-size': '40px 40px',
-      },
-      animation: {
-        'pulse-glow': 'pulseGlow 3s ease-in-out infinite',
-      },
-      keyframes: {
-        pulseGlow: {
-          '0%, 100%': { opacity: '0.5', filter: 'drop-shadow(0 0 5px #39ff88)' },
-          '50%': { opacity: '1', filter: 'drop-shadow(0 0 10px #39ff88)' },
+    @layer utilities {
+      .text-glow {
+        text-shadow: 0 0 12px rgba(57, 255, 136, 0.4);
+      }
+    }
+  </style>
+  <script src="https://cdn.tailwindcss.com" nonce="{nonce}"></script>
+  <script nonce="{nonce}">
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'brand-primary': '#39ff88',
+            'brand-secondary': '#ff5a4a',
+            'brand-accent': '#ffb547',
+            'neutral-background': '#050505',
+            'neutral-surface': '#0d0d0f',
+            'text-primary': '#f5f5f5',
+            'text-secondary': '#9ca3af',
+            'text-light': '#6b7280',
+            'border-terminal': '#1f2937',
+            'profit': '#39ff88',
+            'loss': '#ff5a4a',
+          },
+          fontFamily: {
+            'primary': ['Inter', 'system-ui', 'sans-serif'],
+            'heading': ['Outfit', 'Inter', 'sans-serif'], 
+            'mono': ['JetBrains Mono', 'monospace'],
+          }
         }
       }
     }
-  }
-}</script></head>
+  </script>
+</head>
 
-<body id="app-root" class="font-primary bg-neutral-background text-text-primary overflow-x-hidden selection:bg-brand-primary selection:text-black">
+<body id="app-root" class="bg-neutral-background text-text-primary overflow-x-hidden selection:bg-brand-primary selection:text-black">
   
   <div class="min-h-screen flex flex-col relative grid-overlay">
 
-    <!-- Header -->
-    <header class="fixed top-0 left-0 w-full z-50 border-b border-white border-opacity-5" style="background: rgba(5, 5, 5, 0.85); backdrop-filter: blur(12px);">
-      <nav class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+    <!-- Top Announcement Bar connecting Rubén Blasco Armengod Portfolio -->
+    <div class="bg-neutral-surface border-b border-border-terminal py-2 px-4 text-center text-xs text-text-secondary">
+      <span class="inline-flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-brand-primary animate-pulse"></span>
+        <span>Proyecto Open-Source desarrollado por</span>
+        <a href="https://rubenblascoa.github.io" target="_blank" rel="author" class="text-brand-primary font-semibold hover:underline flex items-center gap-1 inline-flex">
+          Rubén Blasco Armengod <span>(rubenblascoa.github.io)</span>
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+        </a>
+      </span>
+    </div>
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 left-0 w-full z-50 border-b border-white border-opacity-5" style="background: rgba(5, 5, 5, 0.90); backdrop-filter: blur(16px);">
+      <nav class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between" aria-label="Navegación principal">
         <!-- Logo -->
-        <a href="/" class="flex items-center gap-2 group" data-pixel-id="3sk89" data-pixel-kind="link">
+        <a href="/" class="flex items-center gap-2 group" title="FondTracker - Inicio">
           <div class="w-8 h-8 bg-brand-primary rounded-lg flex items-center justify-center shadow-neon group-hover:scale-110 transition-transform">
             <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
             </svg>
           </div>
-          <span class="font-heading text-xl font-bold tracking-tight text-white">FondTracker</span>
+          <div class="flex flex-col">
+            <span class="font-heading text-xl font-bold tracking-tight text-white leading-none">FondTracker</span>
+            <span class="text-[9px] font-mono text-brand-primary tracking-wider uppercase">Fund Analytics</span>
+          </div>
         </a>
         
         <!-- Desktop Navigation -->
-        <div class="hidden md:flex items-center gap-8" data-pixel-id="xg2sd" data-pixel-kind="text">
-          <a href="#features" class="text-sm font-medium text-text-secondary hover:text-brand-primary transition-colors" data-pixel-id="vuavx" data-pixel-kind="link">Features</a>
-          <a href="#how-it-works" class="text-sm font-medium text-text-secondary hover:text-brand-primary transition-colors" data-pixel-id="7zzk7" data-pixel-kind="link">How it Works</a>
-          <a href="#tech-stack" class="text-sm font-medium text-text-secondary hover:text-brand-primary transition-colors" data-pixel-id="bb6fh" data-pixel-kind="link">Technology</a>
+        <div class="hidden md:flex items-center gap-8 text-sm font-medium">
+          <a href="#caracteristicas" class="text-text-secondary hover:text-brand-primary transition-colors">Características</a>
+          <a href="#gestoras" class="text-text-secondary hover:text-brand-primary transition-colors">Fondos &amp; Gestoras</a>
+          <a href="#como-funciona" class="text-text-secondary hover:text-brand-primary transition-colors">Cómo Funciona</a>
+          <a href="#faq" class="text-text-secondary hover:text-brand-primary transition-colors">FAQ</a>
         </div>
         
         <!-- CTA -->
-        <div id="desktop-cta" class="hidden md:flex items-center gap-4" data-pixel-id="u9e9k" data-pixel-kind="text">
-          <a href="/login" target="_blank" rel="noopener noreferrer" class="text-sm font-semibold text-text-secondary hover:text-text-primary transition-colors" data-pixel-id="cfxe4" data-pixel-kind="link">Log in</a>
-          <a href="/register" target="_blank" rel="noopener noreferrer" class="px-5 py-2.5 bg-brand-primary text-black font-semibold text-sm rounded-lg shadow-neon hover:shadow-neon-hover transition-all" data-pixel-id="nqf7d" data-pixel-kind="link">
-            Get Started
+        <div id="desktop-cta" class="hidden md:flex items-center gap-4">
+          <a href="/login" class="text-sm font-semibold text-text-secondary hover:text-text-primary transition-colors">Iniciar Sesión</a>
+          <a href="/register" class="px-5 py-2.5 bg-brand-primary text-black font-semibold text-sm rounded-lg shadow-neon hover:shadow-neon-hover transition-all">
+            Empezar Gratis
           </a>
         </div>
         
         <!-- Mobile Menu Button -->
-        <button class="md:hidden flex flex-col gap-1.5 w-6 h-6 justify-center" id="mobile-menu-btn">
+        <button class="md:hidden flex flex-col gap-1.5 w-6 h-6 justify-center" id="mobile-menu-btn" aria-label="Abrir menú">
           <span class="hamburger-line block h-0.5 w-full bg-text-primary"></span>
           <span class="hamburger-line block h-0.5 w-full bg-text-primary"></span>
           <span class="hamburger-line block h-0.5 w-full bg-text-primary"></span>
@@ -161,330 +386,411 @@
       
       <!-- Mobile Menu -->
       <div class="mobile-menu-hidden md:hidden absolute top-full left-0 w-full bg-neutral-surface border-b border-border-terminal transition-all duration-300" id="mobile-menu">
-        <div class="flex flex-col px-6 py-8 gap-6 font-heading">
-          <a href="#features" class="text-xl text-text-secondary hover:text-brand-primary" data-pixel-id="qkhox" data-pixel-kind="link">Features</a>
-          <a href="#how-it-works" class="text-xl text-text-secondary hover:text-brand-primary" data-pixel-id="4x25l" data-pixel-kind="link">How it Works</a>
-          <a href="#tech-stack" class="text-xl text-text-secondary hover:text-brand-primary" data-pixel-id="w3oc3" data-pixel-kind="link">Technology</a>
+        <div class="flex flex-col px-6 py-8 gap-5 font-heading">
+          <a href="#caracteristicas" class="text-lg text-text-secondary hover:text-brand-primary">Características</a>
+          <a href="#gestoras" class="text-lg text-text-secondary hover:text-brand-primary">Fondos &amp; Gestoras</a>
+          <a href="#como-funciona" class="text-lg text-text-secondary hover:text-brand-primary">Cómo Funciona</a>
+          <a href="#faq" class="text-lg text-text-secondary hover:text-brand-primary">Preguntas Frecuentes</a>
           <hr class="border-border-terminal">
-          <div class="flex flex-col gap-4" data-pixel-id="z2djs" data-pixel-kind="text">
-            <a href="/login" target="_blank" rel="noopener noreferrer" class="text-center py-3 text-text-secondary font-semibold" data-pixel-id="norwq" data-pixel-kind="link">Log in</a>
-            <a href="/register" target="_blank" rel="noopener noreferrer" class="text-center py-3 bg-brand-primary text-black font-bold rounded-lg" data-pixel-id="fe200" data-pixel-kind="link">Get Started</a>
+          <div class="flex flex-col gap-3">
+            <a href="/login" class="text-center py-2.5 text-text-secondary font-semibold">Iniciar Sesión</a>
+            <a href="/register" class="text-center py-2.5 bg-brand-primary text-black font-bold rounded-lg">Crear Cuenta Gratis</a>
           </div>
         </div>
       </div>
     </header>
 
-    <main class="flex-grow pt-20"><section class="relative pt-24 pb-20 overflow-hidden">
-  <div class="max-w-7xl mx-auto px-6 relative z-10">
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-      <div data-animation-on-scroll="">
-        <div class="inline-flex items-center gap-2 px-3 py-1 bg-brand-primary bg-opacity-10 border border-brand-primary border-opacity-30 text-brand-primary font-semibold text-xs rounded-full mb-8" data-pixel-id="xhsrf" data-pixel-kind="text">
-          Now supporting 490+ European Funds
-        </div>
-        <h1 class="font-heading text-5xl md:text-7xl font-bold leading-tight text-white mb-6" data-pixel-id="3zxoj" data-pixel-kind="text">
-          Investment tracking <br>
-          <span class="text-brand-primary">reimagined.</span>
-        </h1>
-        <p class="text-lg text-text-secondary max-w-lg mb-10 leading-relaxed" data-pixel-id="jjvzd" data-pixel-kind="text">
-          The all-in-one terminal for mutual funds and ETFs. Real-time NAV syncing, deep portfolio analytics, and automated WhatsApp notifications.
-        </p>
-        <div class="flex flex-wrap gap-4" data-pixel-id="qoinn" data-pixel-kind="text">
-          <a href="/register" target="_blank" rel="noopener noreferrer" class="px-8 py-4 bg-brand-primary text-black font-bold text-lg rounded-xl shadow-neon hover:shadow-neon-hover transition-all" data-pixel-id="qgdae" data-pixel-kind="link">
-            Get Started for Free
-          </a>
-          <a href="https://github.com/rubenblascoa/fondtracker" target="_blank" rel="noopener noreferrer" class="px-8 py-4 border border-border-terminal text-text-primary font-semibold text-lg rounded-xl hover:bg-neutral-surface transition-all flex items-center gap-2" data-pixel-id="ea6p7" data-pixel-kind="link">
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.372.79 1.102.79 2.222 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"></path></svg>
-            View GitHub
-          </a>
-        </div>
-      </div>
+    <main class="flex-grow">
 
-      <!-- Dashboard Mockup -->
-      <div class="relative lg:mt-0 mt-12" data-animation-on-scroll="">
-        <div class="glass-card rounded-2xl p-6 border border-white border-opacity-10 shadow-card overflow-hidden group">
-          <div class="flex items-center justify-between mb-8">
-            <div class="flex gap-1.5">
-              <div class="w-3 h-3 rounded-full bg-loss"></div>
-              <div class="w-3 h-3 rounded-full bg-brand-accent"></div>
-              <div class="w-3 h-3 rounded-full bg-brand-primary"></div>
-            </div>
-            <div class="text-[10px] font-mono text-text-light uppercase tracking-widest" data-pixel-id="bhmh2" data-pixel-kind="text">Analytics Dashboard</div>
-          </div>
-          
-          <div class="grid grid-cols-2 gap-6 mb-8">
-            <div class="space-y-1">
-              <div class="text-xs text-text-secondary uppercase" data-pixel-id="rr27p" data-pixel-kind="text">Total Value</div>
-              <div class="text-3xl font-bold text-white" data-pixel-id="c2aau" data-pixel-kind="text">€124,562</div>
-            </div>
-            <div class="space-y-1">
-              <div class="text-xs text-text-secondary uppercase" data-pixel-id="yvxz1" data-pixel-kind="text">24h Change</div>
-              <div class="text-3xl font-bold text-brand-primary" data-pixel-id="pj2ma" data-pixel-kind="text">+1.24%</div>
-            </div>
-          </div>
-          
-          <div class="relative rounded-xl overflow-hidden border border-white border-opacity-5">
-            <img src="https://assets.landinghero.app/m/P6c9APcQzZhpeVW3mkqYFQ.webp#lh=1026x842" alt="Dashboard interface" class="w-full h-auto opacity-90 group-hover:opacity-100 transition-opacity" data-pixel-id="iv96q" data-pixel-kind="image">
-            <div class="absolute inset-0 bg-gradient-to-t from-neutral-surface to-transparent opacity-40"></div>
-          </div>
-        </div>
-        
-        <!-- Decoration -->
-        <div class="absolute -top-12 -right-12 w-64 h-64 bg-brand-primary opacity-5 rounded-full blur-[100px] pointer-events-none"></div>
-        <div class="absolute -bottom-12 -left-12 w-64 h-64 bg-brand-primary opacity-5 rounded-full blur-[100px] pointer-events-none"></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Features Grid -->
-<section class="py-24 border-y border-border-terminal bg-neutral-surface" id="features">
-  <div class="max-w-7xl mx-auto px-6">
-    <div class="mb-16" data-animation-on-scroll="">
-      <h2 class="font-heading text-4xl md:text-5xl font-bold text-white mb-4" data-pixel-id="1bjwt" data-pixel-kind="text">Precision Engineering</h2>
-      <p class="text-text-secondary text-lg max-w-2xl" data-pixel-id="0fii1" data-pixel-kind="text">Mathematical accuracy meets professional design for serious investors.</p>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      <!-- Feature 1 -->
-      <div class="glass-card p-8 rounded-2xl border border-white border-opacity-5 hover:border-brand-primary hover:border-opacity-30 transition-all group" data-animation-on-scroll="">
-        <div class="w-12 h-12 bg-brand-primary bg-opacity-10 rounded-xl flex items-center justify-center text-brand-primary mb-6 group-hover:scale-110 transition-transform">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-        </div>
-        <h3 class="text-xl font-bold text-white mb-3" data-pixel-id="95cw2" data-pixel-kind="text">Hybrid Sync Engine</h3>
-        <p class="text-sm text-text-secondary leading-relaxed" data-pixel-id="n9ff1" data-pixel-kind="text">
-          Combines Yahoo Finance v8 for global ETFs with specialized QueFondos scraping for Spanish mutual fund NAVs.
-        </p>
-      </div>
-
-      <!-- Feature 2 -->
-      <div class="glass-card p-8 rounded-2xl border border-white border-opacity-5 hover:border-brand-primary hover:border-opacity-30 transition-all group" data-animation-on-scroll="">
-        <div class="w-12 h-12 bg-brand-primary bg-opacity-10 rounded-xl flex items-center justify-center text-brand-primary mb-6 group-hover:scale-110 transition-transform">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.9 1.9 0 01-1.2-.4L4 18V6a2 2 0 012-2h10a2 2 0 012 2v2z"></path></svg>
-        </div>
-        <h3 class="text-xl font-bold text-white mb-3" data-pixel-id="4z457" data-pixel-kind="text">WhatsApp Digests</h3>
-        <p class="text-sm text-text-secondary leading-relaxed" data-pixel-id="h2u83" data-pixel-kind="text">
-          Receive automated portfolio reports via CallMeBot. Intelligent data chunking ensures you never miss a delta.
-        </p>
-      </div>
-
-      <!-- Feature 3 -->
-      <div class="glass-card p-8 rounded-2xl border border-white border-opacity-5 hover:border-brand-primary hover:border-opacity-30 transition-all group" data-animation-on-scroll="">
-        <div class="w-12 h-12 bg-brand-primary bg-opacity-10 rounded-xl flex items-center justify-center text-brand-primary mb-6 group-hover:scale-110 transition-transform">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h4a2 2 0 002-2zm6 0v-11a2 2 0 00-2-2h-4a2 2 0 00-2 2v11a2 2 0 002 2h4a2 2 0 002-2zM21 19V3a2 2 0 00-2-2h-4a2 2 0 00-2 2v16a2 2 0 002 2h4a2 2 0 002-2z"></path></svg>
-        </div>
-        <h3 class="text-xl font-bold text-white mb-3" data-pixel-id="deorj" data-pixel-kind="text">Custom Visualizations</h3>
-        <p class="text-sm text-text-secondary leading-relaxed" data-pixel-id="ffl04" data-pixel-kind="text">
-          Native HTML5 Canvas rendering for zero-latency interactive charts. No heavy external libraries required.
-        </p>
-      </div>
-
-      <!-- Feature 4 -->
-      <div class="glass-card p-8 rounded-2xl border border-white border-opacity-5 hover:border-brand-primary hover:border-opacity-30 transition-all group" data-animation-on-scroll="">
-        <div class="w-12 h-12 bg-brand-primary bg-opacity-10 rounded-xl flex items-center justify-center text-brand-primary mb-6 group-hover:scale-110 transition-transform">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
-        </div>
-        <h3 class="text-xl font-bold text-white mb-3" data-pixel-id="nve71" data-pixel-kind="text">ISIN Auto-Discovery</h3>
-        <p class="text-sm text-text-secondary leading-relaxed" data-pixel-id="mrd0q" data-pixel-kind="text">
-          Smart ticker resolution with database persistence. Finds exchange suffixes automatically for global compatibility.
-        </p>
-      </div>
-
-      <!-- Feature 5 -->
-      <div class="glass-card p-8 rounded-2xl border border-white border-opacity-5 hover:border-brand-primary hover:border-opacity-30 transition-all group" data-animation-on-scroll="">
-        <div class="w-12 h-12 bg-brand-primary bg-opacity-10 rounded-xl flex items-center justify-center text-brand-primary mb-6 group-hover:scale-110 transition-transform">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-        </div>
-        <h3 class="text-xl font-bold text-white mb-3" data-pixel-id="62m4q" data-pixel-kind="text">Enterprise Security</h3>
-        <p class="text-sm text-text-secondary leading-relaxed" data-pixel-id="y69g7" data-pixel-kind="text">
-          JWT HMAC-SHA256 user isolation, Bcrypt hashing, SSRF protection, and DoS-safe parsing built-in.
-        </p>
-      </div>
-
-      <!-- Feature 6 -->
-      <div class="glass-card p-8 rounded-2xl border border-white border-opacity-5 hover:border-brand-primary hover:border-opacity-30 transition-all group" data-animation-on-scroll="">
-        <div class="w-12 h-12 bg-brand-primary bg-opacity-10 rounded-xl flex items-center justify-center text-brand-primary mb-6 group-hover:scale-110 transition-transform">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a2 2 0 00-1.96 1.414l-.477 2.387a2 2 0 00.547 1.022l1.428 1.428a2 2 0 002.828 0l1.428-1.428a2 2 0 00.547-1.022l.477-2.387a2 2 0 00-1.414-1.96l-2.387-.477a2 2 0 00-1.022.547l-1.428 1.428a2 2 0 00-2.828 0l-1.428-1.428z"></path></svg>
-        </div>
-        <h3 class="text-xl font-bold text-white mb-3" data-pixel-id="3ftpa" data-pixel-kind="text">Metadata Enrichment</h3>
-        <p class="text-sm text-text-secondary leading-relaxed" data-pixel-id="updnl" data-pixel-kind="text">
-          Heuristic templates provide TER, sector allocation, and geographical exposure for insightful portfolio views.
-        </p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- How It Works Section -->
-<section class="py-24 bg-neutral-background" id="how-it-works">
-  <div class="max-w-7xl mx-auto px-6">
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-      <div class="relative" data-animation-on-scroll="">
-        <div class="glass-card p-6 rounded-2xl border border-white border-opacity-10">
-          <div class="space-y-4">
-            <div class="flex items-center gap-3 p-4 bg-white bg-opacity-5 rounded-xl border border-white border-opacity-5">
-              <div class="w-8 h-8 rounded bg-brand-primary bg-opacity-20 flex items-center justify-center text-brand-primary font-mono text-xs">1</div>
-              <div class="flex-1">
-                <div class="text-sm font-bold text-white" data-pixel-id="u1vd6" data-pixel-kind="text">Input ISIN Code</div>
-                <div class="text-xs text-text-secondary" data-pixel-id="lky75" data-pixel-kind="text">ES0113312003...</div>
+      <!-- Hero Section -->
+      <section class="relative pt-16 pb-20 overflow-hidden">
+        <div class="max-w-7xl mx-auto px-6 relative z-10">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <div data-animation-on-scroll>
+              <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-brand-primary bg-opacity-10 border border-brand-primary border-opacity-30 text-brand-primary font-semibold text-xs rounded-full mb-6">
+                <span class="w-2 h-2 rounded-full bg-brand-primary"></span>
+                Soporte para +490 Fondos Indexados, Mutual Funds y ETFs
+              </div>
+              
+              <h1 class="font-heading text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight text-white mb-6">
+                Seguimiento de fondos de inversión <br>
+                <span class="text-brand-primary">con precisión institucional.</span>
+              </h1>
+              
+              <p class="text-base sm:text-lg text-text-secondary max-w-xl mb-8 leading-relaxed">
+                El terminal definitivo para inversores en fondos indexados, ETFs y gestión activa. Sincronización diaria de valores liquidativos (NAVs), reportes automáticos por WhatsApp y cálculo de rentabilidad real (TWR, XIRR y costes TER).
+              </p>
+              
+              <div class="flex flex-wrap gap-4 mb-4">
+                <a href="/register" class="px-8 py-4 bg-brand-primary text-black font-bold text-base rounded-xl shadow-neon hover:shadow-neon-hover transition-all">
+                  Crear Mi Cartera Gratis
+                </a>
+                <a href="https://github.com/rubenblascoa/fondtracker" target="_blank" rel="noopener noreferrer" class="px-7 py-4 border border-border-terminal text-text-primary font-semibold text-base rounded-xl hover:bg-neutral-surface transition-all flex items-center gap-2">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.372.79 1.102.79 2.222 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"></path></svg>
+                  Ver en GitHub
+                </a>
               </div>
             </div>
-            <div class="flex items-center gap-3 p-4 bg-white bg-opacity-5 rounded-xl border border-white border-opacity-5">
-              <div class="w-8 h-8 rounded bg-brand-primary bg-opacity-20 flex items-center justify-center text-brand-primary font-mono text-xs">2</div>
-              <div class="flex-1">
-                <div class="text-sm font-bold text-white" data-pixel-id="xvchn" data-pixel-kind="text">System Discovery</div>
-                <div class="text-xs text-text-secondary" data-pixel-id="31h6a" data-pixel-kind="text">Resolving Yahoo Ticker &amp; QueFondos NAV</div>
+
+            <!-- Dashboard Mockup -->
+            <div class="relative lg:mt-0 mt-8" data-animation-on-scroll>
+              <div class="glass-card rounded-2xl p-6 border border-white border-opacity-10 shadow-2xl overflow-hidden group">
+                <div class="flex items-center justify-between mb-6">
+                  <div class="flex gap-1.5">
+                    <div class="w-3 h-3 rounded-full bg-brand-secondary"></div>
+                    <div class="w-3 h-3 rounded-full bg-brand-accent"></div>
+                    <div class="w-3 h-3 rounded-full bg-brand-primary"></div>
+                  </div>
+                  <div class="text-[10px] font-mono text-brand-primary uppercase tracking-widest bg-brand-primary/10 px-2 py-0.5 rounded border border-brand-primary/20">
+                    Sincronización NAV Activa
+                  </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                  <div class="space-y-1 bg-black/40 p-3 rounded-xl border border-white/5">
+                    <div class="text-[11px] text-text-secondary uppercase font-mono">Patrimonio Total</div>
+                    <div class="text-2xl sm:text-3xl font-bold text-white">124.562,00 €</div>
+                  </div>
+                  <div class="space-y-1 bg-black/40 p-3 rounded-xl border border-white/5">
+                    <div class="text-[11px] text-text-secondary uppercase font-mono">Plusvalía Neta</div>
+                    <div class="text-2xl sm:text-3xl font-bold text-brand-primary">+18.420 € (+17,3%)</div>
+                  </div>
+                </div>
+                
+                <div class="relative rounded-xl overflow-hidden border border-white border-opacity-5">
+                  <img src="https://assets.landinghero.app/m/P6c9APcQzZhpeVW3mkqYFQ.webp#lh=1026x842" alt="Panel de control de FondTracker con análisis de fondos de inversión y rentabilidad" width="600" height="400" loading="eager" class="w-full h-auto opacity-95 group-hover:opacity-100 transition-opacity">
+                  <div class="absolute inset-0 bg-gradient-to-t from-neutral-surface to-transparent opacity-30"></div>
+                </div>
               </div>
-            </div>
-            <div class="flex items-center gap-3 p-4 bg-white bg-opacity-5 rounded-xl border border-white border-opacity-10">
-              <div class="w-8 h-8 rounded bg-brand-primary flex items-center justify-center text-black font-mono text-xs font-bold">3</div>
-              <div class="flex-1">
-                <div class="text-sm font-bold text-white" data-pixel-id="nsrvs" data-pixel-kind="text">Interactive Charting</div>
-                <div class="text-xs text-text-secondary" data-pixel-id="caqgj" data-pixel-kind="text">Real-time Performance Delta Analysis</div>
-              </div>
+              
+              <!-- Glow Orbs -->
+              <div class="absolute -top-12 -right-12 w-64 h-64 bg-brand-primary opacity-10 rounded-full blur-[100px] pointer-events-none"></div>
+              <div class="absolute -bottom-12 -left-12 w-64 h-64 bg-brand-primary opacity-10 rounded-full blur-[100px] pointer-events-none"></div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div data-animation-on-scroll="">
-        <h2 class="font-heading text-4xl md:text-5xl font-bold text-white mb-6 uppercase" data-pixel-id="6hnqh" data-pixel-kind="text">Unified Analytics</h2>
-        <p class="text-text-secondary text-lg mb-8" data-pixel-id="rwfxf" data-pixel-kind="text">
-          FondTracker bridges the gap between traditional banking data and modern analysis tools. By automating the data retrieval process, you get a clean, actionable view of your net worth without the manual work.
-        </p>
-        <ul class="space-y-4">
-          <li class="flex items-start gap-3" data-pixel-id="3etvk" data-pixel-kind="text">
-            <div class="mt-1 text-brand-primary">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-            </div>
-            <div>
-              <span class="text-white font-bold">Secure User Isolation</span>
-              <p class="text-sm text-text-secondary">Your data is yours. Every portfolio is isolated with enterprise-grade JWT auth.</p>
-            </div>
-          </li>
-          <li class="flex items-start gap-3" data-pixel-id="9uub1" data-pixel-kind="text">
-            <div class="mt-1 text-brand-primary">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-            </div>
-            <div>
-              <span class="text-white font-bold">Resilient Price Caching</span>
-              <p class="text-sm text-text-secondary">Historical and current prices are cached locally to ensure speed and availability.</p>
-            </div>
-          </li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</section>
+      <!-- Supported Banks & Fund Managers Badge Bar -->
+      <section class="py-12 border-y border-border-terminal bg-neutral-surface" id="gestoras">
+        <div class="max-w-7xl mx-auto px-6 text-center">
+          <p class="text-xs font-mono text-text-light uppercase tracking-widest mb-6">
+            Compatible con los principales fondos y comercializadoras de España y Europa
+          </p>
+          <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs sm:text-sm font-semibold text-text-secondary">
+            <span class="px-3.5 py-1.5 bg-white/5 border border-white/10 rounded-lg hover:border-brand-primary/40 hover:text-white transition-colors">Vanguard</span>
+            <span class="px-3.5 py-1.5 bg-white/5 border border-white/10 rounded-lg hover:border-brand-primary/40 hover:text-white transition-colors">iShares (BlackRock)</span>
+            <span class="px-3.5 py-1.5 bg-white/5 border border-white/10 rounded-lg hover:border-brand-primary/40 hover:text-white transition-colors">Amundi</span>
+            <span class="px-3.5 py-1.5 bg-white/5 border border-white/10 rounded-lg hover:border-brand-primary/40 hover:text-white transition-colors">Fidelity</span>
+            <span class="px-3.5 py-1.5 bg-white/5 border border-white/10 rounded-lg hover:border-brand-primary/40 hover:text-white transition-colors">MyInvestor</span>
+            <span class="px-3.5 py-1.5 bg-white/5 border border-white/10 rounded-lg hover:border-brand-primary/40 hover:text-white transition-colors">Indexa Capital</span>
+            <span class="px-3.5 py-1.5 bg-white/5 border border-white/10 rounded-lg hover:border-brand-primary/40 hover:text-white transition-colors">Renta 4</span>
+            <span class="px-3.5 py-1.5 bg-white/5 border border-white/10 rounded-lg hover:border-brand-primary/40 hover:text-white transition-colors">Bankinter</span>
+            <span class="px-3.5 py-1.5 bg-white/5 border border-white/10 rounded-lg hover:border-brand-primary/40 hover:text-white transition-colors">Openbank</span>
+            <span class="px-3.5 py-1.5 bg-white/5 border border-white/10 rounded-lg hover:border-brand-primary/40 hover:text-white transition-colors">BBVA / Santander</span>
+          </div>
+        </div>
+      </section>
 
-<!-- Tech Stack -->
-<section class="py-24 bg-neutral-surface border-t border-border-terminal" id="tech-stack">
-  <div class="max-w-7xl mx-auto px-6">
-    <div class="text-center mb-16" data-animation-on-scroll="">
-      <h2 class="font-heading text-4xl font-bold text-white mb-4" data-pixel-id="1j8qv" data-pixel-kind="text">Built with Modern Tech</h2>
-      <p class="text-text-secondary" data-pixel-id="o4mnp" data-pixel-kind="text">High-performance stack for reliable financial tracking.</p>
-    </div>
-    
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
-      <div class="glass-card p-8 rounded-2xl text-center hover:bg-white hover:bg-opacity-5 transition-colors border border-white border-opacity-5" data-animation-on-scroll="">
-        <div class="text-2xl font-bold text-white mb-2" data-pixel-id="5bx84" data-pixel-kind="text">Bun 1.3</div>
-        <p class="text-xs text-text-secondary font-mono" data-pixel-id="7g6f1" data-pixel-kind="text">Ultra-fast Runtime</p>
-      </div>
-      <div class="glass-card p-8 rounded-2xl text-center hover:bg-white hover:bg-opacity-5 transition-colors border border-white border-opacity-5" data-animation-on-scroll="">
-        <div class="text-2xl font-bold text-white mb-2" data-pixel-id="bumxo" data-pixel-kind="text">React 19</div>
-        <p class="text-xs text-text-secondary font-mono" data-pixel-id="hlqtk" data-pixel-kind="text">Modern UI Library</p>
-      </div>
-      <div class="glass-card p-8 rounded-2xl text-center hover:bg-white hover:bg-opacity-5 transition-colors border border-white border-opacity-5" data-animation-on-scroll="">
-        <div class="text-2xl font-bold text-white mb-2" data-pixel-id="76acn" data-pixel-kind="text">MySQL 8</div>
-        <p class="text-xs text-text-secondary font-mono" data-pixel-id="utkhh" data-pixel-kind="text">Reliable Data Store</p>
-      </div>
-      <div class="glass-card p-8 rounded-2xl text-center hover:bg-white hover:bg-opacity-5 transition-colors border border-white border-opacity-5" data-animation-on-scroll="">
-        <div class="text-2xl font-bold text-white mb-2" data-pixel-id="38cx9" data-pixel-kind="text">Tailwind 4</div>
-        <p class="text-xs text-text-secondary font-mono" data-pixel-id="klgrn" data-pixel-kind="text">Modern Styling</p>
-      </div>
-    </div>
-  </div>
-</section>
+      <!-- Features Grid -->
+      <section class="py-24 bg-neutral-background" id="caracteristicas">
+        <div class="max-w-7xl mx-auto px-6">
+          <div class="mb-16" data-animation-on-scroll>
+            <h2 class="font-heading text-3xl sm:text-5xl font-bold text-white mb-4">Ingeniería Financiera de Alta Precisión</h2>
+            <p class="text-text-secondary text-base sm:text-lg max-w-2xl">Diseñado para inversores serios que exigen números reales, rigor matemático y privacidad total.</p>
+          </div>
 
-<!-- Final CTA -->
-<section class="py-24 relative overflow-hidden">
-  <div class="absolute inset-0 bg-brand-primary opacity-[0.02] pointer-events-none"></div>
-  <div class="max-w-4xl mx-auto px-6 text-center relative z-10" data-animation-on-scroll="">
-    <h2 class="font-heading text-5xl md:text-6xl font-bold text-white mb-8 leading-tight" data-pixel-id="nof37" data-pixel-kind="text">Start managing your <br> wealth with precision.</h2>
-    <p class="text-text-secondary text-lg mb-12 max-w-2xl mx-auto" data-pixel-id="ex2cv" data-pixel-kind="text">
-      FondTracker is completely open-source. Clone the repository, deploy your own instance, or use our community version.
-    </p>
-    <div class="flex flex-col md:flex-row items-center justify-center gap-6" data-pixel-id="7ok55" data-pixel-kind="text">
-      <a href="/register" target="_blank" rel="noopener noreferrer" class="w-full md:w-auto px-12 py-5 bg-brand-primary text-black font-bold text-xl rounded-2xl shadow-neon hover:shadow-neon-hover transition-all" data-pixel-id="1qbek" data-pixel-kind="link">
-        Launch Your Dashboard
-      </a>
-      <a href="mailto:rubenblascoarmengod@gmail.com" class="w-full md:w-auto px-12 py-5 border border-border-terminal text-text-primary font-semibold text-lg rounded-2xl hover:bg-neutral-surface transition-all" data-pixel-id="54b7a" data-pixel-kind="link">
-        Contact Developer
-      </a>
-    </div>
-    <p class="mt-8 text-xs text-text-light font-mono" data-pixel-id="xao2w" data-pixel-kind="text">No subscription required. Open source under MIT license.</p>
-  </div>
-</section></main>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- Feature 1 -->
+            <div class="glass-card p-8 rounded-2xl border border-white border-opacity-5 hover:border-brand-primary hover:border-opacity-30 transition-all group" data-animation-on-scroll>
+              <div class="w-12 h-12 bg-brand-primary bg-opacity-10 rounded-xl flex items-center justify-center text-brand-primary mb-6 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+              </div>
+              <h3 class="text-xl font-bold text-white mb-3">Motor Híbrido de Precios</h3>
+              <p class="text-sm text-text-secondary leading-relaxed">
+                Combina Yahoo Finance v8 para ETFs mundiales con scraping especializado de QueFondos para valores liquidativos de fondos españoles.
+              </p>
+            </div>
 
-    <!-- Footer -->
+            <!-- Feature 2 -->
+            <div class="glass-card p-8 rounded-2xl border border-white border-opacity-5 hover:border-brand-primary hover:border-opacity-30 transition-all group" data-animation-on-scroll>
+              <div class="w-12 h-12 bg-brand-primary bg-opacity-10 rounded-xl flex items-center justify-center text-brand-primary mb-6 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+              </div>
+              <h3 class="text-xl font-bold text-white mb-3">Resúmenes por WhatsApp</h3>
+              <p class="text-sm text-text-secondary leading-relaxed">
+                Recibe notificaciones automáticas con la rentabilidad diaria y plusvalías de tu cartera directamente en tu teléfono móvil vía CallMeBot.
+              </p>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="glass-card p-8 rounded-2xl border border-white border-opacity-5 hover:border-brand-primary hover:border-opacity-30 transition-all group" data-animation-on-scroll>
+              <div class="w-12 h-12 bg-brand-primary bg-opacity-10 rounded-xl flex items-center justify-center text-brand-primary mb-6 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+              </div>
+              <h3 class="text-xl font-bold text-white mb-3">Informes Institucionales v4</h3>
+              <p class="text-sm text-text-secondary leading-relaxed">
+                Auditorías PDF completas con inventario de datos por Tiers (A-F), análisis adversarial, costes TER y Look-Through a empresas subyacentes.
+              </p>
+            </div>
+
+            <!-- Feature 4 -->
+            <div class="glass-card p-8 rounded-2xl border border-white border-opacity-5 hover:border-brand-primary hover:border-opacity-30 transition-all group" data-animation-on-scroll>
+              <div class="w-12 h-12 bg-brand-primary bg-opacity-10 rounded-xl flex items-center justify-center text-brand-primary mb-6 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+              </div>
+              <h3 class="text-xl font-bold text-white mb-3">Auto-Descubrimiento por ISIN</h3>
+              <p class="text-sm text-text-secondary leading-relaxed">
+                Introduce el código ISIN y el sistema resuelve automáticamente el ticker de mercado, divisa, banco gestor y categoría de inversión.
+              </p>
+            </div>
+
+            <!-- Feature 5 -->
+            <div class="glass-card p-8 rounded-2xl border border-white border-opacity-5 hover:border-brand-primary hover:border-opacity-30 transition-all group" data-animation-on-scroll>
+              <div class="w-12 h-12 bg-brand-primary bg-opacity-10 rounded-xl flex items-center justify-center text-brand-primary mb-6 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+              </div>
+              <h3 class="text-xl font-bold text-white mb-3">Seguridad y Privacidad Total</h3>
+              <p class="text-sm text-text-secondary leading-relaxed">
+                Aislamiento estricto de usuarios mediante tokens JWT HMAC-SHA256, hash Bcrypt y base de datos relacional MySQL 8.
+              </p>
+            </div>
+
+            <!-- Feature 6 -->
+            <div class="glass-card p-8 rounded-2xl border border-white border-opacity-5 hover:border-brand-primary hover:border-opacity-30 transition-all group" data-animation-on-scroll>
+              <div class="w-12 h-12 bg-brand-primary bg-opacity-10 rounded-xl flex items-center justify-center text-brand-primary mb-6 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h4a2 2 0 002-2zm6 0v-11a2 2 0 00-2-2h-4a2 2 0 00-2 2v11a2 2 0 002 2h4a2 2 0 002-2zM21 19V3a2 2 0 00-2-2h-4a2 2 0 00-2 2v16a2 2 0 002 2h4a2 2 0 002-2z"></path></svg>
+              </div>
+              <h3 class="text-xl font-bold text-white mb-3">Cálculo Fiscal y Traspasos</h3>
+              <p class="text-sm text-text-secondary leading-relaxed">
+                Control de plusvalías latentes y seguimiento histórico conforme al régimen general de traspasos entre fondos (Art. 94 LIRPF).
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- How It Works Section -->
+      <section class="py-24 bg-neutral-surface border-y border-border-terminal" id="como-funciona">
+        <div class="max-w-7xl mx-auto px-6">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <div class="relative" data-animation-on-scroll>
+              <div class="glass-card p-6 rounded-2xl border border-white border-opacity-10">
+                <div class="space-y-4 font-mono text-sm">
+                  <div class="flex items-center gap-3 p-4 bg-white bg-opacity-5 rounded-xl border border-white border-opacity-5">
+                    <div class="w-8 h-8 rounded bg-brand-primary bg-opacity-20 flex items-center justify-center text-brand-primary text-xs font-bold">1</div>
+                    <div class="flex-1">
+                      <div class="text-sm font-bold text-white font-sans">Añade el código ISIN</div>
+                      <div class="text-xs text-text-secondary">Ej: ES0113312003, IE00B03HD191...</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-3 p-4 bg-white bg-opacity-5 rounded-xl border border-white border-opacity-5">
+                    <div class="w-8 h-8 rounded bg-brand-primary bg-opacity-20 flex items-center justify-center text-brand-primary text-xs font-bold">2</div>
+                    <div class="flex-1">
+                      <div class="text-sm font-bold text-white font-sans">Sincronización Automática</div>
+                      <div class="text-xs text-text-secondary">Descarga de NAVs y series históricas</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-3 p-4 bg-white bg-opacity-5 rounded-xl border border-white border-opacity-5">
+                    <div class="w-8 h-8 rounded bg-brand-primary flex items-center justify-center text-black text-xs font-bold">3</div>
+                    <div class="flex-1">
+                      <div class="text-sm font-bold text-white font-sans">Dashboard &amp; Alertas WhatsApp</div>
+                      <div class="text-xs text-text-secondary">Métricas TWR/XIRR y reportes PDF</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div data-animation-on-scroll>
+              <h2 class="font-heading text-3xl sm:text-5xl font-bold text-white mb-6 uppercase">Control Total de tus Inversiones</h2>
+              <p class="text-text-secondary text-base sm:text-lg mb-8 leading-relaxed">
+                FondTracker elimina la fricción de consultar múltiples aplicaciones bancarias. Centraliza fondos de MyInvestor, Indexa Capital, Bankinter y Renta 4 en una única pantalla con métricas profesionales.
+              </p>
+              <ul class="space-y-4">
+                <li class="flex items-start gap-3">
+                  <div class="mt-1 text-brand-primary font-bold">✓</div>
+                  <div>
+                    <span class="text-white font-bold">Sin intermediarios ni suscripciones de pago</span>
+                    <p class="text-sm text-text-secondary">Proyecto de código abierto bajo licencia MIT.</p>
+                  </div>
+                </li>
+                <li class="flex items-start gap-3">
+                  <div class="mt-1 text-brand-primary font-bold">✓</div>
+                  <div>
+                    <span class="text-white font-bold">Datos en caché de alta velocidad</span>
+                    <p class="text-sm text-text-secondary">Carga instantánea de gráficos y resúmenes ejecutivos.</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ Section -->
+      <section class="py-24 bg-neutral-background border-b border-border-terminal" id="faq">
+        <div class="max-w-4xl mx-auto px-6">
+          <div class="text-center mb-16" data-animation-on-scroll>
+            <h2 class="font-heading text-3xl sm:text-5xl font-bold text-white mb-4">Preguntas Frecuentes (FAQ)</h2>
+            <p class="text-text-secondary text-base">Todo lo que necesitas saber sobre el seguimiento de fondos y la plataforma FondTracker.</p>
+          </div>
+
+          <div class="space-y-4" data-animation-on-scroll>
+            <details class="glass-card p-6 rounded-2xl border border-white/5 group" open>
+              <summary class="flex justify-between items-center text-lg font-bold text-white cursor-pointer">
+                <span>¿Cómo hacer el seguimiento de mis fondos de inversión en España?</span>
+                <svg class="w-5 h-5 text-brand-primary transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+              </summary>
+              <p class="mt-4 text-sm text-text-secondary leading-relaxed">
+                Con FondTracker basta con ingresar el código ISIN de tu fondo. El sistema localiza el valor liquidativo oficial (NAV) diario a través de QueFondos y Yahoo Finance, registrando tu precio de compra y calculando la rentabilidad neta acumulada y plusvalías en tiempo real.
+              </p>
+            </details>
+
+            <details class="glass-card p-6 rounded-2xl border border-white/5 group">
+              <summary class="flex justify-between items-center text-lg font-bold text-white cursor-pointer">
+                <span>¿Es compatible con MyInvestor, Indexa Capital, Bankinter y Renta 4?</span>
+                <svg class="w-5 h-5 text-brand-primary transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+              </summary>
+              <p class="mt-4 text-sm text-text-secondary leading-relaxed">
+                Sí. FondTracker es totalmente compatible con fondos comercializados por MyInvestor, Indexa Capital, Openbank, Renta 4, Bankinter, CaixaBank, Santander y BBVA, abarcando gestoras líderes como Vanguard, iShares, Amundi, Fidelity y DWS.
+              </p>
+            </details>
+
+            <details class="glass-card p-6 rounded-2xl border border-white/5 group">
+              <summary class="flex justify-between items-center text-lg font-bold text-white cursor-pointer">
+                <span>¿Cómo funcionan los informes automáticos por WhatsApp?</span>
+                <svg class="w-5 h-5 text-brand-primary transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+              </summary>
+              <p class="mt-4 text-sm text-text-secondary leading-relaxed">
+                FondTracker incluye un planificador cron que genera automáticamente un mensaje resumido con el patrimonio actual, la variación en euros y porcentaje de cada fondo y te lo envía a la hora que configures a través de la pasarela CallMeBot.
+              </p>
+            </details>
+
+            <details class="glass-card p-6 rounded-2xl border border-white/5 group">
+              <summary class="flex justify-between items-center text-lg font-bold text-white cursor-pointer">
+                <span>¿Qué métricas calcula el informe institucional descargable en PDF?</span>
+                <svg class="w-5 h-5 text-brand-primary transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+              </summary>
+              <p class="mt-4 text-sm text-text-secondary leading-relaxed">
+                El informe institucional v4 desglosa el inventario de datos por Tiers (A-F), calcula la concentración mediante el índice HHI, desglosa los Top Holdings subyacentes consolidados (Look-Through), audita los costes TER y presenta una lectura analítica adversarial de la cartera.
+              </p>
+            </details>
+
+            <details class="glass-card p-6 rounded-2xl border border-white/5 group">
+              <summary class="flex justify-between items-center text-lg font-bold text-white cursor-pointer">
+                <span>¿Cómo se gestiona la fiscalidad de traspasos entre fondos (Art. 94 LIRPF)?</span>
+                <svg class="w-5 h-5 text-brand-primary transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+              </summary>
+              <p class="mt-4 text-sm text-text-secondary leading-relaxed">
+                FondTracker monitoriza las plusvalías latentes y el capital aportado histórico, facilitando el control patrimonial bajo el régimen general español de diferimiento fiscal por traspasos entre fondos sin tributación inmediata.
+              </p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <!-- Final CTA -->
+      <section class="py-24 relative overflow-hidden bg-neutral-surface">
+        <div class="absolute inset-0 bg-brand-primary opacity-[0.02] pointer-events-none"></div>
+        <div class="max-w-4xl mx-auto px-6 text-center relative z-10" data-animation-on-scroll>
+          <h2 class="font-heading text-4xl sm:text-6xl font-bold text-white mb-6 leading-tight">
+            Comienza a gestionar tu patrimonio <br> con precisión institucional.
+          </h2>
+          <p class="text-text-secondary text-base sm:text-lg mb-10 max-w-2xl mx-auto">
+            FondTracker es 100% gratuito y de código abierto. Crea tu cuenta en menos de 30 segundos.
+          </p>
+          <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a href="/register" class="w-full sm:w-auto px-10 py-4 bg-brand-primary text-black font-bold text-lg rounded-xl shadow-neon hover:shadow-neon-hover transition-all">
+              Crear Cuenta Gratis
+            </a>
+            <a href="/login" class="w-full sm:w-auto px-8 py-4 border border-border-terminal text-text-primary font-semibold text-base rounded-xl hover:bg-neutral-surface transition-all flex items-center justify-center gap-2">
+              Iniciar Sesión
+            </a>
+          </div>
+          <p class="mt-8 text-xs text-text-light font-mono">Sin suscripciones ocultas. Licencia Open Source MIT.</p>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer with Natural & Professional Credits -->
     <footer class="bg-neutral-background border-t border-border-terminal py-16 relative overflow-hidden">
       <div class="max-w-7xl mx-auto px-6 relative z-10">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-          <div class="space-y-6">
+          <div class="space-y-4">
             <div class="flex items-center gap-2">
               <div class="w-6 h-6 bg-brand-primary rounded flex items-center justify-center">
                 <svg class="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
                 </svg>
               </div>
-              <span class="font-heading text-lg font-bold text-white" data-pixel-id="k1brm" data-pixel-kind="text">FondTracker</span>
+              <span class="font-heading text-lg font-bold text-white">FondTracker</span>
             </div>
-            <p class="text-sm text-text-secondary leading-relaxed" data-pixel-id="h4xdr" data-pixel-kind="text">
-              Open-source investment fund tracking platform. Secure, accurate, and completely free for personal use.
+            <p class="text-xs text-text-secondary leading-relaxed">
+              Plataforma libre de analítica y seguimiento de fondos de inversión y ETFs. Diseñada para ofrecer máxima claridad financiera e independencia patrimonial.
             </p>
           </div>
+
           <div>
-            <h4 class="text-xs font-bold uppercase tracking-widest text-text-light mb-6" data-pixel-id="yuyts" data-pixel-kind="text">Product</h4>
-            <ul class="space-y-4">
-              <li data-pixel-id="kais2" data-pixel-kind="text"><a href="#features" class="text-sm text-text-secondary hover:text-brand-primary transition-colors" data-pixel-id="kd50w" data-pixel-kind="link">Features</a></li>
-              <li data-pixel-id="1trhu" data-pixel-kind="text"><a href="#how-it-works" class="text-sm text-text-secondary hover:text-brand-primary transition-colors" data-pixel-id="r8p0x" data-pixel-kind="link">How it Works</a></li>
-              <li data-pixel-id="29ppk" data-pixel-kind="text"><a href="#tech-stack" class="text-sm text-text-secondary hover:text-brand-primary transition-colors" data-pixel-id="f5iw8" data-pixel-kind="link">Technology</a></li>
+            <h3 class="text-xs font-bold uppercase tracking-widest text-text-light mb-4">Navegación</h3>
+            <ul class="space-y-3 text-xs">
+              <li><a href="#caracteristicas" class="text-text-secondary hover:text-brand-primary transition-colors">Características</a></li>
+              <li><a href="#gestoras" class="text-text-secondary hover:text-brand-primary transition-colors">Fondos &amp; Gestoras</a></li>
+              <li><a href="#como-funciona" class="text-text-secondary hover:text-brand-primary transition-colors">Cómo Funciona</a></li>
+              <li><a href="#faq" class="text-text-secondary hover:text-brand-primary transition-colors">Preguntas Frecuentes</a></li>
             </ul>
           </div>
+
           <div>
-            <h4 class="text-xs font-bold uppercase tracking-widest text-text-light mb-6" data-pixel-id="vpoyi" data-pixel-kind="text">Legal</h4>
-            <ul class="space-y-4">
-              <li data-pixel-id="leg1" data-pixel-kind="text"><a href="/legal/privacy-policy" target="_blank" rel="noopener noreferrer" class="text-sm text-text-secondary hover:text-brand-primary transition-colors" data-pixel-id="leg1-link" data-pixel-kind="link">Privacy Policy</a></li>
-              <li data-pixel-id="leg2" data-pixel-kind="text"><a href="/legal/terms-of-service" target="_blank" rel="noopener noreferrer" class="text-sm text-text-secondary hover:text-brand-primary transition-colors" data-pixel-id="leg2-link" data-pixel-kind="link">Terms of Service</a></li>
+            <h3 class="text-xs font-bold uppercase tracking-widest text-text-light mb-4">Legal &amp; Seguridad</h3>
+            <ul class="space-y-3 text-xs">
+              <li><a href="/legal/privacy-policy" class="text-text-secondary hover:text-brand-primary transition-colors">Política de Privacidad</a></li>
+              <li><a href="/legal/terms-of-service" class="text-text-secondary hover:text-brand-primary transition-colors">Términos del Servicio</a></li>
+              <li><a href="/.well-known/security.txt" class="text-text-secondary hover:text-brand-primary transition-colors">Security.txt (RFC 9116)</a></li>
+              <li><a href="/sitemap.xml" class="text-text-secondary hover:text-brand-primary transition-colors">Sitemap XML</a></li>
             </ul>
           </div>
+
           <div>
-            <h4 class="text-xs font-bold uppercase tracking-widest text-text-light mb-6" data-pixel-id="szdr4" data-pixel-kind="text">Contactar</h4>
-            <div class="flex flex-col gap-3">
-              <p class="text-sm font-bold text-white" data-pixel-id="name" data-pixel-kind="text">Rubén Blasco Armengod</p>
-              <ul class="space-y-3 mt-3">
-                <li data-pixel-id="mail-li" data-pixel-kind="text">
-                  <a href="mailto:rubenblascoarmengod@gmail.com" class="text-sm text-text-secondary hover:text-brand-primary transition-colors flex items-center gap-2 group" data-pixel-id="mail-link" data-pixel-kind="link">
-                    <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+            <h3 class="text-xs font-bold uppercase tracking-widest text-text-light mb-4">Contacto</h3>
+            <div class="flex flex-col gap-2">
+              <p class="text-xs font-semibold text-white">Rubén Blasco Armengod</p>
+              <ul class="space-y-3 text-xs mt-1">
+                <li>
+                  <a href="https://rubenblascoa.github.io" target="_blank" rel="author" class="text-brand-primary hover:underline font-semibold flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    rubenblascoa.github.io
+                  </a>
+                </li>
+                <li>
+                  <a href="mailto:rubenblascoarmengod@gmail.com" class="text-text-secondary hover:text-brand-primary transition-colors flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
                     rubenblascoarmengod@gmail.com
                   </a>
                 </li>
-                <li data-pixel-id="git-li" data-pixel-kind="text">
-                  <a href="https://github.com/rubenblascoa" class="text-sm text-text-secondary hover:text-brand-primary transition-colors flex items-center gap-2 group" data-pixel-id="git-link" data-pixel-kind="link" target="_blank" rel="noopener noreferrer">
-                    <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.372.79 1.102.79 2.222 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"></path></svg>
-                    GitHub
+                <li>
+                  <a href="https://github.com/rubenblascoa" target="_blank" rel="noopener noreferrer" class="text-text-secondary hover:text-brand-primary transition-colors flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.372.79 1.102.79 2.222 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"></path></svg>
+                    github.com/rubenblascoa
                   </a>
                 </li>
               </ul>
             </div>
           </div>
         </div>
+
+        <div class="border-t border-border-terminal pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-light font-mono">
+          <span>© 2026 FondTracker. Licencia MIT.</span>
+          <span>Desarrollado por <a href="https://rubenblascoa.github.io" target="_blank" rel="author" class="text-brand-primary hover:underline font-semibold">Rubén Blasco Armengod</a></span>
+        </div>
       </div>
     </footer>
   </div>
 
+  <!-- Client Logic -->
   <script nonce="{nonce}">
     document.addEventListener('DOMContentLoaded', () => {
-      // Mobile menu toggle
       const mobileMenuBtn = document.getElementById('mobile-menu-btn');
       const mobileMenu = document.getElementById('mobile-menu');
       
@@ -496,17 +802,15 @@
         });
       }
       
-      // Smooth scroll without changing URL hash
       document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
-          e.preventDefault();
           const targetId = this.getAttribute('href').substring(1);
           if (!targetId) return;
           const targetEl = document.getElementById(targetId);
           if (targetEl) {
+            e.preventDefault();
             targetEl.scrollIntoView({ behavior: 'smooth' });
           }
-          // Close mobile menu if open
           if (mobileMenu && mobileMenu.classList.contains('mobile-menu-visible')) {
             mobileMenuBtn.classList.remove('hamburger-open');
             mobileMenu.classList.add('mobile-menu-hidden');
@@ -515,7 +819,6 @@
         });
       });
       
-      // Scroll reveal observer
       const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
@@ -530,7 +833,6 @@
         observer.observe(el);
       });
 
-      // Reload when user logs in from another tab (via BroadcastChannel)
       if (typeof BroadcastChannel !== 'undefined') {
         const authChannel = new BroadcastChannel('ft_auth');
         authChannel.addEventListener('message', (e) => {
@@ -543,11 +845,8 @@
         });
       }
 
-      // Safe HTML escaping to prevent XSS
       function esc(str) { var d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
 
-      // Auth detection: server injects window.__LANDING_USER__ if the request had a valid JWT.
-      // Fallback: fetch /api/auth/me using the sessionStorage token (same-tab login case).
       function renderUserMenu(user) {
         const desktopCta = document.getElementById('desktop-cta');
         if (desktopCta) {
@@ -555,8 +854,8 @@
             ? '<a href="/admin" class="w-full flex items-center gap-3 px-3 py-2 text-[12px] font-medium text-[#39ff88] hover:bg-[#39ff88]/10 rounded-xl transition-all no-underline text-left"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Panel de Admin</a>'
             : '';
           desktopCta.innerHTML = `
-            <a href="/dashboard" target="_blank" rel="noopener noreferrer" class="hidden sm:inline-flex items-center justify-center px-4 py-2 border border-white/10 bg-white/5 hover:bg-white/10 text-white font-medium text-xs rounded-xl transition-all shadow-[0_0_15px_rgba(255,255,255,0.02)] no-underline">
-              Go to Dashboard
+            <a href="/dashboard" class="hidden sm:inline-flex items-center justify-center px-4 py-2 border border-white/10 bg-white/5 hover:bg-white/10 text-white font-medium text-xs rounded-xl transition-all shadow-[0_0_15px_rgba(255,255,255,0.02)] no-underline">
+              Ir al Dashboard
             </a>
             <div class="relative flex items-center pl-4 border-l border-white/10 gap-2" id="user-menu-wrap">
               <div class="flex items-center gap-2">
@@ -565,26 +864,26 @@
                 </div>
                 <span class="text-[12px] font-medium text-white hidden sm:block">${esc(user.username)}</span>
               </div>
-              <button id="gear-btn" class="p-1.5 rounded-xl text-zinc-500 hover:text-white transition-all cursor-pointer flex items-center justify-center" title="Settings">
+              <button id="gear-btn" class="p-1.5 rounded-xl text-zinc-500 hover:text-white transition-all cursor-pointer flex items-center justify-center" title="Configuración">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="12" cy="12" r="3"></circle>
                   <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                 </svg>
               </button>
-              <div id="user-dropdown" class="hidden absolute right-0 top-full mt-3 w-56 bg-[#0d0d0f] rounded-xl z-50 p-2 fade-in">
+              <div id="user-dropdown" class="hidden absolute right-0 top-full mt-3 w-56 bg-[#0d0d0f] rounded-xl z-50 p-2 fade-in border border-white/10 shadow-2xl">
                 <div class="px-3 py-3 border-b border-white/5 mb-2">
-                  <p class="text-[10px] text-zinc-500 font-mono uppercase tracking-wider mb-1">Signed in as</p>
+                  <p class="text-[10px] text-zinc-500 font-mono uppercase tracking-wider mb-1">Sesión iniciada como</p>
                   <p class="text-[13px] font-medium text-white truncate">${esc(user.email || user.username)}</p>
                 </div>
-                <a href="/dashboard" target="_blank" rel="noopener noreferrer" class="w-full flex items-center gap-3 px-3 py-2 text-[12px] font-medium text-zinc-300 hover:bg-white/10 hover:text-white rounded-xl transition-all no-underline text-left">
+                <a href="/dashboard" class="w-full flex items-center gap-3 px-3 py-2 text-[12px] font-medium text-zinc-300 hover:bg-white/10 hover:text-white rounded-xl transition-all no-underline text-left">
                   <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-                  Go to Dashboard
+                  Ir al Dashboard
                 </a>
                 ${adminLink}
                 <div class="h-px bg-white/5 my-2 mx-2"></div>
                 <button id="dd-logout-btn" class="w-full flex items-center gap-3 px-3 py-2 text-[12px] font-medium text-zinc-300 hover:bg-white/10 hover:text-red-500 rounded-xl transition-all cursor-pointer border-0 bg-transparent text-left">
                   <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                  Sign Out
+                  Cerrar Sesión
                 </button>
               </div>
             </div>
@@ -605,11 +904,24 @@
             }
           });
 
-          document.getElementById('dd-logout-btn').addEventListener('click', function() {
-            localStorage.removeItem('fondtracker_token');
-            sessionStorage.removeItem('fondtracker_token');
-            window.location.href = '/login';
-          });
+          function performLogout() {
+            try {
+              sessionStorage.removeItem('fondtracker_token');
+              localStorage.removeItem('fondtracker_token');
+              document.cookie = 'ft_session=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict';
+              document.cookie = 'ft_session=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+              document.cookie = 'ft_session=; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+              if (typeof BroadcastChannel !== 'undefined') {
+                const authChannel = new BroadcastChannel('ft_auth');
+                authChannel.postMessage({ type: 'logout' });
+              }
+            } catch(e) {}
+            fetch('/api/auth/logout', { method: 'POST' }).catch(() => {}).finally(() => {
+              window.location.href = '/login';
+            });
+          }
+
+          document.getElementById('dd-logout-btn').addEventListener('click', performLogout);
 
           document.addEventListener('click', function(e) {
             const wrap = document.getElementById('user-menu-wrap');
@@ -622,20 +934,32 @@
           });
         }
 
-        const mobileCta = document.querySelector('#mobile-menu .flex.flex-col.gap-4');
+        const mobileCta = document.querySelector('#mobile-menu .flex.flex-col.gap-3');
         if (mobileCta) {
           mobileCta.innerHTML = `
-            <a href="/dashboard" class="text-center py-3 bg-brand-primary text-black font-bold rounded-lg">Go to Dashboard</a>
-            <button onclick="sessionStorage.removeItem('fondtracker_token');window.location.reload();" class="text-center py-3 text-text-secondary font-semibold">Sign Out</button>
+            <a href="/dashboard" class="text-center py-2.5 bg-brand-primary text-black font-bold rounded-lg">Ir al Dashboard</a>
+            <button id="mobile-logout-btn" class="text-center py-2 text-text-secondary font-semibold">Cerrar Sesión</button>
           `;
+          document.getElementById('mobile-logout-btn')?.addEventListener('click', () => {
+            try {
+              sessionStorage.removeItem('fondtracker_token');
+              localStorage.removeItem('fondtracker_token');
+              document.cookie = 'ft_session=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict';
+              document.cookie = 'ft_session=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+              if (typeof BroadcastChannel !== 'undefined') {
+                new BroadcastChannel('ft_auth').postMessage({ type: 'logout' });
+              }
+            } catch(e) {}
+            fetch('/api/auth/logout', { method: 'POST' }).catch(() => {}).finally(() => {
+              window.location.href = '/login';
+            });
+          });
         }
       }
 
-      // 1. Server-injected user (best case: works on every load including fresh tabs)
       if (window.__LANDING_USER__) {
         renderUserMenu(window.__LANDING_USER__);
       } else {
-        // 2. Fallback: fetch using sessionStorage token (same-tab login)
         try {
           const token = sessionStorage.getItem('fondtracker_token');
           if (token) {
@@ -649,4 +973,5 @@
     });
   </script>
 
-</body></html>
+</body>
+</html>

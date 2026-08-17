@@ -33,11 +33,24 @@ export function setToken(token: string) {
 export function clearToken() {
   try {
     sessionStorage.removeItem(TOKEN_KEY);
-    // Clear cookie
-    document.cookie = `${COOKIE_KEY}=; path=/; SameSite=Strict; max-age=0`;
+    localStorage.removeItem(TOKEN_KEY);
+    // Clear cookie across paths to prevent ghost sessions
+    document.cookie = `${COOKIE_KEY}=; path=/; SameSite=Strict; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    document.cookie = `${COOKIE_KEY}=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    document.cookie = `${COOKIE_KEY}=; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
     authChannel?.postMessage({ type: "logout" });
   } catch {
     // ignore
+  }
+}
+
+export async function logout(): Promise<void> {
+  try {
+    await fetch("/api/auth/logout", { method: "POST" });
+  } catch {
+    // ignore
+  } finally {
+    clearToken();
   }
 }
 

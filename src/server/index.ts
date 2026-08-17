@@ -267,8 +267,26 @@ function serveStatic(req: Request) {
   if (/^(con|nul|prn|aux|com[1-9]|lpt[1-9])($|\/|\\)/i.test(safe)) {
     return new Response("Forbidden", { status: 403 });
   }
+  const ext = safe.split(".").pop()?.toLowerCase();
+  const mimeMap: Record<string, string> = {
+    svg: "image/svg+xml",
+    ico: "image/x-icon",
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    webp: "image/webp",
+    webmanifest: "application/manifest+json",
+    json: "application/json",
+    xml: "application/xml; charset=utf-8",
+    txt: "text/plain; charset=utf-8",
+    css: "text/css; charset=utf-8",
+    js: "application/javascript; charset=utf-8",
+  };
+  const contentType = ext ? mimeMap[ext] : undefined;
+
   return new Response(Bun.file(full), {
     headers: {
+      ...(contentType ? { "Content-Type": contentType } : {}),
       ...securityHeaders(),
       "Cache-Control":
         IS_PROD
@@ -365,6 +383,57 @@ const server = serve({
   routes: {
     "/favicon.svg": (req) => serveStatic(req),
     "/favicon.ico": (req) => serveStatic(req),
+    "/robots.txt": (req) => serveStatic(req),
+    "/sitemap.xml": (req) => {
+      const baseUrl = process.env.RENDER_EXTERNAL_URL || process.env.ALLOWED_ORIGIN || "https://fondtracker.onrender.com";
+      const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+  <url>
+    <loc>${baseUrl}/</loc>
+    <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/register</loc>
+    <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/login</loc>
+    <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/legal/privacy-policy</loc>
+    <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/legal/terms-of-service</loc>
+    <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+</urlset>`;
+      return new Response(sitemapXml, {
+        headers: {
+          "Content-Type": "application/xml; charset=utf-8",
+          ...securityHeaders(),
+          "Cache-Control": "public, max-age=3600",
+        },
+      });
+    },
+    "/manifest.webmanifest": (req) => serveStatic(req),
+    "/.well-known/security.txt": (req) => serveStatic(req),
+    "/og-image.svg": (req) => serveStatic(req),
+    "/og-image.png": (req) => serveStatic(req),
     "/": (req) => serveIndexHtml(req),
     "/dashboard": index,
     "/dashboard/*": index,
@@ -464,6 +533,18 @@ const server = serve({
           // Always return the same generic message to prevent user enumeration
           return badRequest("Credenciales incorrectas");
         }
+      },
+    },
+
+    "/api/auth/logout": {
+      async POST() {
+        return new Response(JSON.stringify({ ok: true }), {
+          headers: {
+            "Content-Type": "application/json",
+            "Set-Cookie": "ft_session=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict",
+            ...securityHeaders(),
+          },
+        });
       },
     },
 
