@@ -131,7 +131,7 @@ export function ReportsHub({
         {/* 1. PDF Executive Document */}
         <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-6 flex flex-col justify-between group hover:border-[var(--color-accent)]/30 transition-all shadow-lg">
           <div>
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-accent)] mb-3 sm:mb-4 shadow-[0_0_12px_rgba(57,255,136,0.15)] group-hover:scale-105 transition-transform">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-accent)] mb-3 sm:mb-4 shadow-[0_0_12px_rgba(192,132,252,0.15)] group-hover:scale-105 transition-transform">
               <FileText size={20} />
             </div>
             <h3 className="text-sm sm:text-base font-bold text-[var(--color-fg-1)] mb-1">Informe Ejecutivo PDF</h3>
@@ -154,7 +154,7 @@ export function ReportsHub({
           <button
             onClick={onExportPdf}
             disabled={isExportingPdf || funds.length === 0}
-            className="w-full py-3 bg-[var(--color-accent)] text-[#0a0a0c] font-bold text-xs rounded-xl shadow-[0_0_15px_rgba(57,255,136,0.25)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-4"
+            className="w-full py-3 bg-[var(--color-accent)] text-[#0a0a0c] font-bold text-xs rounded-xl shadow-[0_0_15px_rgba(192,132,252,0.25)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-4"
           >
             {isExportingPdf ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
             <span>{isExportingPdf ? "Generando documento PDF..." : "Descargar Informe PDF"}</span>

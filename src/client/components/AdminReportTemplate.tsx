@@ -59,7 +59,7 @@ function buildRealAumHistory(data: any) {
 // A4 Standard: 794px x 1123px (at 96 DPI)
 export const AdminReportTemplate = forwardRef<HTMLDivElement, { data: any }>(({ data }, ref) => {
   const authDist = [
-    { name: 'Google', value: Number(data?.auth_google) || 0, color: '#39ff88' },
+    { name: 'Google', value: Number(data?.auth_google) || 0, color: '#c084fc' },
     { name: 'GitHub', value: Number(data?.auth_github) || 0, color: '#a855f7' },
     { name: 'Email/Pass', value: Number(data?.auth_password) || 0, color: '#3b82f6' }
   ].filter(d => d.value > 0);
@@ -100,11 +100,11 @@ export const AdminReportTemplate = forwardRef<HTMLDivElement, { data: any }>(({ 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #27272a', paddingBottom: '14px', marginBottom: '20px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: 'rgba(57, 255, 136, 0.15)', border: '1px solid rgba(57, 255, 136, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Activity size={16} color="#39ff88" />
+              <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: 'rgba(192,132,252,0.15)', border: '1px solid rgba(192,132,252,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Activity size={16} color="#c084fc" />
               </div>
               <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.5px' }}>
-                FondTracker <span style={{ color: '#39ff88', fontSize: '13px', border: '1px solid rgba(57, 255, 136, 0.4)', padding: '2px 6px', borderRadius: '6px', marginLeft: '4px', verticalAlign: 'middle' }}>ADMIN PRO</span>
+                FondTracker <span style={{ color: '#c084fc', fontSize: '13px', border: '1px solid rgba(192,132,252,0.4)', padding: '2px 6px', borderRadius: '6px', marginLeft: '4px', verticalAlign: 'middle' }}>ADMIN PRO</span>
               </h1>
             </div>
             <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#94a3b8' }}>
@@ -112,7 +112,7 @@ export const AdminReportTemplate = forwardRef<HTMLDivElement, { data: any }>(({ 
             </p>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ display: 'inline-block', backgroundColor: 'rgba(57, 255, 136, 0.1)', color: '#39ff88', border: '1px solid rgba(57, 255, 136, 0.25)', padding: '2px 8px', borderRadius: '12px', fontSize: '9px', fontWeight: 'bold', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+            <div style={{ display: 'inline-block', backgroundColor: 'rgba(192,132,252,0.1)', color: '#c084fc', border: '1px solid rgba(192,132,252,0.25)', padding: '2px 8px', borderRadius: '12px', fontSize: '9px', fontWeight: 'bold', fontFamily: 'monospace', textTransform: 'uppercase' }}>
               ● Live Diagnostic
             </div>
             <p style={{ margin: '4px 0 0 0', fontSize: '10px', color: '#64748b', fontFamily: 'monospace' }}>
@@ -126,12 +126,12 @@ export const AdminReportTemplate = forwardRef<HTMLDivElement, { data: any }>(({ 
           <div style={{ backgroundColor: '#121216', border: '1px solid #27272a', borderRadius: '12px', padding: '12px 14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
               <span style={{ fontSize: '9px', color: '#94a3b8', textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: 'bold' }}>Total AUM</span>
-              <Banknote size={13} color="#39ff88" />
+              <Banknote size={13} color="#c084fc" />
             </div>
             <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#ffffff', fontFamily: 'monospace' }}>
               {fmtEur(data?.aum_total ?? 0)}
             </div>
-            <div style={{ fontSize: '9px', color: '#39ff88', marginTop: '4px' }}>
+            <div style={{ fontSize: '9px', color: '#c084fc', marginTop: '4px' }}>
               {data?.total_investments ?? 0} posiciones
             </div>
           </div>
@@ -187,7 +187,7 @@ export const AdminReportTemplate = forwardRef<HTMLDivElement, { data: any }>(({ 
                 Valor nominal acumulado de las carteras de inversión activas en la plataforma
               </p>
             </div>
-            <span style={{ fontSize: '10px', color: '#39ff88', fontFamily: 'monospace', fontWeight: 'bold', backgroundColor: 'rgba(57,255,136,0.1)', padding: '2px 8px', borderRadius: '6px' }}>
+            <span style={{ fontSize: '10px', color: '#c084fc', fontFamily: 'monospace', fontWeight: 'bold', backgroundColor: 'rgba(192,132,252,0.1)', padding: '2px 8px', borderRadius: '6px' }}>
               {fmtEur(data?.aum_total ?? 0)} Actual
             </span>
           </div>
@@ -196,14 +196,14 @@ export const AdminReportTemplate = forwardRef<HTMLDivElement, { data: any }>(({ 
             <AreaChart width={674} height={170} data={aumChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="adminAumGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#39ff88" stopOpacity={0.45}/>
-                  <stop offset="95%" stopColor="#39ff88" stopOpacity={0.0}/>
+                  <stop offset="5%" stopColor="#c084fc" stopOpacity={0.45}/>
+                  <stop offset="95%" stopColor="#c084fc" stopOpacity={0.0}/>
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 9 }} dy={4} />
               <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 9 }} tickFormatter={(v) => `€${Math.round(v/1000)}k`} />
-              <Area type="monotone" dataKey="value" stroke="#39ff88" strokeWidth={2.5} fillOpacity={1} fill="url(#adminAumGrad)" isAnimationActive={false} />
+              <Area type="monotone" dataKey="value" stroke="#c084fc" strokeWidth={2.5} fillOpacity={1} fill="url(#adminAumGrad)" isAnimationActive={false} />
             </AreaChart>
           </div>
         </div>
@@ -268,7 +268,7 @@ export const AdminReportTemplate = forwardRef<HTMLDivElement, { data: any }>(({ 
                       <span style={{ fontFamily: 'monospace', color: '#ffffff', fontWeight: 'bold' }}>{fmtEur(b.aum)}</span>
                     </div>
                     <div style={{ width: '100%', height: '4px', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: '2px', overflow: 'hidden' }}>
-                      <div style={{ width: `${Math.max(pct, 8)}%`, height: '100%', backgroundColor: '#39ff88', borderRadius: '2px' }} />
+                      <div style={{ width: `${Math.max(pct, 8)}%`, height: '100%', backgroundColor: '#c084fc', borderRadius: '2px' }} />
                     </div>
                   </div>
                 );
@@ -281,7 +281,7 @@ export const AdminReportTemplate = forwardRef<HTMLDivElement, { data: any }>(({ 
         {/* Server & Security Diagnostics Table */}
         <div style={{ backgroundColor: '#121216', border: '1px solid #27272a', borderRadius: '14px', padding: '14px 16px' }}>
           <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <ShieldCheck size={13} color="#39ff88" /> Diagnóstico de Seguridad &amp; Integridad del Servidor
+            <ShieldCheck size={13} color="#c084fc" /> Diagnóstico de Seguridad &amp; Integridad del Servidor
           </span>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', fontSize: '9px', fontFamily: 'monospace' }}>
             <div style={{ backgroundColor: '#0a0a0c', padding: '8px 10px', borderRadius: '8px', border: '1px solid #1e293b' }}>
@@ -294,11 +294,11 @@ export const AdminReportTemplate = forwardRef<HTMLDivElement, { data: any }>(({ 
             </div>
             <div style={{ backgroundColor: '#0a0a0c', padding: '8px 10px', borderRadius: '8px', border: '1px solid #1e293b' }}>
               <span style={{ color: '#64748b', display: 'block' }}>CACHÉ EN MEMORIA</span>
-              <span style={{ color: '#39ff88', fontWeight: 'bold' }}>{data?.price_cache_size || 0} Cotizaciones</span>
+              <span style={{ color: '#c084fc', fontWeight: 'bold' }}>{data?.price_cache_size || 0} Cotizaciones</span>
             </div>
             <div style={{ backgroundColor: '#0a0a0c', padding: '8px 10px', borderRadius: '8px', border: '1px solid #1e293b' }}>
               <span style={{ color: '#64748b', display: 'block' }}>SCHEDULER CRON</span>
-              <span style={{ color: '#39ff88', fontWeight: 'bold' }}>Operativo 24/7</span>
+              <span style={{ color: '#c084fc', fontWeight: 'bold' }}>Operativo 24/7</span>
             </div>
           </div>
         </div>

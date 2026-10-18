@@ -277,7 +277,7 @@ export function App() {
         <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#080810", flexDirection: "column", gap: "16px" }}>
           <div style={{ fontSize: "32px" }}>🚫</div>
           <div style={{ color: "#ff6464", fontFamily: "monospace", fontSize: "14px" }}>Acceso denegado — no eres administrador</div>
-          <a href="/dashboard" style={{ color: "#39ff88", fontSize: "13px" }}>← Volver al dashboard</a>
+          <a href="/dashboard" style={{ color: "#c084fc", fontSize: "13px" }}>← Volver al dashboard</a>
         </div>
       );
     }

@@ -53,7 +53,7 @@ export function LoginPage({ onAuth, onSuccess, onSwitchToRegister }: Props) {
           <div 
             className="absolute inset-0 opacity-20 pointer-events-none"
             style={{
-              backgroundImage: 'linear-gradient(rgba(57,255,136,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(57,255,136,0.2) 1px, transparent 1px)',
+              backgroundImage: 'linear-gradient(rgba(192,132,252,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(192,132,252,0.2) 1px, transparent 1px)',
               backgroundSize: '40px 40px',
               transform: 'perspective(500px) rotateX(60deg) scale(2.5) translateY(-50%)'
             }}
@@ -249,7 +249,7 @@ export function LoginPage({ onAuth, onSuccess, onSwitchToRegister }: Props) {
             <button
               type="submit"
               disabled={loading || !identifier || !password}
-              className="w-full bg-[var(--color-accent)] text-[#0a0a0a] font-semibold text-sm py-4 rounded-xl hover:brightness-110 active:brightness-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all mt-4 shadow-[0_0_15px_rgba(57,255,136,0.2)]"
+              className="w-full bg-[var(--color-accent)] text-[#0a0a0a] font-semibold text-sm py-4 rounded-xl hover:brightness-110 active:brightness-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all mt-4 shadow-[0_0_15px_rgba(192,132,252,0.2)]"
             >
               {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
             </button>

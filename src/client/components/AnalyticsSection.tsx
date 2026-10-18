@@ -210,7 +210,7 @@ export function AnalyticsSection({ funds, status }: AnalyticsSectionProps) {
     });
 
     // Color Palettes
-    const palette = ["#39ff88", "#60a5fa", "#ffb547", "#a78bfa", "#f472b6", "#34d399", "#38bdf8", "#fbbf24", "#e879f9", "#94a3b8"];
+    const palette = ["#c084fc", "#e3b25b", "#818cf8", "#f472b6", "#60a5fa", "#34d399", "#38bdf8", "#fb923c", "#e879f9", "#a19d94"];
 
     const assetClasses = Array.from(assetClassMap.entries())
       .map(([name, weight], i) => ({
@@ -446,7 +446,7 @@ export function AnalyticsSection({ funds, status }: AnalyticsSectionProps) {
             onClick={() => setActiveTab(tab.key as any)}
             className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
               activeTab === tab.key
-                ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_12px_rgba(57,255,136,0.25)]"
+                ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_12px_rgba(192,132,252,0.25)]"
                 : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] hover:bg-[var(--color-ink-2)]"
             }`}
           >

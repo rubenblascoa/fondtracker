@@ -149,7 +149,7 @@ export function Header({ status, user, onLogout, onOpenApiDocs, landingNav, show
     <header className="sticky top-0 z-20 bg-[var(--color-ink-0)]/85 backdrop-blur-xl border-b border-[var(--color-ink-3)]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-5 flex items-center gap-3 sm:gap-6">
         <div className="flex items-center gap-4">
-          <div className="flex items-center justify-center w-8 h-8 rounded bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 shadow-[0_0_15px_rgba(57,255,136,0.15)]">
+          <div className="flex items-center justify-center w-8 h-8 rounded bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 shadow-[0_0_15px_rgba(192,132,252,0.15)]">
             <svg
               width="18"
               height="18"
@@ -199,7 +199,7 @@ export function Header({ status, user, onLogout, onOpenApiDocs, landingNav, show
             )}
             <div className="relative flex items-center border-l border-[var(--color-ink-3)] pl-4 sm:pl-6" ref={menuRef}>
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 rounded-md flex items-center justify-center text-[12px] text-[var(--color-accent)] font-pixel shadow-[0_0_10px_rgba(57,255,136,0.1)]">
+                <div className="w-7 h-7 bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 rounded-md flex items-center justify-center text-[12px] text-[var(--color-accent)] font-pixel shadow-[0_0_10px_rgba(192,132,252,0.1)]">
                   {user.username[0].toUpperCase()}
                 </div>
                 <span className="text-[12px] font-medium text-[var(--color-fg-1)] hidden sm:block leading-none ml-1 translate-y-[1px]">
@@ -303,7 +303,7 @@ export function Header({ status, user, onLogout, onOpenApiDocs, landingNav, show
                   
                   {error && <p className="text-[11px] text-[var(--color-danger)] bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/20 px-2 py-1.5 rounded-lg mb-3 flex items-center gap-2"><span className="font-bold">!</span>{error}</p>}
                   
-                  <button onClick={handleChangeEmail} disabled={loading || !currentEmail || !email} className="w-full bg-[var(--color-accent)] text-[#0a0a0a] font-semibold text-[12px] py-2.5 rounded-xl hover:brightness-110 disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(57,255,136,0.2)]">
+                  <button onClick={handleChangeEmail} disabled={loading || !currentEmail || !email} className="w-full bg-[var(--color-accent)] text-[#0a0a0a] font-semibold text-[12px] py-2.5 rounded-xl hover:brightness-110 disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(192,132,252,0.2)]">
                     {loading ? "Saving..." : "Save Changes"}
                   </button>
                 </div>
@@ -325,7 +325,7 @@ export function Header({ status, user, onLogout, onOpenApiDocs, landingNav, show
 
                   {error && <p className="text-[11px] text-[var(--color-danger)] bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/20 px-2 py-1.5 rounded-lg mb-3 flex items-center gap-2"><span className="font-bold">!</span>{error}</p>}
                   
-                  <button onClick={handleChangePassword} disabled={loading || !currentPassword || !newPassword} className="w-full bg-[var(--color-accent)] text-[#0a0a0a] font-semibold text-[12px] py-2.5 rounded-xl hover:brightness-110 disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(57,255,136,0.2)]">
+                  <button onClick={handleChangePassword} disabled={loading || !currentPassword || !newPassword} className="w-full bg-[var(--color-accent)] text-[#0a0a0a] font-semibold text-[12px] py-2.5 rounded-xl hover:brightness-110 disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(192,132,252,0.2)]">
                     {loading ? "Updating..." : "Update Password"}
                   </button>
                 </div>
@@ -424,7 +424,7 @@ export function Header({ status, user, onLogout, onOpenApiDocs, landingNav, show
 
                   {error && <p className="text-[11px] text-[var(--color-danger)] bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/20 px-2 py-1.5 rounded-lg mb-3 flex items-center gap-2"><span className="font-bold">!</span>{error}</p>}
                   
-                  <button onClick={handleSavePhone} disabled={loading} className="w-full bg-[var(--color-accent)] text-[#0a0a0a] font-semibold text-[12px] py-2.5 rounded-xl hover:brightness-110 disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(57,255,136,0.2)]">
+                  <button onClick={handleSavePhone} disabled={loading} className="w-full bg-[var(--color-accent)] text-[#0a0a0a] font-semibold text-[12px] py-2.5 rounded-xl hover:brightness-110 disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(192,132,252,0.2)]">
                     {loading ? "Saving..." : "Save Phone"}
                   </button>
                 </div>
@@ -435,14 +435,14 @@ export function Header({ status, user, onLogout, onOpenApiDocs, landingNav, show
           <>
             <div className="ml-auto hidden md:flex items-center gap-4">
               <a href="/login" className="text-sm font-semibold text-[var(--color-fg-3)] hover:text-[var(--color-fg-1)] transition-colors">Log in</a>
-              <a href="/register" className="px-5 py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-sm rounded-lg shadow-[0_0_15px_rgba(57,255,136,0.2)] hover:shadow-[0_0_25px_rgba(57,255,136,0.4)] transition-all">
+              <a href="/register" className="px-5 py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-sm rounded-lg shadow-[0_0_15px_rgba(192,132,252,0.2)] hover:shadow-[0_0_25px_rgba(192,132,252,0.4)] transition-all">
                 Get Started
               </a>
             </div>
 
             {/* Mobile Hamburger for Public / Landing */}
             <div className="ml-auto md:hidden flex items-center gap-2">
-              <a href="/register" className="px-3.5 py-1.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold text-xs rounded-lg shadow-[0_0_10px_rgba(57,255,136,0.2)]">
+              <a href="/register" className="px-3.5 py-1.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold text-xs rounded-lg shadow-[0_0_10px_rgba(192,132,252,0.2)]">
                 Empezar
               </a>
               <button
@@ -470,7 +470,7 @@ export function Header({ status, user, onLogout, onOpenApiDocs, landingNav, show
         ) : (
           <div className="ml-auto flex items-center gap-3">
             <a href="/login" className="text-xs sm:text-sm font-semibold text-[var(--color-fg-3)] hover:text-[var(--color-fg-1)] transition-colors">Log in</a>
-            <a href="/register" className="px-3.5 sm:px-5 py-1.5 sm:py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-xs sm:text-sm rounded-lg shadow-[0_0_15px_rgba(57,255,136,0.2)] hover:shadow-[0_0_25px_rgba(57,255,136,0.4)] transition-all">
+            <a href="/register" className="px-3.5 sm:px-5 py-1.5 sm:py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-xs sm:text-sm rounded-lg shadow-[0_0_15px_rgba(192,132,252,0.2)] hover:shadow-[0_0_25px_rgba(192,132,252,0.4)] transition-all">
               Get Started
             </a>
           </div>
@@ -518,7 +518,7 @@ export function Header({ status, user, onLogout, onOpenApiDocs, landingNav, show
             </a>
             <a 
               href="/register" 
-              className="w-full py-2.5 px-4 bg-[var(--color-accent)] text-[var(--color-accent-fg)] rounded-xl text-center text-xs font-bold shadow-[0_0_12px_rgba(57,255,136,0.25)] transition-all"
+              className="w-full py-2.5 px-4 bg-[var(--color-accent)] text-[var(--color-accent-fg)] rounded-xl text-center text-xs font-bold shadow-[0_0_12px_rgba(192,132,252,0.25)] transition-all"
             >
               Crear Cuenta Gratuita
             </a>

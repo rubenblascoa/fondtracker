@@ -87,7 +87,7 @@ export function LegalPage({ view, user, onLogout }: LegalPageProps) {
                   }}
                   className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
                     isPrivacy
-                      ? "bg-[var(--color-accent)] text-[#0a0a0c] shadow-[0_0_12px_rgba(57,255,136,0.25)] font-bold"
+                      ? "bg-[var(--color-accent)] text-[#0a0a0c] shadow-[0_0_12px_rgba(192,132,252,0.25)] font-bold"
                       : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] hover:bg-[var(--color-ink-3)]/50"
                   }`}
                 >
@@ -102,7 +102,7 @@ export function LegalPage({ view, user, onLogout }: LegalPageProps) {
                   }}
                   className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
                     !isPrivacy
-                      ? "bg-[var(--color-accent)] text-[#0a0a0c] shadow-[0_0_12px_rgba(57,255,136,0.25)] font-bold"
+                      ? "bg-[var(--color-accent)] text-[#0a0a0c] shadow-[0_0_12px_rgba(192,132,252,0.25)] font-bold"
                       : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] hover:bg-[var(--color-ink-3)]/50"
                   }`}
                 >

@@ -274,10 +274,10 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
     const firstPoint = points[0];
     const lastPoint = points[points.length - 1];
     const isChartUp = lastPoint.data.close >= firstPoint.data.close;
-    const strokeColor = isChartUp ? "#39ff88" : "#ff5a4a";
+    const strokeColor = isChartUp ? "#34d399" : "#f87171";
 
     const gradient = ctx.createLinearGradient(0, padding.top, 0, h - padding.bottom);
-    gradient.addColorStop(0, isChartUp ? "rgba(57, 255, 136, 0.22)" : "rgba(255, 90, 74, 0.22)");
+    gradient.addColorStop(0, isChartUp ? "rgba(192,132,252,0.22)" : "rgba(255, 90, 74, 0.22)");
     gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
 
     ctx.beginPath();
@@ -378,7 +378,7 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
         <div className="space-y-1 flex-1">
           
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[10px] font-mono font-bold px-2 py-0.5 bg-[var(--color-accent)]/10 text-[var(--color-accent)] rounded border border-[var(--color-accent)]/20 shadow-[0_0_6px_rgba(57,255,136,0.1)]">
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 bg-[var(--color-accent)]/10 text-[var(--color-accent)] rounded border border-[var(--color-accent)]/20 shadow-[0_0_6px_rgba(192,132,252,0.1)]">
               {fund.isin}
             </span>
 
@@ -408,9 +408,9 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
                 target="_blank"
                 rel="noopener noreferrer"
                 title={`Ver fuente en ${dataSourceInfo.name}`}
-                className="flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.5 bg-[#39ff88]/10 hover:bg-[#39ff88]/20 text-[#39ff88] rounded border border-[#39ff88]/20 transition-colors cursor-pointer"
+                className="flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.5 bg-[var(--color-accent)]/10 hover:bg-[var(--color-accent)]/20 text-[var(--color-accent)] rounded border border-[var(--color-accent)]/20 transition-colors cursor-pointer"
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-[#39ff88] animate-pulse" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)] animate-pulse" />
                 {chartData.dataSource === "quefondos" && chartData.dataDate
                   ? `NAV ${fmtDataDate(chartData.dataDate)}`
                   : "LIVE"}
@@ -741,7 +741,7 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
               type="button"
               onClick={saveEdit}
               disabled={editLoading}
-              className="px-4 py-1.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold text-xs rounded-lg shadow-[0_0_10px_rgba(57,255,136,0.2)] hover:brightness-110 disabled:opacity-50 flex items-center gap-1.5"
+              className="px-4 py-1.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold text-xs rounded-lg shadow-[0_0_10px_rgba(192,132,252,0.2)] hover:brightness-110 disabled:opacity-50 flex items-center gap-1.5"
             >
               {editLoading ? "Guardando..." : "Actualizar Inversión"}
             </button>
@@ -763,7 +763,7 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
                 onClick={() => setActiveTab("chart")}
                 className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center gap-1 ${
                   activeTab === "chart" 
-                    ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_8px_rgba(57,255,136,0.2)]" 
+                    ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_8px_rgba(192,132,252,0.2)]" 
                     : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
                 }`}
               >
@@ -776,7 +776,7 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
                 onClick={() => setActiveTab("composition")}
                 className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center gap-1 ${
                   activeTab === "composition" 
-                    ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_8px_rgba(57,255,136,0.2)]" 
+                    ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_8px_rgba(192,132,252,0.2)]" 
                     : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
                 }`}
               >
@@ -789,7 +789,7 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
                 onClick={() => setActiveTab("details")}
                 className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center gap-1 ${
                   activeTab === "details" 
-                    ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_8px_rgba(57,255,136,0.2)]" 
+                    ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_8px_rgba(192,132,252,0.2)]" 
                     : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
                 }`}
               >

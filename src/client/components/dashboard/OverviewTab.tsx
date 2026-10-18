@@ -16,7 +16,7 @@ function fmtPct(n: number) {
   return `${sign}${n.toFixed(2)}%`;
 }
 
-const COLORS = ["#39ff88", "#00d2ff", "#ffb800", "#ff5959", "#b388ff", "#ff6b81", "#70a1ff", "#2ed573"];
+const COLORS = ["#c084fc", "#e3b25b", "#818cf8", "#f472b6", "#60a5fa", "#34d399", "#fb923c", "#a19d94"];
 
 type Props = {
   funds: Investment[];

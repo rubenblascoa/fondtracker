@@ -676,7 +676,7 @@ export function CatalogTab({ onToast }: { onToast?: (msg: string, type: "success
               setFormPrice("");
               setShowAddModal(true);
             }}
-            className="px-3.5 py-2 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold text-xs rounded-xl hover:brightness-110 shadow-[0_0_12px_rgba(57,255,136,0.25)] transition-all flex items-center gap-1.5 shrink-0"
+            className="px-3.5 py-2 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold text-xs rounded-xl hover:brightness-110 shadow-[0_0_12px_rgba(192,132,252,0.25)] transition-all flex items-center gap-1.5 shrink-0"
           >
             <Plus size={14} />
             <span>Añadir Fondo</span>
@@ -860,7 +860,7 @@ export function CatalogTab({ onToast }: { onToast?: (msg: string, type: "success
                 <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 bg-[var(--color-ink-2)] hover:bg-[var(--color-ink-2)] text-xs font-semibold text-[var(--color-fg-2)] rounded-xl transition-colors">
                   Cancelar
                 </button>
-                <button type="submit" className="px-4 py-2 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold text-xs rounded-xl hover:brightness-110 shadow-[0_0_10px_rgba(57,255,136,0.3)] transition-all">
+                <button type="submit" className="px-4 py-2 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold text-xs rounded-xl hover:brightness-110 shadow-[0_0_10px_rgba(192,132,252,0.3)] transition-all">
                   Guardar en Catálogo
                 </button>
               </div>
@@ -930,7 +930,7 @@ export function CatalogTab({ onToast }: { onToast?: (msg: string, type: "success
                 <button type="button" onClick={() => setEditingFund(null)} className="px-4 py-2 bg-[var(--color-ink-2)] hover:bg-[var(--color-ink-2)] text-xs font-semibold text-[var(--color-fg-2)] rounded-xl transition-colors">
                   Cancelar
                 </button>
-                <button type="submit" className="px-4 py-2 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold text-xs rounded-xl hover:brightness-110 shadow-[0_0_10px_rgba(57,255,136,0.3)] transition-all">
+                <button type="submit" className="px-4 py-2 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold text-xs rounded-xl hover:brightness-110 shadow-[0_0_10px_rgba(192,132,252,0.3)] transition-all">
                   Guardar Cambios
                 </button>
               </div>
@@ -1022,7 +1022,7 @@ export function NotificationsTab({ onToast }: { onToast?: (msg: string, type: "s
           <button 
             onClick={triggerDigest} 
             disabled={isTriggering}
-            className="w-full py-2.5 mt-3 bg-[var(--color-accent)] text-[#0a0a0c] hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold rounded-xl shadow-[0_0_12px_rgba(57,255,136,0.2)] transition-all flex items-center justify-center gap-2"
+            className="w-full py-2.5 mt-3 bg-[var(--color-accent)] text-[#0a0a0c] hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold rounded-xl shadow-[0_0_12px_rgba(192,132,252,0.2)] transition-all flex items-center justify-center gap-2"
           >
             {isTriggering ? (
               <><div className="w-3.5 h-3.5 border-2 border-[#0a0a0c] border-t-transparent rounded-full animate-spin" /> Enviando...</>
@@ -1391,7 +1391,7 @@ export function AdminSectionContent({ user, initialSubSection }: { user: User; i
 
   const authDist = useMemo(() => {
     return [
-      { name: 'Google', value: data?.auth_google ?? 0, color: '#39ff88' },
+      { name: 'Google', value: data?.auth_google ?? 0, color: '#c084fc' },
       { name: 'GitHub', value: data?.auth_github ?? 0, color: '#a855f7' },
       { name: 'Email/Pass', value: data?.auth_password ?? 0, color: '#3b82f6' }
     ].filter(d => d.value > 0);
@@ -1438,7 +1438,7 @@ export function AdminSectionContent({ user, initialSubSection }: { user: User; i
                 onClick={() => setSubSection(item.key)}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                   active 
-                    ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_10px_rgba(57,255,136,0.25)]" 
+                    ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_10px_rgba(192,132,252,0.25)]" 
                     : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] hover:bg-[var(--color-ink-2)]"
                 }`}
               >
@@ -1710,7 +1710,7 @@ export function AdminPanel({ user, onLogout }: { user: User; onLogout: () => voi
       <aside className="w-60 bg-[var(--color-ink-1)] backdrop-blur-md border-r border-[var(--color-ink-3)] flex flex-col relative z-20">
         <div className="h-16 flex items-center px-5 border-b border-[var(--color-ink-3)]">
           <a href="/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <div className="w-8 h-8 rounded-xl bg-[var(--color-accent)]/10 flex items-center justify-center border border-[var(--color-accent)]/20 shadow-[0_0_12px_rgba(57,255,136,0.15)]">
+            <div className="w-8 h-8 rounded-xl bg-[var(--color-accent)]/10 flex items-center justify-center border border-[var(--color-accent)]/20 shadow-[0_0_12px_rgba(192,132,252,0.15)]">
               <Activity size={17} className="text-[var(--color-accent)]" />
             </div>
             <span className="font-bold text-[var(--color-fg-1)] text-base tracking-wide">Fond<span className="text-[var(--color-accent)]">Tracker</span></span>

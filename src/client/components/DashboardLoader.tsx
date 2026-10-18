@@ -89,12 +89,12 @@ export function DashboardLoader({ onComplete, minDurationMs = 1100 }: DashboardL
           />
 
           {/* Core Emblem */}
-          <div className="w-16 h-16 rounded-2xl bg-[var(--color-ink-1)] border border-[var(--color-accent)]/40 flex items-center justify-center shadow-[0_0_25px_rgba(57,255,136,0.3)]">
+          <div className="w-16 h-16 rounded-2xl bg-[var(--color-ink-1)] border border-[var(--color-accent)]/40 flex items-center justify-center shadow-[0_0_25px_rgba(192,132,252,0.3)]">
             <Activity size={28} className="text-[var(--color-accent)] animate-pulse" />
           </div>
 
           {/* Corner Radar Blips */}
-          <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[var(--color-accent)] shadow-[0_0_8px_#39ff88] animate-ping" />
+          <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[var(--color-accent)] shadow-[0_0_8px_rgba(192,132,252,0.5)] animate-ping" />
         </div>
 
         {/* Brand Name */}
@@ -116,7 +116,7 @@ export function DashboardLoader({ onComplete, minDurationMs = 1100 }: DashboardL
         <div className="w-full space-y-2 pt-2">
           <div className="h-1.5 w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-full overflow-hidden p-0.5 relative">
             <div 
-              className="h-full bg-gradient-to-r from-emerald-500 via-[var(--color-accent)] to-teal-300 rounded-full transition-all duration-300 ease-out relative shadow-[0_0_12px_rgba(57,255,136,0.5)]"
+              className="h-full bg-gradient-to-r from-emerald-500 via-[var(--color-accent)] to-teal-300 rounded-full transition-all duration-300 ease-out relative shadow-[0_0_12px_rgba(192,132,252,0.5)]"
               style={{ width: `${progress}%` }}
             >
               {/* Highlight Shimmer on tip */}
@@ -137,7 +137,7 @@ export function DashboardLoader({ onComplete, minDurationMs = 1100 }: DashboardL
         {/* HUD Telemetry Badges */}
         <div className="grid grid-cols-2 gap-2 w-full pt-4 border-t border-[var(--color-ink-3)] text-[10px] font-mono text-[var(--color-fg-4)]">
           <div className="flex items-center justify-center gap-1.5 p-1.5 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_#39ff88]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(192,132,252,0.5)]" />
             <span>SISTEMA: EN LÍNEA</span>
           </div>
           <div className="flex items-center justify-center gap-1.5 p-1.5 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl">

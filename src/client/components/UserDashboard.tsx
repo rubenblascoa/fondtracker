@@ -212,7 +212,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
 
   // Asset Distribution (by Bank)
   const bankDistribution = useMemo(() => {
-    const palette = ['#39ff88', '#60a5fa', '#ffb547', '#a78bfa', '#f472b6', '#34d399', '#f87171'];
+    const palette = ['#c084fc', '#e3b25b', '#818cf8', '#f472b6', '#60a5fa', '#34d399', '#f87171'];
     const map = new Map<string, number>();
     funds.forEach(f => {
       const cur = (f.current_price ?? f.purchase_price) * f.shares;
@@ -547,7 +547,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
         {/* Brand */}
         <div className="h-16 flex items-center px-5 border-b border-[var(--color-ink-3)] justify-between">
           <a href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <div className="w-8 h-8 rounded-xl bg-[var(--color-accent)]/10 flex items-center justify-center border border-[var(--color-accent)]/20 shadow-[0_0_12px_rgba(57,255,136,0.15)]">
+            <div className="w-8 h-8 rounded-xl bg-[var(--color-accent)]/10 flex items-center justify-center border border-[var(--color-accent)]/20 shadow-[0_0_12px_rgba(192,132,252,0.15)]">
               <Activity size={17} className="text-[var(--color-accent)]" />
             </div>
             <span className="font-bold text-[var(--color-fg-1)] text-base tracking-wide">
@@ -601,7 +601,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
                   section === "admin"
                     ? "bg-[var(--color-accent)]/10 text-[var(--color-accent)] shadow-[inset_3px_0_0_0_var(--color-accent)] font-bold border border-[var(--color-accent)]/30"
-                    : "text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 shadow-[0_0_12px_rgba(57,255,136,0.08)]"
+                    : "text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 shadow-[0_0_12px_rgba(192,132,252,0.08)]"
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -658,7 +658,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
             <div className="p-3.5 border-t border-[var(--color-ink-3)]">
               <div className={`border rounded-2xl p-3.5 transition-all ${
                 isActive 
-                  ? "bg-[var(--color-ink-2)] border-emerald-500/20 shadow-[0_0_12px_rgba(57,255,136,0.06)]"
+                  ? "bg-[var(--color-ink-2)] border-emerald-500/20 shadow-[0_0_12px_rgba(192,132,252,0.06)]"
                   : isPaused
                   ? "bg-[var(--color-ink-2)] border-amber-500/20"
                   : "bg-[var(--color-ink-2)] border-[var(--color-ink-3)]"
@@ -680,7 +680,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                     </span>
                     <span className={`w-2 h-2 rounded-full ${
                       isActive 
-                        ? "bg-emerald-400 shadow-[0_0_8px_#39ff88] animate-pulse" 
+                        ? "bg-emerald-400 shadow-[0_0_8px_rgba(192,132,252,0.5)] animate-pulse" 
                         : isPaused 
                         ? "bg-amber-400 shadow-[0_0_6px_#fbbf24]" 
                         : "bg-gray-500"
@@ -694,7 +694,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                   onClick={() => setSection("notifications")} 
                   className={`w-full py-1.5 rounded-lg text-xs font-semibold transition-all ${
                     !isConfigured
-                      ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] hover:brightness-110 shadow-[0_0_10px_rgba(57,255,136,0.2)]"
+                      ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] hover:brightness-110 shadow-[0_0_10px_rgba(192,132,252,0.2)]"
                       : "bg-[var(--color-ink-2)] hover:bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] text-[var(--color-fg-1)]"
                   }`}
                 >
@@ -967,7 +967,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
             {/* Quick Add Button */}
             <button 
               onClick={() => setSection("add")}
-              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 bg-[var(--color-accent)] text-[#0a0a0c] hover:brightness-110 font-semibold text-xs rounded-xl shadow-[0_0_15px_rgba(57,255,136,0.2)] active:scale-95 transition-all"
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 bg-[var(--color-accent)] text-[#0a0a0c] hover:brightness-110 font-semibold text-xs rounded-xl shadow-[0_0_15px_rgba(192,132,252,0.2)] active:scale-95 transition-all"
             >
               <Plus size={14} strokeWidth={2.5} />
               <span className="hidden sm:inline">Añadir Fondo</span>
@@ -1020,7 +1020,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                   <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-3.5 sm:p-5 relative overflow-hidden group hover:border-[var(--color-accent)]/30 transition-all flex flex-col justify-between">
                     <div>
                       <div className="flex justify-between items-start mb-2 sm:mb-3">
-                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-accent)] shadow-[0_0_12px_rgba(57,255,136,0.15)]">
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-accent)] shadow-[0_0_12px_rgba(192,132,252,0.15)]">
                           <TrendingUp size={16} />
                         </div>
                         <span className="text-[9px] sm:text-[10px] font-mono text-[var(--color-accent)] uppercase tracking-wider bg-[var(--color-accent)]/10 px-1.5 sm:px-2 py-0.5 rounded font-bold">
@@ -1263,7 +1263,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                     <button 
                       disabled={isExportingPdf || funds.length === 0} 
                       onClick={exportPdf} 
-                      className="w-full py-2.5 bg-[var(--color-accent)] text-[#0a0a0c] hover:brightness-110 text-xs font-bold rounded-xl shadow-[0_0_15px_rgba(57,255,136,0.25)] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="w-full py-2.5 bg-[var(--color-accent)] text-[#0a0a0c] hover:brightness-110 text-xs font-bold rounded-xl shadow-[0_0_15px_rgba(192,132,252,0.25)] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       <Download size={14} />
                       {isExportingPdf ? 'Generando PDF...' : 'Descargar PDF'}
@@ -1298,7 +1298,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                       </p>
                       <button 
                         onClick={() => setSection("add")} 
-                        className="px-4 py-2 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-xs rounded-xl shadow-[0_0_12px_rgba(57,255,136,0.2)] hover:brightness-110 transition-all"
+                        className="px-4 py-2 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-xs rounded-xl shadow-[0_0_12px_rgba(192,132,252,0.2)] hover:brightness-110 transition-all"
                       >
                         Añadir Primer Fondo
                       </button>
@@ -1569,7 +1569,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                       onClick={() => setTheme("dark")}
                       className={`p-4 rounded-2xl border text-left transition-all relative overflow-hidden group ${
                         isDark 
-                          ? "border-[var(--color-accent)] bg-[var(--color-ink-2)] shadow-[0_0_20px_rgba(57,255,136,0.15)] ring-1 ring-[var(--color-accent)]" 
+                          ? "border-[var(--color-accent)] bg-[var(--color-ink-2)] shadow-[0_0_20px_rgba(192,132,252,0.15)] ring-1 ring-[var(--color-accent)]" 
                           : "border-[var(--color-ink-3)] bg-[var(--color-ink-2)] hover:border-[var(--color-ink-3)]"
                       }`}
                     >
@@ -1584,7 +1584,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                           </div>
                         </div>
                         {isDark && (
-                          <div className="w-5 h-5 rounded-full bg-[var(--color-accent)] text-[var(--color-accent-fg)] flex items-center justify-center shadow-[0_0_8px_rgba(57,255,136,0.5)]">
+                          <div className="w-5 h-5 rounded-full bg-[var(--color-accent)] text-[var(--color-accent-fg)] flex items-center justify-center shadow-[0_0_8px_rgba(192,132,252,0.5)]">
                             <Check size={11} strokeWidth={3} />
                           </div>
                         )}
@@ -1706,7 +1706,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                   <button
                     onClick={handleSavePhone}
                     disabled={settingsLoading}
-                    className="w-full py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-xs rounded-xl hover:brightness-110 transition-all shadow-[0_0_15px_rgba(57,255,136,0.2)] disabled:opacity-50"
+                    className="w-full py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-xs rounded-xl hover:brightness-110 transition-all shadow-[0_0_15px_rgba(192,132,252,0.2)] disabled:opacity-50"
                   >
                     {settingsLoading ? "Guardando..." : "Guardar Teléfono"}
                   </button>
@@ -1739,7 +1739,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                   <button
                     onClick={handleChangeEmail}
                     disabled={settingsLoading}
-                    className="w-full py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-xs rounded-xl hover:brightness-110 transition-all shadow-[0_0_15px_rgba(57,255,136,0.2)] disabled:opacity-50"
+                    className="w-full py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-xs rounded-xl hover:brightness-110 transition-all shadow-[0_0_15px_rgba(192,132,252,0.2)] disabled:opacity-50"
                   >
                     {settingsLoading ? "Actualizando..." : "Actualizar Email"}
                   </button>
@@ -1770,7 +1770,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                   <button
                     onClick={handleChangePassword}
                     disabled={settingsLoading}
-                    className="w-full py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-xs rounded-xl hover:brightness-110 transition-all shadow-[0_0_15px_rgba(57,255,136,0.2)] disabled:opacity-50"
+                    className="w-full py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-xs rounded-xl hover:brightness-110 transition-all shadow-[0_0_15px_rgba(192,132,252,0.2)] disabled:opacity-50"
                   >
                     {settingsLoading ? "Cambiando..." : "Cambiar Contraseña"}
                   </button>
@@ -1849,7 +1849,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
           className="flex flex-col items-center -mt-5 group"
           aria-label="Añadir Inversión"
         >
-          <div className="w-12 h-12 rounded-full bg-[var(--color-accent)] text-[var(--color-accent-fg)] flex items-center justify-center shadow-[0_0_16px_rgba(57,255,136,0.4)] group-active:scale-95 transition-transform border-2 border-[var(--color-ink-0)]">
+          <div className="w-12 h-12 rounded-full bg-[var(--color-accent)] text-[var(--color-accent-fg)] flex items-center justify-center shadow-[0_0_16px_rgba(192,132,252,0.4)] group-active:scale-95 transition-transform border-2 border-[var(--color-ink-0)]">
             <Plus size={24} strokeWidth={2.8} />
           </div>
           <span className="text-[10px] font-semibold text-[var(--color-fg-1)] mt-0.5">Añadir</span>

@@ -153,7 +153,7 @@ export function NotifyPanel({ status, onChange }: Props) {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
           <div className="max-w-2xl">
             <div className="flex items-center gap-2.5 mb-2.5">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shadow-[0_0_12px_rgba(57,255,136,0.15)]">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shadow-[0_0_12px_rgba(192,132,252,0.15)]">
                 <Smartphone size={18} />
               </div>
               <div>
@@ -168,7 +168,7 @@ export function NotifyPanel({ status, onChange }: Props) {
 
             <div className="flex flex-wrap items-center gap-3 mt-4 text-xs font-mono">
               <div className="flex items-center gap-2 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] px-3 py-1.5 rounded-xl">
-                <span className={`w-2.5 h-2.5 rounded-full ${isEnabled && wa?.configured ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_#39ff88]" : "bg-gray-500"}`} />
+                <span className={`w-2.5 h-2.5 rounded-full ${isEnabled && wa?.configured ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(192,132,252,0.5)]" : "bg-gray-500"}`} />
                 <span className="text-[var(--color-fg-2)] font-medium">
                   Estado: <strong className={isEnabled && wa?.configured ? "text-emerald-400" : "text-[var(--color-fg-4)]"}>{isEnabled && wa?.configured ? "Activo" : "Pendiente de configurar"}</strong>
                 </span>
@@ -188,7 +188,7 @@ export function NotifyPanel({ status, onChange }: Props) {
             <button
               onClick={handleTestNotification}
               disabled={testing || !wa?.configured}
-              className="px-4 py-2.5 bg-[var(--color-accent)] text-[#0a0a0c] hover:brightness-110 font-bold text-xs rounded-xl shadow-[0_0_15px_rgba(57,255,136,0.25)] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2.5 bg-[var(--color-accent)] text-[#0a0a0c] hover:brightness-110 font-bold text-xs rounded-xl shadow-[0_0_15px_rgba(192,132,252,0.25)] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {testing ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
               <span>{testing ? "Enviando mensaje..." : "Enviar WhatsApp de Prueba"}</span>
@@ -374,7 +374,7 @@ export function NotifyPanel({ status, onChange }: Props) {
                       onClick={() => toggleHour(h)}
                       className={`py-2 rounded-lg text-xs font-mono font-bold transition-all ${
                         active 
-                          ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_8px_rgba(57,255,136,0.2)]" 
+                          ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_8px_rgba(192,132,252,0.2)]" 
                           : "bg-[var(--color-ink-2)] text-[var(--color-fg-4)] hover:bg-[var(--color-ink-2)] hover:text-[var(--color-fg-1)] border border-[var(--color-ink-3)]"
                       }`}
                     >

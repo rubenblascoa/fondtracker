@@ -519,7 +519,7 @@ export function AddFundForm({ onAdded }: Props) {
                       onClick={() => setMode("amount")}
                       className={`py-2 px-2.5 sm:px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 sm:gap-2 ${
                         mode === "amount"
-                          ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_15px_rgba(57,255,136,0.2)] font-bold"
+                          ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_15px_rgba(192,132,252,0.2)] font-bold"
                           : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
                       }`}
                     >
@@ -532,7 +532,7 @@ export function AddFundForm({ onAdded }: Props) {
                       onClick={() => setMode("shares")}
                       className={`py-2 px-2.5 sm:px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 sm:gap-2 ${
                         mode === "shares"
-                          ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_15px_rgba(57,255,136,0.2)] font-bold"
+                          ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_15px_rgba(192,132,252,0.2)] font-bold"
                           : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
                       }`}
                     >
@@ -646,7 +646,7 @@ export function AddFundForm({ onAdded }: Props) {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full sm:w-auto px-8 py-3.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold text-xs rounded-xl shadow-[0_0_20px_rgba(57,255,136,0.3)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="w-full sm:w-auto px-8 py-3.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold text-xs rounded-xl shadow-[0_0_20px_rgba(192,132,252,0.3)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {loading ? (
                       <>

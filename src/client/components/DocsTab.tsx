@@ -419,7 +419,7 @@ export function DocsTab() {
               onClick={() => setActiveCategory(tab.key as any)}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all shrink-0 ${
                 activeCategory === tab.key
-                  ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_12px_rgba(57,255,136,0.25)]"
+                  ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_12px_rgba(192,132,252,0.25)]"
                   : "bg-[var(--color-ink-2)] text-[var(--color-fg-2)] hover:bg-[var(--color-ink-2)] hover:text-[var(--color-fg-1)]"
               }`}
             >
@@ -619,7 +619,7 @@ export function DocsTab() {
               <button
                 onClick={() => runLiveTest(selectedEndpoint)}
                 disabled={consoleLoading}
-                className="w-full sm:w-auto px-5 py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold text-xs rounded-xl hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-[0_0_12px_rgba(57,255,136,0.3)] disabled:opacity-50 shrink-0"
+                className="w-full sm:w-auto px-5 py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold text-xs rounded-xl hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-[0_0_12px_rgba(192,132,252,0.3)] disabled:opacity-50 shrink-0"
               >
                 {consoleLoading ? <RefreshCw size={14} className="animate-spin" /> : <Play size={14} />}
                 <span>{consoleLoading ? "Ejecutando..." : "Ejecutar Petición"}</span>

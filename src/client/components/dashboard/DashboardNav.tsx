@@ -72,7 +72,7 @@ export function DashboardNav({
           </button>
 
           <a href="/dashboard" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[var(--color-accent)] to-emerald-600 flex items-center justify-center text-black font-black text-sm shadow-md group-hover:scale-105 transition-transform">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[var(--color-accent-2)] to-[var(--color-accent)] flex items-center justify-center text-black font-black text-sm shadow-md group-hover:scale-105 transition-transform">
               FT
             </div>
             <span className="font-bold text-base tracking-tight text-[var(--color-fg-1)]">

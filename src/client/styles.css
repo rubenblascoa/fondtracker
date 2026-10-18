@@ -24,95 +24,124 @@
   font-display: swap;
 }
 
+/* ── FondTracker 2.0 · identidad "Mezcla 2" ──
+   Negro con grano + resplandor violeta, degradado dorado→violeta,
+   Space Grotesk (titulares/cifras), Inter (texto), JetBrains Mono (etiquetas). */
 @theme {
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   --font-sans: "Inter", system-ui, sans-serif;
-  --font-heading: "Outfit", "Inter", sans-serif;
+  --font-heading: "Space Grotesk", "Inter", sans-serif;
   --font-primary: "Inter", system-ui, sans-serif;
   --font-pixel: "Geist Pixel", monospace;
   --font-pixel-grid: "Geist Pixel Grid", monospace;
 
-  --color-ink-0: #030303;
-  --color-ink-1: #0a0a0c;
-  --color-ink-2: #121215;
-  --color-ink-3: #1a1a1f;
-  --color-ink-4: #2a2a31;
-  --color-ink-5: #3a3a43;
-  --color-fg-1: #ffffff;
-  --color-fg-2: #e2e2e8;
-  --color-fg-3: #a1a1aa;
-  --color-fg-4: #71717a;
-  --color-accent: #39ff88;
-  --color-accent-dim: #1f7a44;
-  --color-danger: #ff5a4a;
-  --color-warn: #ffb547;
-  --color-profit: #39ff88;
-  --color-loss: #ff5a4a;
+  --color-ink-0: #0b0b0a;
+  --color-ink-1: #131312;
+  --color-ink-2: #191917;
+  --color-ink-3: #23221f;
+  --color-ink-4: #2f2e2a;
+  --color-ink-5: #3e3d38;
+  --color-fg-1: #f2efe8;
+  --color-fg-2: #dcd8cf;
+  --color-fg-3: #a19d94;
+  --color-fg-4: #75716a;
+  --color-accent: #c084fc;
+  --color-accent-2: #e3b25b;
+  --color-accent-dim: #7c3aed;
+  --color-danger: #f87171;
+  --color-warn: #e3b25b;
+  --color-profit: #34d399;
+  --color-loss: #f87171;
 
-  --color-brand-primary: #39ff88;
-  --color-brand-secondary: #ff5a4a;
-  --color-brand-accent: #ffb547;
-  --color-neutral-background: #050505;
-  --color-neutral-surface: #0d0d0f;
-  --color-text-primary: #f5f5f5;
-  --color-text-secondary: #9ca3af;
-  --color-text-light: #6b7280;
-  --color-border-terminal: #1f2937;
+  --color-surface: rgba(255, 255, 255, 0.035);
+  --color-border: rgba(255, 255, 255, 0.07);
+  --color-tag-bg: rgba(129, 140, 248, 0.14);
+  --color-tag-fg: #c7d2fe;
+  --color-btn-bg: #f2efe8;
+  --color-btn-fg: #0b0b0a;
+  --radius-card: 18px;
 
-  --shadow-neon: 0 0 15px rgba(57, 255, 136, 0.2);
-  --shadow-neon-hover: 0 0 25px rgba(57, 255, 136, 0.4);
-  --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.5);
+  --color-brand-primary: #c084fc;
+  --color-brand-secondary: #f87171;
+  --color-brand-accent: #e3b25b;
+  --color-neutral-background: #0b0b0a;
+  --color-neutral-surface: #131312;
+  --color-text-primary: #f2efe8;
+  --color-text-secondary: #a19d94;
+  --color-text-light: #75716a;
+  --color-border-terminal: #23221f;
+
+  --shadow-neon: 0 0 18px rgba(192, 132, 252, 0.18);
+  --shadow-neon-hover: 0 0 26px rgba(192, 132, 252, 0.32);
+  --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.45);
 }
 
 @layer base {
   :root {
     color-scheme: dark;
     --grid-color: rgba(255, 255, 255, 0.02);
-    --color-accent-fg: #000000;
+    --color-accent-fg: #0b0b0a;
+    --gradient-accent: linear-gradient(90deg, #e3b25b, #c084fc);
+    --ft-glow: radial-gradient(900px 420px at 85% -12%, rgba(129, 140, 248, 0.16), transparent 70%);
+    --ft-grain: radial-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px);
   }
 
-  /* ── Light Mode Color Theme Overrides (High Contrast WCAG AAA) ── */
+  /* ── Modo claro ── */
   html[data-theme="light"],
   body.theme-light {
     color-scheme: light;
-    --color-ink-0: #f8fafc;
+    --color-ink-0: #f7f5f0;
     --color-ink-1: #ffffff;
-    --color-ink-2: #f1f5f9;
-    --color-ink-3: #e2e8f0;
-    --color-ink-4: #cbd5e1;
-    --color-ink-5: #94a3b8;
-    --color-fg-1: #09090b;
-    --color-fg-2: #18181b;
-    --color-fg-3: #334155;
-    --color-fg-4: #475569;
-    --color-fg-5: #64748b;
-    --color-accent: #047857;
-    --color-accent-dim: #065f46;
+    --color-ink-2: #f3f0e9;
+    --color-ink-3: #e7e3da;
+    --color-ink-4: #d4cfc3;
+    --color-ink-5: #aaa498;
+    --color-fg-1: #14130f;
+    --color-fg-2: #26241f;
+    --color-fg-3: #4d4a43;
+    --color-fg-4: #6f6b62;
+    --color-fg-5: #8a857b;
+    --color-accent: #7c3aed;
+    --color-accent-2: #b7791f;
+    --color-accent-dim: #6d28d9;
     --color-accent-fg: #ffffff;
     --color-danger: #dc2626;
-    --color-warn: #b45309;
+    --color-warn: #b7791f;
     --color-profit: #15803d;
     --color-loss: #dc2626;
 
-    --color-brand-primary: #047857;
-    --color-brand-secondary: #dc2626;
-    --color-brand-accent: #b45309;
-    --color-neutral-background: #f8fafc;
-    --color-neutral-surface: #ffffff;
-    --color-text-primary: #09090b;
-    --color-text-secondary: #334155;
-    --color-text-light: #64748b;
-    --color-border-terminal: #e2e8f0;
+    --color-surface: #ffffff;
+    --color-border: rgba(20, 19, 15, 0.09);
+    --color-tag-bg: rgba(124, 58, 237, 0.09);
+    --color-tag-fg: #5b21b6;
+    --color-btn-bg: #14130f;
+    --color-btn-fg: #f7f5f0;
 
+    --color-brand-primary: #7c3aed;
+    --color-brand-secondary: #dc2626;
+    --color-brand-accent: #b7791f;
+    --color-neutral-background: #f7f5f0;
+    --color-neutral-surface: #ffffff;
+    --color-text-primary: #14130f;
+    --color-text-secondary: #4d4a43;
+    --color-text-light: #6f6b62;
+    --color-border-terminal: #e7e3da;
+
+    --gradient-accent: linear-gradient(90deg, #b7791f, #7c3aed);
+    --ft-glow: radial-gradient(900px 420px at 85% -12%, rgba(124, 58, 237, 0.08), transparent 70%);
+    --ft-grain: radial-gradient(rgba(0, 0, 0, 0.025) 1px, transparent 1px);
     --grid-color: rgba(0, 0, 0, 0.035);
-    --shadow-neon: 0 4px 14px rgba(4, 120, 87, 0.2);
-    --shadow-neon-hover: 0 6px 20px rgba(4, 120, 87, 0.3);
-    --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+    --shadow-neon: 0 4px 14px rgba(124, 58, 237, 0.16);
+    --shadow-neon-hover: 0 6px 20px rgba(124, 58, 237, 0.24);
+    --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.04);
   }
 
   html,
   body {
-    background: var(--color-ink-0);
+    background-color: var(--color-ink-0);
+    background-image: var(--ft-glow), var(--ft-grain);
+    background-size: auto, 3px 3px;
+    background-attachment: fixed, fixed;
     color: var(--color-fg-1);
     font-family: var(--font-sans);
     font-feature-settings: "ss01", "ss03";
@@ -148,6 +177,28 @@
   *:focus-visible {
     outline: 1px solid var(--color-accent);
     outline-offset: 2px;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-heading {
+    font-family: var(--font-heading);
+    letter-spacing: -0.02em;
+  }
+
+  /* Botón principal: píldora clara (oscura en modo claro). Cubre los botones
+     existentes que pintan con el acento hasta que usen <Button>. */
+  button[class*="bg-[var(--color-accent)]"]:not([class*="/"]),
+  a[class*="bg-[var(--color-accent)]"]:not([class*="/"]) {
+    background: var(--color-btn-bg) !important;
+    color: var(--color-btn-fg) !important;
+    border-radius: 9999px !important;
+    box-shadow: none !important;
+  }
+  button[class*="bg-[var(--color-accent)]"]:not([class*="/"]) *,
+  a[class*="bg-[var(--color-accent)]"]:not([class*="/"]) * {
+    color: var(--color-btn-fg) !important;
   }
 
   input:-webkit-autofill,
@@ -202,7 +253,26 @@
   }
 
   .glow {
-    text-shadow: 0 0 12px rgba(57, 255, 136, 0.55);
+    text-shadow: none;
+  }
+
+  .ft-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+  }
+
+  .ft-gradient-text {
+    background: var(--gradient-accent);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .ft-bg {
+    background-color: var(--color-ink-0);
+    background-image: var(--ft-glow), var(--ft-grain);
+    background-size: auto, 3px 3px;
   }
 
   .fade-in {
@@ -306,10 +376,11 @@
 }
 
 .glass-card {
-  background: rgba(13, 13, 15, 0.75);
+  background: var(--color-surface);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
   transform: translateZ(0);
   -webkit-transform: translate3d(0,0,0);
   backface-visibility: hidden;
@@ -346,7 +417,7 @@ body.theme-light .grid-overlay {
 }
 
 .text-glow {
-  text-shadow: 0 0 10px rgba(57, 255, 136, 0.3);
+  text-shadow: none;
 }
 
 html[data-theme="light"] .text-glow,
@@ -390,7 +461,7 @@ body.theme-light {
   .border-white\/10,
   .border-white\/20,
   .border-white\/30 {
-    border-color: #e2e8f0 !important;
+    border-color: var(--color-ink-3) !important;
   }
   
   .bg-black\/40,
@@ -404,16 +475,16 @@ body.theme-light {
   .bg-black\/20,
   .bg-black\/30,
   .bg-white\/5 {
-    background-color: #f1f5f9 !important;
+    background-color: var(--color-ink-2) !important;
   }
 
   .bg-white\/10 {
-    background-color: #e2e8f0 !important;
+    background-color: var(--color-ink-3) !important;
   }
 
   /* High contrast text overrides */
   .text-white:not([class*="bg-[var(--color-accent)]"], [class*="bg-[var(--color-danger)]"], [class*="bg-brand-primary"], .badge-dark) {
-    color: #09090b !important;
+    color: var(--color-fg-1) !important;
   }
 
   .text-gray-300 {
@@ -435,38 +506,26 @@ body.theme-light {
   /* Stat cards, fund cards and general cards in light mode */
   .bg-\[var\(--color-ink-1\)\] {
     background-color: #ffffff !important;
-    border-color: #e2e8f0 !important;
+    border-color: var(--color-ink-3) !important;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03) !important;
   }
 
   .bg-\[var\(--color-ink-2\)\] {
-    background-color: #f8fafc !important;
-    border-color: #e2e8f0 !important;
+    background-color: var(--color-ink-2) !important;
+    border-color: var(--color-ink-3) !important;
   }
 
   /* Primary action buttons */
-  button[class*="bg-[var(--color-accent)]"],
-  a[class*="bg-[var(--color-accent)]"],
   button.bg-brand-primary,
   a.bg-brand-primary {
-    color: #ffffff !important;
-    background-color: #047857 !important;
-    box-shadow: 0 4px 14px rgba(4, 120, 87, 0.25) !important;
+    color: var(--color-btn-fg) !important;
+    background-color: var(--color-btn-bg) !important;
+    box-shadow: none !important;
   }
 
-  button[class*="bg-[var(--color-accent)]"]:hover,
-  a[class*="bg-[var(--color-accent)]"]:hover,
-  button.bg-brand-primary:hover,
-  a.bg-brand-primary:hover {
-    background-color: #065f46 !important;
-  }
-
-  /* Make sure text inside accent buttons is white */
-  button[class*="bg-[var(--color-accent)]"] span,
-  a[class*="bg-[var(--color-accent)]"] span,
   button.bg-brand-primary span,
   a.bg-brand-primary span {
-    color: #ffffff !important;
+    color: var(--color-btn-fg) !important;
   }
 
   /* Neon glows should not blur text in light mode */
@@ -477,15 +536,15 @@ body.theme-light {
   /* Tooltip box in charts */
   .recharts-default-tooltip {
     background-color: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    color: #09090b !important;
+    border: 1px solid var(--color-ink-3) !important;
+    color: var(--color-fg-1) !important;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08) !important;
   }
 
   /* Sidebar in light mode */
   aside {
     background-color: #ffffff !important;
-    border-color: #e2e8f0 !important;
+    border-color: var(--color-ink-3) !important;
   }
 }
 
@@ -541,6 +600,6 @@ html[data-theme="light"] .report-page span,
 html[data-theme="light"] .report-page td,
 html[data-theme="light"] .report-page th,
 html[data-theme="light"] .report-page div {
-  --color-accent: #39ff88 !important;
+  --color-accent: #c084fc !important;
 }
 

@@ -440,21 +440,21 @@ export const UserReportTemplate = forwardRef<HTMLDivElement, Props>(({ user, sta
           {/* Header Institucional v4 */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #27272a', paddingBottom: '12px', marginBottom: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#39ff88', color: '#000000', fontWeight: '900', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#c084fc', color: '#000000', fontWeight: '900', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace' }}>
                 FT
               </div>
               <div>
                 <span style={{ fontSize: '12px', fontFamily: 'monospace', fontWeight: 'bold', letterSpacing: '0.1em', color: '#ffffff', textTransform: 'uppercase', display: 'block' }}>
                   FondTracker Institutional Research
                 </span>
-                <span style={{ fontSize: '9px', fontFamily: 'monospace', color: '#39ff88', display: 'block' }}>
+                <span style={{ fontSize: '9px', fontFamily: 'monospace', color: '#c084fc', display: 'block' }}>
                   Comité de Análisis de Inversiones • Dictamen Patrimonial
                 </span>
               </div>
             </div>
             <div style={{ textAlign: 'right', fontFamily: 'monospace', fontSize: '9px', color: '#94a3b8' }}>
               <span>Informe v4.0 • {dateStr} {timeStr}</span>
-              <span style={{ display: 'block', color: '#39ff88', fontWeight: 'bold' }}>DATA QUALITY SCORE: {tierInventory.overallDqScore}/100</span>
+              <span style={{ display: 'block', color: '#c084fc', fontWeight: 'bold' }}>DATA QUALITY SCORE: {tierInventory.overallDqScore}/100</span>
             </div>
           </div>
 
@@ -462,10 +462,10 @@ export const UserReportTemplate = forwardRef<HTMLDivElement, Props>(({ user, sta
           <div style={{ backgroundColor: '#121216', border: '1px solid #27272a', borderRadius: '10px', padding: '10px 12px', marginBottom: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '9px', fontFamily: 'monospace', color: '#cbd5e1', marginBottom: '6px' }}>
               <span style={{ fontWeight: 'bold', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <Database size={12} color="#39ff88" />
+                <Database size={12} color="#c084fc" />
                 [FACT] Contrato de Datos &amp; Inventario por Tiers
               </span>
-              <span style={{ color: '#39ff88', fontWeight: 'bold' }}>
+              <span style={{ color: '#c084fc', fontWeight: 'bold' }}>
                 Confianza Metodológica: {tierInventory.overallDqScore >= 80 ? 'ALTA' : 'MEDIA'}
               </span>
             </div>
@@ -482,7 +482,7 @@ export const UserReportTemplate = forwardRef<HTMLDivElement, Props>(({ user, sta
           {/* Title & Epistemological Labels */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-              <span style={{ padding: '2px 6px', backgroundColor: 'rgba(57,255,136,0.1)', border: '1px solid rgba(57,255,136,0.3)', borderRadius: '4px', fontSize: '8px', fontFamily: 'monospace', color: '#39ff88', fontWeight: 'bold' }}>
+              <span style={{ padding: '2px 6px', backgroundColor: 'rgba(192,132,252,0.1)', border: '1px solid rgba(192,132,252,0.3)', borderRadius: '4px', fontSize: '8px', fontFamily: 'monospace', color: '#c084fc', fontWeight: 'bold' }}>
                 [FACT] DATOS REALES
               </span>
               <span style={{ padding: '2px 6px', backgroundColor: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.3)', borderRadius: '4px', fontSize: '8px', fontFamily: 'monospace', color: '#60a5fa', fontWeight: 'bold' }}>
@@ -530,7 +530,7 @@ export const UserReportTemplate = forwardRef<HTMLDivElement, Props>(({ user, sta
 
             <div style={{ backgroundColor: '#121216', border: '1px solid #27272a', padding: '10px 12px', borderRadius: '10px' }}>
               <span style={{ fontSize: '8px', color: '#94a3b8', textTransform: 'uppercase', display: 'block' }}>[CALC] Portfolio Score</span>
-              <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#39ff88', marginTop: '1px' }}>
+              <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#c084fc', marginTop: '1px' }}>
                 {portfolioAnalysis.portfolioScore} <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 'normal' }}>/ 100</span>
               </div>
               <span style={{ fontSize: '7.5px', color: '#34d399', display: 'block' }}>[ANALYSIS] Rating Institucional</span>
@@ -551,7 +551,7 @@ export const UserReportTemplate = forwardRef<HTMLDivElement, Props>(({ user, sta
               <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {portfolioAnalysis.primaryFund ? sanitizeFundName(portfolioAnalysis.primaryFund.fund.name) : '—'}
               </div>
-              <span style={{ fontSize: '7.5px', color: '#39ff88', display: 'block' }}>
+              <span style={{ fontSize: '7.5px', color: '#c084fc', display: 'block' }}>
                 {portfolioAnalysis.primaryFund ? `[CALC] ${portfolioAnalysis.primaryFund.weight}% del capital` : '—'}
               </span>
             </div>
@@ -564,7 +564,7 @@ export const UserReportTemplate = forwardRef<HTMLDivElement, Props>(({ user, sta
             </span>
             <div style={{ fontSize: '9.5px', color: '#cbd5e1', lineHeight: '1.5', display: 'flex', flexDirection: 'column', gap: '3px' }}>
               <p style={{ margin: 0 }}>
-                <strong>Qué explica el resultado:</strong> Tu cartera acumula una rentabilidad neta de <strong style={{ color: '#39ff88' }}>{fmtEur(totalPL)} ({fmtPct(totalPLPct)})</strong> sobre un capital aportado de {fmtEur(totalInitial)}. El fondo líder <strong style={{ color: '#ffffff' }}>{portfolioAnalysis.primaryFund ? sanitizeFundName(portfolioAnalysis.primaryFund.fund.name) : 'principal'}</strong> ({portfolioAnalysis.primaryFund?.weight}% de peso) aporta +{fmtEur(portfolioAnalysis.primaryFund?.pl || 0)} al beneficio global, actuando como el motor primario de rentabilidad.
+                <strong>Qué explica el resultado:</strong> Tu cartera acumula una rentabilidad neta de <strong style={{ color: '#c084fc' }}>{fmtEur(totalPL)} ({fmtPct(totalPLPct)})</strong> sobre un capital aportado de {fmtEur(totalInitial)}. El fondo líder <strong style={{ color: '#ffffff' }}>{portfolioAnalysis.primaryFund ? sanitizeFundName(portfolioAnalysis.primaryFund.fund.name) : 'principal'}</strong> ({portfolioAnalysis.primaryFund?.weight}% de peso) aporta +{fmtEur(portfolioAnalysis.primaryFund?.pl || 0)} al beneficio global, actuando como el motor primario de rentabilidad.
               </p>
               <p style={{ margin: 0 }}>
                 <strong>Dónde está el riesgo principal:</strong> La posición líder concentra el {portfolioAnalysis.primaryFund?.riskContribPct}% del riesgo agregado. La estructura de costes (TER medio del {portfolioAnalysis.avgTer}%) te ahorra aproximadamente {fmtEur(totalCurrent * 0.012)}/año frente a fondos comercializados por banca tradicional.
@@ -607,7 +607,7 @@ export const UserReportTemplate = forwardRef<HTMLDivElement, Props>(({ user, sta
           </div>
 
           <h2 style={{ fontSize: '13px', fontWeight: 'bold', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 10px 0' }}>
-            <Layers size={15} color="#39ff88" />
+            <Layers size={15} color="#c084fc" />
             Análisis Posición por Posición ({funds.length} Fondos Auditados)
           </h2>
 
@@ -630,7 +630,7 @@ export const UserReportTemplate = forwardRef<HTMLDivElement, Props>(({ user, sta
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '3px' }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '2px' }}>
-                        <span style={{ fontSize: '8px', fontFamily: 'monospace', fontWeight: 'bold', padding: '1px 5px', backgroundColor: 'rgba(57,255,136,0.1)', color: '#39ff88', borderRadius: '4px', border: '1px solid rgba(57,255,136,0.2)' }}>
+                        <span style={{ fontSize: '8px', fontFamily: 'monospace', fontWeight: 'bold', padding: '1px 5px', backgroundColor: 'rgba(192,132,252,0.1)', color: '#c084fc', borderRadius: '4px', border: '1px solid rgba(192,132,252,0.2)' }}>
                           [FACT] {af.fund.isin}
                         </span>
                         {af.fund.bank && (
@@ -660,7 +660,7 @@ export const UserReportTemplate = forwardRef<HTMLDivElement, Props>(({ user, sta
                     </div>
                     <div>
                       <span style={{ color: '#64748b', display: 'block', fontSize: '7px', textTransform: 'uppercase' }}>[CALC] Peso Cartera</span>
-                      <span style={{ color: '#39ff88', fontWeight: 'bold' }}>{af.weight}%</span>
+                      <span style={{ color: '#c084fc', fontWeight: 'bold' }}>{af.weight}%</span>
                     </div>
                     <div>
                       <span style={{ color: '#64748b', display: 'block', fontSize: '7px', textTransform: 'uppercase' }}>[CALC] Plusvalía Neta</span>
@@ -732,7 +732,7 @@ export const UserReportTemplate = forwardRef<HTMLDivElement, Props>(({ user, sta
           {/* Section 3: Consolidated Indirect Underlying Holdings */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <h2 style={{ fontSize: '13px', fontWeight: 'bold', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-              <Building2 size={15} color="#39ff88" />
+              <Building2 size={15} color="#c084fc" />
               [CALC] Exposición Indirecta Consolidada a Empresas Líderes (Look-Through)
             </h2>
             <p style={{ fontSize: '9px', color: '#94a3b8', margin: 0 }}>
@@ -756,7 +756,7 @@ export const UserReportTemplate = forwardRef<HTMLDivElement, Props>(({ user, sta
                       <td style={{ padding: '6px 8px', fontWeight: 'bold', color: '#ffffff' }}>#{idx + 1} {h.name}</td>
                       <td style={{ padding: '6px 8px', color: '#94a3b8' }}>{h.ticker || '—'}</td>
                       <td style={{ padding: '6px 8px', color: '#cbd5e1' }}>{h.sector}</td>
-                      <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold', color: '#39ff88' }}>{h.weight}%</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold', color: '#c084fc' }}>{h.weight}%</td>
                       <td style={{ padding: '6px 8px', textAlign: 'right', color: '#ffffff', fontWeight: 'bold' }}>{fmtEur(h.valueEur)}</td>
                     </tr>
                   ))}
@@ -794,7 +794,7 @@ export const UserReportTemplate = forwardRef<HTMLDivElement, Props>(({ user, sta
               [ANALYSIS] Concentración &amp; Solapamiento Real (Índice HHI: {portfolioAnalysis.hhi})
             </span>
             <p style={{ fontSize: '8.5px', color: '#cbd5e1', lineHeight: '1.4', margin: 0 }}>
-              La combinación de fondos presenta una correlación equilibrada. El Top 5 de empresas subyacentes concentra el <strong style={{ color: '#39ff88' }}>{portfolioAnalysis.topHoldings.slice(0, 5).reduce((acc, h) => acc + h.weight, 0).toFixed(1)}%</strong> de tu cartera, garantizando una diversificación efectiva sin redundancias excesivas en grandes corporaciones globales.
+              La combinación de fondos presenta una correlación equilibrada. El Top 5 de empresas subyacentes concentra el <strong style={{ color: '#c084fc' }}>{portfolioAnalysis.topHoldings.slice(0, 5).reduce((acc, h) => acc + h.weight, 0).toFixed(1)}%</strong> de tu cartera, garantizando una diversificación efectiva sin redundancias excesivas en grandes corporaciones globales.
             </p>
           </div>
         </div>
@@ -840,7 +840,7 @@ export const UserReportTemplate = forwardRef<HTMLDivElement, Props>(({ user, sta
                 [CALC] Auditoría de Costes (TER)
               </span>
               <div style={{ color: '#cbd5e1', lineHeight: '1.4' }}>
-                <div>• TER Medio Ponderado: <strong style={{ color: '#39ff88' }}>{portfolioAnalysis.avgTer}%</strong></div>
+                <div>• TER Medio Ponderado: <strong style={{ color: '#c084fc' }}>{portfolioAnalysis.avgTer}%</strong></div>
                 <div>• Coste Anual Estimado: <strong style={{ color: '#ffffff' }}>{fmtEur(portfolioAnalysis.totalAnnualCost)} / año</strong></div>
                 <div>• Ahorro Estimado vs Banca (1.50%): <strong style={{ color: '#34d399' }}>~{fmtEur(totalCurrent * 0.012)} / año</strong></div>
               </div>
@@ -853,8 +853,8 @@ export const UserReportTemplate = forwardRef<HTMLDivElement, Props>(({ user, sta
               </span>
               <div style={{ color: '#cbd5e1', lineHeight: '1.4' }}>
                 <div>• Volatilidad Ponderada: <strong style={{ color: '#ffffff' }}>{portfolioAnalysis.avgVol}%</strong></div>
-                <div>• Sharpe Ratio (Rf = 3.0%): <strong style={{ color: '#39ff88' }}>{portfolioAnalysis.sharpe}</strong></div>
-                <div>• Sortino Ratio: <strong style={{ color: '#39ff88' }}>{portfolioAnalysis.sortino}</strong></div>
+                <div>• Sharpe Ratio (Rf = 3.0%): <strong style={{ color: '#c084fc' }}>{portfolioAnalysis.sharpe}</strong></div>
+                <div>• Sortino Ratio: <strong style={{ color: '#c084fc' }}>{portfolioAnalysis.sortino}</strong></div>
                 <div>• Retorno Ponderado (TWR / XIRR): <strong style={{ color: '#34d399' }}>{portfolioAnalysis.twr}% / {portfolioAnalysis.xirr}%</strong></div>
               </div>
             </div>
@@ -862,7 +862,7 @@ export const UserReportTemplate = forwardRef<HTMLDivElement, Props>(({ user, sta
 
           {/* Section 7: Variables to Monitor */}
           <div style={{ backgroundColor: '#121216', border: '1px solid #27272a', padding: '10px 12px', borderRadius: '10px', marginBottom: '10px' }}>
-            <span style={{ fontSize: '9px', fontWeight: 'bold', color: '#39ff88', textTransform: 'uppercase', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '3px' }}>
+            <span style={{ fontSize: '9px', fontWeight: 'bold', color: '#c084fc', textTransform: 'uppercase', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '3px' }}>
               <Target size={12} /> [ANALYSIS] Variables Concretas a Vigilar en esta Cartera
             </span>
             <ul style={{ fontSize: '8px', color: '#cbd5e1', paddingLeft: '0', listStyle: 'none', margin: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>

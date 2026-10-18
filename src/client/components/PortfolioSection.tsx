@@ -215,7 +215,7 @@ export function PortfolioSection({ funds, status, onRefresh, onNavigateAdd }: Po
             {/* Add Fund CTA */}
             <button 
               onClick={onNavigateAdd}
-              className="px-3 sm:px-4 py-2 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold text-xs rounded-xl shadow-[0_0_12px_rgba(57,255,136,0.2)] hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5 shrink-0"
+              className="px-3 sm:px-4 py-2 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold text-xs rounded-xl shadow-[0_0_12px_rgba(192,132,252,0.2)] hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5 shrink-0"
             >
               <Plus size={14} strokeWidth={2.5} />
               <span className="hidden sm:inline">Añadir</span>
