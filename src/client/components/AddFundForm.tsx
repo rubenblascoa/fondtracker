@@ -1,4 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef, type FormEvent } from "react";
+import { purchaseFromStatement, referencePrice } from "../purchase";
+import { formatEur } from "../utils";
 import { api, type FundCatalogEntry, type FundSearchResult } from "../api";
 import { 
   Search, Plus, Check, AlertCircle, Sparkles, Building2, 
@@ -11,13 +13,7 @@ import {
 } from "recharts";
 import { sanitizeFundName } from "../utils";
 
-function fmtEur(n: number) {
-  return new Intl.NumberFormat('es-ES', { 
-    style: 'currency', 
-    currency: 'EUR', 
-    maximumFractionDigits: 2 
-  }).format(n);
-}
+const fmtEur = (n: number) => formatEur(n);
 
 type Props = {
   onAdded: () => void;
@@ -119,33 +115,10 @@ export function AddFundForm({ onAdded }: Props) {
       .finally(() => setLoadingChart(false));
   }, [selectedFund]);
 
-  // Autofill purchase price when date or chart changes
-  useEffect(() => {
-    if (!selectedFundChart || !purchaseDate) return;
-    
-    const targetTime = new Date(purchaseDate).getTime() / 1000;
-    const quotes = selectedFundChart.quotes;
-    if (!quotes || quotes.length === 0) {
-      if (selectedFundChart.currentPrice > 0) {
-        setPurchasePrice(selectedFundChart.currentPrice.toFixed(4));
-      }
-      return;
-    }
-
-    let closestQuote = quotes[0];
-    let minDiff = Math.abs(quotes[0].timestamp - targetTime);
-    for (const q of quotes) {
-      const diff = Math.abs(q.timestamp - targetTime);
-      if (diff < minDiff) {
-        minDiff = diff;
-        closestQuote = q;
-      }
-    }
-    
-    if (closestQuote && closestQuote.close > 0) {
-      setPurchasePrice(closestQuote.close.toFixed(4));
-    }
-  }, [purchaseDate, selectedFundChart]);
+  // Lo que el usuario apunta (extracto del banco) y lo que se deriva
+  const purchase = purchaseFromStatement(shares, amount);
+  const reference =
+    purchase.ok && selectedFundChart?.quotes ? referencePrice(selectedFundChart.quotes, purchaseDate, purchase.price) : null;
 
   const selectFund = (fund: FundCatalogEntry | typeof POPULAR_QUICK_FUNDS[0]) => {
     setSelectedFund({
@@ -182,30 +155,9 @@ export function AddFundForm({ onAdded }: Props) {
       setError("Selecciona un fondo del catálogo");
       return;
     }
-    const priceVal = parseFloat(purchasePrice);
-    let sharesVal = 0;
-    
-    if (mode === "amount") {
-      const amountVal = parseFloat(amount);
-      if (!Number.isFinite(amountVal) || amountVal <= 0) {
-        setError("El importe invertido debe ser un número positivo");
-        return;
-      }
-      if (!Number.isFinite(priceVal) || priceVal <= 0) {
-        setError("El precio liquidativo debe ser un número positivo");
-        return;
-      }
-      sharesVal = amountVal / priceVal;
-    } else {
-      sharesVal = parseFloat(shares);
-      if (!Number.isFinite(sharesVal) || sharesVal <= 0) {
-        setError("El número de participaciones debe ser positivo");
-        return;
-      }
-      if (!Number.isFinite(priceVal) || priceVal <= 0) {
-        setError("El precio liquidativo debe ser un número positivo");
-        return;
-      }
+    if (!purchase.ok) {
+      setError(purchase.error);
+      return;
     }
     if (!purchaseDate) {
       setError("Selecciona una fecha de compra");
@@ -217,8 +169,8 @@ export function AddFundForm({ onAdded }: Props) {
     try {
       await api.addFund({
         isin: selectedFund.isin,
-        shares: sharesVal,
-        purchase_price: priceVal,
+        shares: purchase.shares,
+        purchase_price: purchase.price,
         purchase_date: purchaseDate,
         notes: notes.trim() || undefined,
       });
@@ -244,17 +196,8 @@ export function AddFundForm({ onAdded }: Props) {
     }
   };
 
-  const totalEstimate =
-    mode === "amount"
-      ? (amount ? parseFloat(amount) : 0)
-      : (shares && purchasePrice
-        ? (parseFloat(shares) * parseFloat(purchasePrice))
-        : 0);
-
-  const calculatedShares =
-    mode === "amount" && amount && purchasePrice && parseFloat(purchasePrice) > 0
-      ? (parseFloat(amount) / parseFloat(purchasePrice))
-      : mode === "shares" && shares ? parseFloat(shares) : 0;
+  const totalEstimate = purchase.ok ? purchase.amount : 0;
+  const calculatedShares = purchase.ok ? purchase.shares : 0;
 
   // Format quotes for mini chart
   const miniChartData = React.useMemo(() => {
@@ -268,31 +211,13 @@ export function AddFundForm({ onAdded }: Props) {
   return (
     <div className="space-y-6">
       
-      {/* ── Top Header Banner ── */}
-      <div className="bg-gradient-to-r from-[var(--color-ink-1)] to-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-7 relative overflow-hidden shadow-xl">
-        <div className="absolute right-0 top-0 w-80 h-80 bg-[var(--color-accent)]/5 rounded-full blur-[90px] pointer-events-none" />
-
-        <div className="max-w-3xl relative z-10">
-          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 text-[var(--color-accent)] rounded-full text-[11px] sm:text-xs font-semibold mb-2 sm:mb-3">
-            <Plus size={13} strokeWidth={2.5} />
-            <span>Registro de Inversión &amp; Catálogo Europeo</span>
-          </div>
-          <h1 className="text-xl sm:text-3xl font-extrabold text-[var(--color-fg-1)] tracking-tight mb-1.5 sm:mb-2">
-            Añadir Posición a tu Cartera
-          </h1>
-          <p className="text-xs sm:text-sm text-[var(--color-fg-4)] leading-relaxed">
-            Busca fondos indexados, ETFs y fondos bancarios o introduce cualquier código ISIN con cálculo automático.
-          </p>
-        </div>
-      </div>
-
       {/* ── Step Indicator Breadcrumb ── */}
       <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-3 sm:p-3.5 flex items-center justify-between sm:justify-start gap-2 sm:gap-3 text-xs font-mono">
         <div className={`flex items-center gap-1.5 sm:gap-2 font-bold ${!selectedFund ? "text-[var(--color-accent)]" : "text-[var(--color-fg-4)]"}`}>
           <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[11px] sm:text-xs ${!selectedFund ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold" : "bg-[var(--color-ink-2)] text-[var(--color-fg-1)]"}`}>
             1
           </span>
-          <span className="hidden sm:inline">1. Seleccionar Fondo o ETF</span>
+          <span className="hidden sm:inline">1. Elige el fondo</span>
           <span className="sm:hidden">1. Buscar Fondo</span>
         </div>
         <div className="w-6 sm:w-10 h-px bg-[var(--color-ink-2)]" />
@@ -300,7 +225,7 @@ export function AddFundForm({ onAdded }: Props) {
           <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[11px] sm:text-xs ${selectedFund ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold" : "bg-[var(--color-ink-2)] text-[var(--color-fg-5)]"}`}>
             2
           </span>
-          <span className="hidden sm:inline">2. Datos de Suscripción &amp; Liquidativo</span>
+          <span className="hidden sm:inline">2. Apunta lo que tienes</span>
           <span className="sm:hidden">2. Suscripción</span>
         </div>
       </div>
@@ -508,122 +433,74 @@ export function AddFundForm({ onAdded }: Props) {
                   </button>
                 </div>
 
-                {/* Mode Switcher */}
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-fg-4)] block">
-                    Modalidad de Registro
-                  </label>
-                  <div className="grid grid-cols-2 gap-1.5 sm:gap-2 p-1 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-2xl w-full max-w-md">
-                    <button
-                      type="button"
-                      onClick={() => setMode("amount")}
-                      className={`py-2 px-2.5 sm:px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 sm:gap-2 ${
-                        mode === "amount"
-                          ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_15px_rgba(192,132,252,0.2)] font-bold"
-                          : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
-                      }`}
-                    >
-                      <CreditCard size={13} />
-                      <span>Por Importe (€)</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setMode("shares")}
-                      className={`py-2 px-2.5 sm:px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 sm:gap-2 ${
-                        mode === "shares"
-                          ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_15px_rgba(192,132,252,0.2)] font-bold"
-                          : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
-                      }`}
-                    >
-                      <Layers size={13} />
-                      <span>Por Títulos</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Fields */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                  
-                  {mode === "amount" ? (
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-fg-4)] block">
-                        Importe Invertido (€) *
-                      </label>
+                {/* Datos del extracto del banco */}
+                <p className="text-sm text-[var(--color-fg-3)]">
+                  Copia las <b className="text-[var(--color-fg-1)]">participaciones</b> y el <b className="text-[var(--color-fg-1)]">importe invertido</b> tal cual aparecen en tu banco. El precio de compra se calcula solo.
+                </p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+                  {[
+                    { label: "Participaciones", value: shares, set: setShares, placeholder: "66,893659", suffix: "" },
+                    { label: "Importe invertido", value: amount, set: setAmount, placeholder: "1.000,00", suffix: "€" },
+                  ].map((f) => (
+                    <div key={f.label} className="space-y-1.5">
+                      <label className="block font-mono text-[11px] uppercase tracking-wider text-[var(--color-fg-4)]">{f.label} *</label>
                       <div className="relative">
                         <input
-                          type="number"
-                          step="any"
-                          value={amount}
-                          onChange={(e) => setAmount(e.target.value)}
-                          placeholder="1000.00"
-                          className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] rounded-2xl pl-4 pr-10 py-3 sm:py-3.5 text-base font-mono font-bold text-[var(--color-fg-1)] outline-none transition-all"
+                          type="text"
+                          inputMode="decimal"
+                          value={f.value}
+                          onChange={(e) => f.set(e.target.value)}
+                          placeholder={f.placeholder}
+                          className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] py-3 pl-4 pr-10 font-mono text-base font-semibold text-[var(--color-fg-1)] outline-none transition-all focus:border-[var(--color-accent)]"
                           required
                         />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 font-mono text-sm text-[var(--color-fg-4)] font-bold">€</span>
+                        {f.suffix && <span className="absolute right-4 top-1/2 -translate-y-1/2 font-mono text-sm text-[var(--color-fg-4)]">{f.suffix}</span>}
                       </div>
                     </div>
-                  ) : (
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-fg-4)] block">
-                        Participaciones *
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
-                        value={shares}
-                        onChange={(e) => setShares(e.target.value)}
-                        placeholder="50.2541"
-                        className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] rounded-2xl px-4 py-3 sm:py-3.5 text-base font-mono font-bold text-[var(--color-fg-1)] outline-none transition-all"
-                        required
-                      />
-                    </div>
-                  )}
-
+                  ))}
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-fg-4)] block">
-                      Fecha de Compra *
-                    </label>
+                    <label className="block font-mono text-[11px] uppercase tracking-wider text-[var(--color-fg-4)]">Fecha de compra *</label>
                     <input
                       type="date"
                       value={purchaseDate}
                       onChange={(e) => setPurchaseDate(e.target.value)}
-                      className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] rounded-2xl px-4 py-3 sm:py-3.5 text-sm sm:text-xs font-mono text-[var(--color-fg-1)] outline-none transition-all cursor-pointer"
+                      className="w-full cursor-pointer rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 font-mono text-sm text-[var(--color-fg-1)] outline-none transition-all focus:border-[var(--color-accent)]"
                       required
                     />
                   </div>
+                </div>
 
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between items-center">
-                      <label className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-fg-4)]">
-                        Precio (NAV) *
-                      </label>
-                      {loadingChart && (
-                        <span className="text-[10px] font-mono text-[var(--color-accent)] animate-pulse">
-                          Buscando...
-                        </span>
-                      )}
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        step="any"
-                        value={purchasePrice}
-                        onChange={(e) => setPurchasePrice(e.target.value)}
-                        placeholder="125.45"
-                        className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] rounded-2xl pl-4 pr-10 py-3 sm:py-3.5 text-base font-mono font-bold text-[var(--color-fg-1)] outline-none transition-all"
-                        required
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 font-mono text-sm text-[var(--color-fg-4)] font-bold">€</span>
-                    </div>
+                {/* Precio derivado + referencia publicada */}
+                <div className="ft-card flex flex-wrap items-center justify-between gap-3 p-4">
+                  <div>
+                    <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-fg-4)]">Precio de compra</span>
+                    <p className="font-heading text-xl font-semibold text-[var(--color-fg-1)]">
+                      {purchase.ok ? formatEur(purchase.price, 4) : "—"}
+                    </p>
                   </div>
-
+                  <div className="text-right text-xs">
+                    {loadingChart ? (
+                      <span className="animate-pulse text-[var(--color-fg-4)]">Buscando precio publicado…</span>
+                    ) : reference ? (
+                      <span className={reference.warn ? "text-[var(--color-warn)]" : "text-[var(--color-fg-3)]"}>
+                        Precio publicado el {reference.date.split("-").reverse().join("/")}: {formatEur(reference.price, 4)}
+                        {reference.warn && (
+                          <>
+                            <br />
+                            Difiere un {String(reference.gapPct).replace(".", ",")} %: revisa participaciones, importe y fecha.
+                          </>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-[var(--color-fg-4)]">Se compara con el precio publicado al rellenar los datos.</span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Notes */}
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-fg-4)] block">
-                    Notas u Observaciones (Opcional)
+                    Notas (opcional)
                   </label>
                   <textarea
                     value={notes}
@@ -651,12 +528,12 @@ export function AddFundForm({ onAdded }: Props) {
                     {loading ? (
                       <>
                         <RefreshCw size={14} className="animate-spin" />
-                        <span>Guardando Posición...</span>
+                        <span>Guardando…</span>
                       </>
                     ) : (
                       <>
                         <Plus size={16} strokeWidth={3} />
-                        <span>Registrar Inversión</span>
+                        <span>Añadir a mi cartera</span>
                       </>
                     )}
                   </button>
@@ -676,7 +553,7 @@ export function AddFundForm({ onAdded }: Props) {
             <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-5 shadow-xl">
               <div className="border-b border-[var(--color-ink-3)] pb-3 sm:pb-4">
                 <span className="text-[10px] font-mono text-[var(--color-accent)] uppercase tracking-wider font-bold block mb-1">
-                  Resumen de la Orden en Vivo
+                  Resumen
                 </span>
                 <h3 className="text-sm sm:text-base font-bold text-[var(--color-fg-1)] leading-snug">
                   {sanitizeFundName(selectedFund.name)}
@@ -686,21 +563,21 @@ export function AddFundForm({ onAdded }: Props) {
               {/* Live Metric Badges */}
               <div className="grid grid-cols-2 gap-2 sm:gap-3 font-mono">
                 <div className="bg-[var(--color-ink-2)] p-2.5 sm:p-3 rounded-xl border border-[var(--color-ink-3)]">
-                  <div className="text-[10px] text-[var(--color-fg-4)] uppercase">Capital a Invertir</div>
+                  <div className="text-[10px] text-[var(--color-fg-4)] uppercase">Invertido</div>
                   <div className="text-base sm:text-lg font-bold text-[var(--color-fg-1)] mt-0.5">{fmtEur(totalEstimate)}</div>
                 </div>
                 <div className="bg-[var(--color-ink-2)] p-2.5 sm:p-3 rounded-xl border border-[var(--color-ink-3)]">
                   <div className="text-[10px] text-[var(--color-fg-4)] uppercase">Participaciones</div>
                   <div className="text-base sm:text-lg font-bold text-[var(--color-accent)] mt-0.5">
-                    {calculatedShares ? calculatedShares.toFixed(4) : "0.0000"}
+                    {calculatedShares ? String(calculatedShares).replace(".", ",") : "—"}
                   </div>
                 </div>
                 <div className="bg-[var(--color-ink-2)] p-2.5 sm:p-3 rounded-xl border border-[var(--color-ink-3)]">
-                  <div className="text-[10px] text-[var(--color-fg-4)] uppercase">Precio NAV Entrada</div>
-                  <div className="text-xs sm:text-sm font-bold text-[var(--color-fg-2)] mt-0.5">{purchasePrice ? `${purchasePrice} €` : "—"}</div>
+                  <div className="text-[10px] text-[var(--color-fg-4)] uppercase">Precio de compra</div>
+                  <div className="text-xs sm:text-sm font-bold text-[var(--color-fg-2)] mt-0.5">{purchase.ok ? formatEur(purchase.price, 4) : "—"}</div>
                 </div>
                 <div className="bg-[var(--color-ink-2)] p-2.5 sm:p-3 rounded-xl border border-[var(--color-ink-3)]">
-                  <div className="text-[10px] text-[var(--color-fg-4)] uppercase">Entidad Custodia</div>
+                  <div className="text-[10px] text-[var(--color-fg-4)] uppercase">Entidad</div>
                   <div className="text-xs sm:text-sm font-bold text-[var(--color-fg-2)] mt-0.5 truncate">{selectedFund.bank || "General"}</div>
                 </div>
               </div>
@@ -709,7 +586,7 @@ export function AddFundForm({ onAdded }: Props) {
               {miniChartData.length > 0 && (
                 <div className="space-y-2 pt-2 border-t border-[var(--color-ink-3)]">
                   <div className="flex justify-between items-center text-xs font-mono">
-                    <span className="text-[var(--color-fg-4)]">Evolución Reciente del NAV</span>
+                    <span className="text-[var(--color-fg-4)]">Valor liquidativo reciente</span>
                     <span className="text-[var(--color-accent)] font-bold">{selectedFundChart?.currentPrice?.toFixed(2)} €</span>
                   </div>
                   <div className="h-24 sm:h-28 w-full">
@@ -738,7 +615,7 @@ export function AddFundForm({ onAdded }: Props) {
               <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl text-xs text-emerald-400 flex items-start gap-2.5">
                 <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
                 <span>
-                  Esta posición se sincronizará automáticamente con las alertas de WhatsApp y los informes fiscales de patrimonio.
+                  Después podrás añadir aportaciones, ventas o traspasos desde «Movimientos» en la ficha del fondo.
                 </span>
               </div>
             </div>
