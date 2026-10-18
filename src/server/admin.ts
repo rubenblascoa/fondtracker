@@ -10,12 +10,7 @@ export type ActivityLog = {
 };
 
 const activityLogs: ActivityLog[] = [
-  {
-    id: "init-1",
-    type: "SYSTEM_REFRESH",
-    message: "Servidor FondTracker inicializado con pool MySQL",
-    timestamp: new Date(Date.now() - 3600000).toISOString(),
-  }
+  { id: "startup", type: "SYSTEM_REFRESH", message: "Servidor arrancado", timestamp: new Date().toISOString() },
 ];
 const MAX_LOGS = 60;
 
@@ -42,15 +37,21 @@ export async function getAdminOverview() {
       pool.query<any[]>("SELECT COUNT(*) AS total FROM users WHERE deleted_at IS NULL"),
       pool.query<any[]>("SELECT COUNT(*) AS total FROM users WHERE deleted_at IS NULL AND created_at >= NOW() - INTERVAL 7 DAY"),
       pool.query<any[]>("SELECT COUNT(*) AS total FROM investments WHERE deleted_at IS NULL"),
-      pool.query<any[]>("SELECT COALESCE(SUM(CAST(shares AS DECIMAL(20,6)) * CAST(purchase_price AS DECIMAL(20,6))), 0) AS aum FROM investments WHERE deleted_at IS NULL"),
+      pool.query<any[]>(`
+        SELECT
+          COALESCE(SUM(CAST(i.shares AS DECIMAL(20,6)) * CAST(i.purchase_price AS DECIMAL(20,6))), 0) AS invested,
+          COALESCE(SUM(CAST(i.shares AS DECIMAL(20,6)) * CAST(COALESCE(fp.price, i.purchase_price) AS DECIMAL(20,6))), 0) AS value
+        FROM investments i LEFT JOIN fund_prices fp ON fp.isin = i.isin
+        WHERE i.deleted_at IS NULL
+      `),
       pool.query<any[]>("SELECT COUNT(*) AS total FROM fund_catalog"),
       pool.query<any[]>("SELECT COUNT(*) AS total FROM fund_prices"),
       pool.query<any[]>(`
-        SELECT COUNT(DISTINCT u.id) AS total 
-        FROM users u 
-        WHERE u.deleted_at IS NULL 
-          AND u.phone IS NOT NULL 
-          AND u.phone != '' 
+        SELECT COUNT(DISTINCT u.id) AS total
+        FROM users u
+        WHERE u.deleted_at IS NULL
+          AND u.phone IS NOT NULL
+          AND u.phone != ''
           AND COALESCE((SELECT setting_value FROM settings WHERE setting_key = CONCAT('digest:enabled:', u.id)), 'true') != 'false'
       `),
       pool.query<any[]>("SELECT SUM(google_id IS NOT NULL) AS google, SUM(github_id IS NOT NULL) AS github, SUM(password_hash IS NOT NULL) AS password FROM users WHERE deleted_at IS NULL"),
@@ -83,7 +84,10 @@ export async function getAdminOverview() {
     deleted_users: Number(deletedRow[0]?.total ?? 0),
     new_this_week: Number(newWeekRow[0]?.total ?? 0),
     total_investments: Number(invRow[0]?.total ?? 0),
-    aum_total: Number(aumRow[0]?.aum ?? 0),
+    /** Lo que han puesto los usuarios (participaciones × precio de compra) */
+    invested_total: Number(aumRow[0]?.invested ?? 0),
+    /** Lo que vale hoy, con el último precio guardado de cada fondo */
+    value_total: Number(aumRow[0]?.value ?? 0),
     catalog_size: Number(catalogRow[0]?.total ?? 0),
     cached_prices: Number(pricesRow[0]?.total ?? 0),
     whatsapp_active: Number(waRow[0]?.total ?? 0),
@@ -102,7 +106,7 @@ export async function getAdminOverview() {
 
 export async function getAdminUsers(search?: string, status?: string, limit = 50, offset = 0) {
   let sql = `
-    SELECT 
+    SELECT
       u.id,
       u.username,
       u.email,
@@ -116,7 +120,7 @@ export async function getAdminUsers(search?: string, status?: string, limit = 50
       COUNT(i.id) AS investment_count,
       COALESCE(SUM(CAST(i.shares AS DECIMAL(20,6)) * CAST(i.purchase_price AS DECIMAL(20,6))), 0) AS total_invested,
       (
-        CASE 
+        CASE
           WHEN u.phone IS NOT NULL AND u.phone != '' AND COALESCE((SELECT setting_value FROM settings WHERE setting_key = CONCAT('digest:enabled:', u.id)), 'true') != 'false' THEN '1'
           ELSE '0'
         END
@@ -174,15 +178,12 @@ export async function getAdminUserDetail(userId: number) {
     [userId]
   );
 
-  const [settingsRows] = await pool.query<any[]>(
-    `SELECT setting_key, setting_value FROM settings WHERE setting_key LIKE ? OR setting_key LIKE ?`,
-    [`%_${userId}`, `%:${userId}`]
-  );
-
-  const settingsMap: Record<string, string> = {};
-  for (const r of (settingsRows || [])) {
-    settingsMap[r.setting_key] = r.setting_value;
-  }
+  const { whatsappConfig } = await import("./whatsapp");
+  const [wa, lastSent, lastStatus] = await Promise.all([
+    whatsappConfig(userId),
+    queries.getSetting(`digest:last_sent_at:${userId}`),
+    queries.getSetting(`digest:last_status:${userId}`),
+  ]);
 
   let totalInvested = 0;
   let totalCurrent = 0;
@@ -196,29 +197,6 @@ export async function getAdminUserDetail(userId: number) {
     totalCurrent += curAmt;
   }
 
-  let hours = [8, 14, 20];
-  const rawHours = settingsMap[`whatsapp_hours_${userId}`] || settingsMap[`digest:hours:${userId}`];
-  if (rawHours) {
-    try {
-      const parsed = JSON.parse(rawHours);
-      if (Array.isArray(parsed)) hours = parsed;
-    } catch {
-      const split = String(rawHours).split(",").map(Number).filter(n => Number.isFinite(n));
-      if (split.length > 0) hours = split;
-    }
-  }
-
-  const isEnabled = 
-    settingsMap[`whatsapp_enabled_${userId}`] === "1" || 
-    settingsMap[`digest:enabled:${userId}`] === "1" || 
-    settingsMap[`digest:enabled:${userId}`] === "true";
-
-  const hasApiKey = Boolean(
-    settingsMap[`whatsapp_api_key_${userId}`] || 
-    settingsMap[`digest:api_key:${userId}`] || 
-    process.env.CALLMEBOT_API_KEY
-  );
-
   return {
     user,
     summary: {
@@ -230,12 +208,13 @@ export async function getAdminUserDetail(userId: number) {
     },
     investments: investments || [],
     whatsapp: {
-      phone: settingsMap[`whatsapp_phone_${userId}`] || user.phone || null,
-      enabled: isEnabled,
-      hasApiKey,
-      hours,
-      lastSent: settingsMap[`digest:last_sent_at:${userId}`] || null,
-      lastStatus: settingsMap[`digest:last_status:${userId}`] || null,
+      phone: wa.phone,
+      enabled: wa.enabled,
+      hasApiKey: Boolean(wa.api_key),
+      hours: wa.hours,
+      timezone: wa.timezone,
+      lastSent: lastSent || null,
+      lastStatus: lastStatus || null,
     }
   };
 }
@@ -410,7 +389,7 @@ export async function adminRefreshAllPrices() {
   );
   const isins: string[] = rows.map(r => r.isin);
   addActivityLog("SYSTEM_REFRESH", `Iniciada sincronización masiva de precios para ${isins.length} fondos`);
-  
+
   // Background runner
   (async () => {
     let success = 0;
@@ -433,7 +412,7 @@ export async function getAdminNotificationStats() {
   const [usersRows] = await pool.query<any[]>(
     "SELECT id, username, email, phone FROM users WHERE deleted_at IS NULL ORDER BY created_at DESC"
   );
-  
+
   const [settingsRows] = await pool.query<any[]>(
     "SELECT setting_key, setting_value FROM settings WHERE setting_key LIKE 'digest:%'"
   );
@@ -489,15 +468,10 @@ export async function getAdminNotificationPreview(userId?: number) {
     const [users] = await pool.query<any[]>(
       "SELECT u.id FROM users u JOIN investments i ON i.user_id = u.id WHERE u.deleted_at IS NULL GROUP BY u.id ORDER BY COUNT(i.id) DESC LIMIT 1"
     );
-    targetUserId = users[0]?.id || 1;
+    targetUserId = users[0]?.id;
   }
-  try {
-    const message = await previewDigest({ slot: "manual", timezone: "Europe/Madrid" }, targetUserId ?? 1);
-    return { userId: targetUserId, message };
-  } catch (err) {
-    return { 
-      userId: targetUserId, 
-      message: "📊 *FondTracker — Resumen Diario*\n\n💼 *Cartera Global*\n📈 *Rentabilidad en directo*\n\n⚡ Actualizado automáticamente por FondTracker." 
-    };
-  }
+  // Si no se puede generar, error de verdad (antes devolvía un mensaje inventado)
+  if (!targetUserId) throw new Error("No hay ningún usuario con fondos para generar la vista previa");
+  const message = await previewDigest({ slot: "manual", timezone: "Europe/Madrid" }, targetUserId);
+  return { userId: targetUserId, message };
 }

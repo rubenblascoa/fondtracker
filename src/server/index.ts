@@ -140,6 +140,26 @@ function securityHeaders(extra?: Record<string, string>): Record<string, string>
   };
 }
 
+/**
+ * Variables de .env para el panel de administración: si están configuradas y, solo en las que no son
+ * secretas, su valor. Los secretos (contraseñas, claves, tokens) nunca salen del servidor.
+ */
+const PUBLIC_ENV = new Set(["NODE_ENV", "PORT", "TZ", "MYSQL_HOST", "MYSQL_PORT", "MYSQL_DATABASE", "MYSQL_SSL", "ALLOWED_ORIGIN", "RENDER_EXTERNAL_URL"]);
+function describeEnv(): { key: string; set: boolean; value: string | null }[] {
+  const keys = new Set<string>(PUBLIC_ENV);
+  try {
+    const file = require("fs").readFileSync(join(PROJECT_ROOT, ".env"), "utf-8") as string;
+    for (const line of file.split("\n")) {
+      const key = line.trim().split("=")[0]?.trim();
+      if (key && !key.startsWith("#") && /^[A-Z0-9_]+$/.test(key)) keys.add(key);
+    }
+  } catch {}
+  return [...keys].sort().map((key) => {
+    const raw = process.env[key];
+    return { key, set: Boolean(raw), value: PUBLIC_ENV.has(key) && raw ? raw : null };
+  });
+}
+
 function getClientIp(req: Request): string {
   // Prefer direct TCP connection IP (not spoofable)
   if (serverInstance) {
@@ -337,7 +357,8 @@ async function serveIndexHtml(req: Request): Promise<Response> {
             username: profile.username,
             email: profile.email,
             is_admin: profile.is_admin,
-          });
+            // «<» escapado: un nombre o email con «</script>» no puede cerrar la etiqueta
+          }).replace(/</g, "\\u003c");
           html = html.replace(
             "</head>",
             `<script nonce="${cachedNonce}">window.__LANDING_USER__=${safeUser};</script>\n</head>`
@@ -1121,34 +1142,12 @@ const server = serve({
         if (admin instanceof Response) return admin;
         const overview = await getAdminOverview();
         
-        let customEnv: Record<string, string> = {};
-        try {
-          const fs = require('fs');
-          if (fs.existsSync('.env')) {
-            const envContent = fs.readFileSync('.env', 'utf-8');
-            const lines = envContent.split('\n');
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (trimmed && !trimmed.startsWith('#')) {
-                const parts = trimmed.split('=');
-                if (parts.length > 0) {
-                  const key = parts[0].trim();
-                  customEnv[key] = process.env[key] || '';
-                }
-              }
-            }
-          }
-        } catch (e) {
-          // fail silently
-        }
-
         return json({ 
           ...overview, 
           uptime: Math.round((Date.now() - STARTED_AT) / 1000),
           node_env: process.env.NODE_ENV || "development",
           bun_version: process.versions?.bun || "N/A",
           price_cache_size: overview.cached_prices,
-          env: customEnv
         });
       },
     },
@@ -1444,7 +1443,12 @@ const server = serve({
         if (admin instanceof Response) return admin;
         const { priceCache } = await import("./sentinel") as any;
         const mem = process.memoryUsage ? process.memoryUsage() : { rss: 0, heapUsed: 0, heapTotal: 0 };
+        // Base de datos: consulta mínima con su tiempo de respuesta
+        const t0 = performance.now();
+        const db = await (await import("./db")).pool.query("SELECT 1").then(() => ({ ok: true, ms: Math.round(performance.now() - t0) }), (e: any) => ({ ok: false, ms: null, error: String(e?.message ?? e) }));
         return json({
+          db,
+          env: describeEnv(),
           uptime: Math.round((Date.now() - STARTED_AT) / 1000),
           bun_version: typeof Bun !== "undefined" ? Bun.version : (process.versions?.node || "N/A"),
           platform: process.platform,
