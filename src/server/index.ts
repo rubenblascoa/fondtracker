@@ -296,6 +296,7 @@ function serveStatic(req: Request) {
     txt: "text/plain; charset=utf-8",
     css: "text/css; charset=utf-8",
     js: "application/javascript; charset=utf-8",
+    mjs: "application/javascript; charset=utf-8",
   };
   const contentType = ext ? mimeMap[ext] : undefined;
 
@@ -450,8 +451,9 @@ const server = serve({
     },
     "/manifest.webmanifest": (req) => serveStatic(req),
     "/.well-known/security.txt": (req) => serveStatic(req),
-    "/og-image.svg": (req) => serveStatic(req),
     "/og-image.png": (req) => serveStatic(req),
+    "/apple-touch-icon.png": (req) => serveStatic(req),
+    "/vendor/lenis.mjs": (req) => serveStatic(req),
     "/": (req) => serveIndexHtml(req),
     "/dashboard": index,
     "/dashboard/*": index,

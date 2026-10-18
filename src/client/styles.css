@@ -82,6 +82,8 @@
     --grid-color: rgba(255, 255, 255, 0.02);
     --color-accent-fg: #0b0b0a;
     --gradient-accent: linear-gradient(90deg, #e3b25b, #c084fc);
+    /* Degradado de tinta (cian→violeta→magenta) para los textos de varios colores */
+    --gradient-ink: linear-gradient(90deg, #3ee0ff, #6f7bff 45%, #d15bff);
     --ft-glow: radial-gradient(900px 420px at 85% -12%, rgba(129, 140, 248, 0.16), transparent 70%);
     --ft-grain: radial-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px);
   }
@@ -128,6 +130,7 @@
     --color-border-terminal: #e7e3da;
 
     --gradient-accent: linear-gradient(90deg, #b7791f, #7c3aed);
+    --gradient-ink: linear-gradient(90deg, #0891b2, #4f46e5 45%, #c026d3);
     --ft-glow: radial-gradient(900px 420px at 85% -12%, rgba(124, 58, 237, 0.08), transparent 70%);
     --ft-grain: radial-gradient(rgba(0, 0, 0, 0.025) 1px, transparent 1px);
     --grid-color: rgba(0, 0, 0, 0.035);
@@ -263,7 +266,7 @@
   }
 
   .ft-gradient-text {
-    background: var(--gradient-accent);
+    background: var(--gradient-ink);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;

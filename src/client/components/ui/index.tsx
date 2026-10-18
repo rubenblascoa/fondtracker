@@ -96,15 +96,14 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
 }
 
 export function Logo({ size = "md", href = "/" }: { size?: "sm" | "md"; href?: string | null }) {
-  const mark = size === "sm" ? "h-6 w-6 rounded-lg" : "h-[30px] w-[30px] rounded-[10px]";
+  const mark = size === "sm" ? "h-5 w-5" : "h-6 w-6";
   const inner = (
     <>
-      <span className={cx(mark, "grid place-items-center text-[#0b0b0a]")} style={{ background: "var(--gradient-accent)" }} aria-hidden="true">
-        <svg width={size === "sm" ? 13 : 16} height={size === "sm" ? 13 : 16} fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-          <path d="M3 17l6-6 4 4 8-8" />
-          <path d="M14 7h7v7" />
-        </svg>
-      </span>
+      {/* Dos líneas de flujo entrelazadas: el logotipo de FondTracker */}
+      <svg className={cx(mark, "shrink-0 text-[var(--color-fg-1)]")} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M2.5 9c2.5 0 2.5 4.2 5 4.2S10 9 12 9s2.5 4.2 5 4.2S19.5 9 21.5 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M2.5 15c2.5 0 2.5 4.2 5 4.2S10 15 12 15s2.5 4.2 5 4.2S19.5 15 21.5 15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" opacity="0.5" />
+      </svg>
       <span className={cx("font-heading font-bold tracking-tight text-[var(--color-fg-1)]", size === "sm" ? "text-base" : "text-lg")}>FondTracker</span>
     </>
   );

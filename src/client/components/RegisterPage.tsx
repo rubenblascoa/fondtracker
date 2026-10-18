@@ -241,7 +241,7 @@ type Props = {
 
 export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
   const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => new URLSearchParams(location.search).get("email") ?? "");
   const [password, setPassword] = useState("");
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES.find(c => c.code === "ES") ?? COUNTRIES[0]);
   const [localNumber, setLocalNumber] = useState("");
