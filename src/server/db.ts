@@ -73,6 +73,10 @@ export async function ensureSchema() {
     await pool.query(`ALTER TABLE users ADD COLUMN phone VARCHAR(20) DEFAULT NULL`);
   } catch (e) {} // Ignore if already exists
   try {
+    // Nombre con el que se saluda en el panel (opcional)
+    await pool.query(`ALTER TABLE users ADD COLUMN display_name VARCHAR(40) DEFAULT NULL`);
+  } catch (e) {} // Ignore if already exists
+  try {
     await pool.query(`ALTER TABLE users ADD COLUMN is_admin TINYINT(1) NOT NULL DEFAULT 0`);
   } catch (e) {} // Ignore if already exists
   // Auto-promote admins from ADMIN_EMAILS env var

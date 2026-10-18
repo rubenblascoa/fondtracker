@@ -36,7 +36,7 @@ import {
   getGithubAuthUrl,
   handleGithubCallback,
 } from "./auth";
-import { validatePassword } from "./validation";
+import { normalizeDisplayName, validatePassword } from "./validation";
 import {
   getAdminOverview,
   getAdminUsers,
@@ -632,7 +632,12 @@ const server = serve({
         if (user instanceof Response) return user;
         if (!checkCSRF(req)) return json({ error: "Origen no permitido" }, { status: 403 });
         try {
-          const body = (await safeJson(req)) as { email?: string; currentEmail?: string; currentPassword?: string; newPassword?: string; phone?: string };
+          const body = (await safeJson(req)) as { email?: string; currentEmail?: string; currentPassword?: string; newPassword?: string; phone?: string; display_name?: string };
+          if (body.display_name !== undefined) {
+            const name = normalizeDisplayName(String(body.display_name ?? ""));
+            if (!name.ok) return badRequest(name.error);
+            await (await import("./db")).pool.query("UPDATE users SET display_name = ? WHERE id = ?", [name.value, user.id]);
+          }
           if (body.email) {
             if (!body.currentEmail) return badRequest("Falta el email actual");
             const email = (body.email as string).trim().toLowerCase();

@@ -244,7 +244,8 @@ export async function buildFundReport(ctx: DigestContext, userId: number): Promi
     getUserProfile(userId),
     listInvestments(userId),
   ]);
-  const name = profile?.username ? ` ${profile.username}` : "";
+  const shownName = profile?.display_name || profile?.username;
+  const name = shownName ? ` ${shownName}` : "";
   const localHour = new Intl.DateTimeFormat("en-US", {
     timeZone: ctx.timezone,
     hour: "numeric",

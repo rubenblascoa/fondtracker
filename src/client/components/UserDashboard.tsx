@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api, type Investment, type Status, type User, type YahooChartData } from "../api";
-import { Plus, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { AddFundForm } from "./AddFundForm";
 import { NotifyPanel } from "./NotifyPanel";
@@ -13,8 +13,10 @@ import { DocsTab } from "./DocsTab";
 import { DashboardNav, SECTION_META, type DashboardSection } from "./dashboard/DashboardNav";
 import { OverviewTab } from "./dashboard/OverviewTab";
 import { SettingsModal } from "./dashboard/SettingsModal";
-import { Button, PageHeader } from "./ui";
+import { PageHeader } from "./ui";
 import { downloadPortfolioCsv, downloadPortfolioJson } from "../exports";
+import { greeting } from "../overview";
+import { formatEur, formatPct } from "../utils";
 
 function timeAgo(date: Date) {
   const mins = Math.floor((Date.now() - date.getTime()) / 60000);
@@ -100,10 +102,17 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
   };
 
   const meta = SECTION_META[section];
+  // En el Resumen la cabecera saluda y resume la cartera en una línea
+  const isOverview = section === "overview" && funds.length > 0 && status != null;
+  const name = user.display_name || user.username.charAt(0).toUpperCase() + user.username.slice(1);
+  const headerTitle = isOverview ? `${greeting(new Date().getHours())}, ${name}` : meta.label;
+  const headerSubtitle = isOverview
+    ? `Tu cartera vale ${formatEur(status.total_current)} · ${status.total_profit_loss >= 0 ? "+" : ""}${formatEur(status.total_profit_loss)} (${formatPct(status.total_profit_loss_pct)}) desde que empezaste`
+    : meta.subtitle;
   const canSee = !meta.adminOnly || user.is_admin;
 
   return (
-    <div className="flex h-screen overflow-hidden text-[var(--color-fg-1)]">
+    <div className="flex h-screen flex-col overflow-hidden text-[var(--color-fg-1)]">
       <DashboardNav
         user={user}
         status={status}
@@ -116,11 +125,11 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
         setMobileDrawerOpen={setMobileDrawerOpen}
       />
 
-      <main ref={mainRef} className="flex-1 overflow-y-auto pb-28 pt-16 md:pb-10 md:pt-0">
+      <main ref={mainRef} className="flex-1 overflow-y-auto pb-28 pt-16 lg:pb-10 lg:pt-0">
         <div className="mx-auto max-w-[1280px] space-y-6 px-4 py-6 sm:px-8 sm:py-8">
           <PageHeader
-            title={meta.label}
-            subtitle={meta.subtitle}
+            title={headerTitle}
+            subtitle={headerSubtitle}
             actions={
               <>
                 <button
@@ -132,13 +141,6 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
                   <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
                   <span className="hidden sm:inline">Actualizado {timeAgo(lastRefreshedAt)}</span>
                 </button>
-                {section !== "add" && (
-                  <span className="hidden md:block">
-                    <Button size="sm" onClick={() => setSection("add")}>
-                      <Plus size={15} /> Añadir fondo
-                    </Button>
-                  </span>
-                )}
               </>
             }
           />

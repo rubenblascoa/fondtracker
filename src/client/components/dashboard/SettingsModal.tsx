@@ -27,7 +27,7 @@ type Props = {
 export function SettingsModal({ user, isOpen, onClose }: Props) {
   const { theme, isDark, isLight, toggleTheme, setTheme } = useTheme();
   const setSettingsOpen = (open: boolean) => { if (!open) onClose(); };
-  const [settingsTab, setSettingsTab] = useState<"appearance" | "phone" | "email" | "password" | "danger">("appearance");
+  const [settingsTab, setSettingsTab] = useState<"profile" | "appearance" | "phone" | "email" | "password" | "danger">("profile");
   
   // Settings Form States
   const [phoneCountry, setPhoneCountry] = useState(() => COUNTRIES.find(c => c.code === "ES") ?? COUNTRIES[0]);
@@ -36,6 +36,7 @@ export function SettingsModal({ user, isOpen, onClose }: Props) {
   const [countrySearch, setCountrySearch] = useState("");
   const countryRef = useRef<HTMLDivElement>(null);
   
+  const [displayName, setDisplayName] = useState(user.display_name ?? "");
   const [currentEmail, setCurrentEmail] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
@@ -73,6 +74,24 @@ export function SettingsModal({ user, isOpen, onClose }: Props) {
   }, []);
 
   // Save Settings Handlers
+  const handleSaveName = async () => {
+    setSettingsError("");
+    setSettingsSuccess("");
+    setSettingsLoading(true);
+    try {
+      await api.updateAccount({ display_name: displayName });
+      const clean = displayName.trim().replace(/s+/g, " ");
+      user.display_name = clean || null;
+      setDisplayName(clean);
+      setSettingsSuccess(clean ? "Nombre guardado" : "Nombre borrado: se usará tu usuario");
+      setTimeout(() => setSettingsSuccess(""), 3000);
+    } catch (err) {
+      setSettingsError(err instanceof Error ? err.message : "Error al guardar");
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
   const handleSavePhone = async () => {
     setSettingsError("");
     setSettingsSuccess("");
@@ -185,6 +204,14 @@ export function SettingsModal({ user, isOpen, onClose }: Props) {
 
             {/* Modal Tabs */}
             <div className="flex border-b border-[var(--color-ink-3)] px-3 sm:px-6 pt-2 gap-1 sm:gap-2 overflow-x-auto no-scrollbar touch-scroll shrink-0">
+              <button 
+                onClick={() => { setSettingsTab("profile"); setSettingsError(""); setSettingsSuccess(""); }}
+                className={`pb-2.5 sm:pb-3 px-2 sm:px-2.5 text-xs font-medium border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                  settingsTab === "profile" ? "border-[var(--color-accent)] text-[var(--color-accent)] font-semibold" : "border-transparent text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
+                }`}
+              >
+                <UserCheck size={13} /> Perfil
+              </button>
               <button 
                 onClick={() => { setSettingsTab("appearance"); setSettingsError(""); setSettingsSuccess(""); }}
                 className={`pb-2.5 sm:pb-3 px-2 sm:px-2.5 text-xs font-medium border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
@@ -346,6 +373,35 @@ export function SettingsModal({ user, isOpen, onClose }: Props) {
               )}
 
               {/* Phone Tab */}
+              {settingsTab === "profile" && (
+                <div className="space-y-4">
+                  <p className="text-xs text-[var(--color-fg-4)]">
+                    Así te saludamos en el panel y en el resumen por WhatsApp. Si lo dejas vacío, usamos tu usuario ({user.username}).
+                  </p>
+                  <div>
+                    <label htmlFor="display-name" className="text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-1.5 block">Tu nombre</label>
+                    <input
+                      id="display-name"
+                      type="text"
+                      value={displayName}
+                      maxLength={40}
+                      autoComplete="given-name"
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
+                      placeholder="Rubén"
+                      className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-sm text-[var(--color-fg-1)] outline-none transition-all"
+                    />
+                  </div>
+                  <button
+                    onClick={handleSaveName}
+                    disabled={settingsLoading}
+                    className="w-full py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-xs rounded-xl hover:brightness-110 transition-all shadow-[0_0_15px_rgba(192,132,252,0.2)] disabled:opacity-50"
+                  >
+                    {settingsLoading ? "Guardando..." : "Guardar nombre"}
+                  </button>
+                </div>
+              )}
+
               {settingsTab === "phone" && (
                 <div className="space-y-4">
                   <p className="text-xs text-[var(--color-fg-4)]">

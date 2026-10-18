@@ -160,9 +160,9 @@ export async function getUserFromRequest(req: Request): Promise<{ id: number; us
   return { id: payload.sub, username: payload.username, is_admin: Boolean(rows[0].is_admin) };
 }
 
-export async function getUserProfile(userId: number): Promise<{ id: number; username: string; email: string; phone: string | null; is_admin: boolean; created_at: string } | null> {
+export async function getUserProfile(userId: number): Promise<{ id: number; username: string; display_name: string | null; email: string; phone: string | null; is_admin: boolean; created_at: string } | null> {
   const [rows] = await pool.query<any[]>(
-    "SELECT id, username, email, phone, is_admin, created_at FROM users WHERE id = ? AND deleted_at IS NULL",
+    "SELECT id, username, display_name, email, phone, is_admin, created_at FROM users WHERE id = ? AND deleted_at IS NULL",
     [userId]
   );
   const row = rows[0];

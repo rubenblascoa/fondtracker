@@ -64,6 +64,8 @@ export function onAuthChange(cb: (type: "login" | "logout", token?: string) => v
 export type User = {
   id: number;
   username: string;
+  /** Nombre con el que se le saluda; null si no lo ha puesto */
+  display_name?: string | null;
   email: string;
   phone: string | null;
   is_admin: boolean;
@@ -543,7 +545,7 @@ export const api = {
       { method: "POST" }
     ),
 
-  updateAccount: (data: { email?: string; currentEmail?: string; currentPassword?: string; newPassword?: string; phone?: string | null }) =>
+  updateAccount: (data: { email?: string; currentEmail?: string; currentPassword?: string; newPassword?: string; phone?: string | null; display_name?: string }) =>
     request<{ ok: true }>("/api/auth/me", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
