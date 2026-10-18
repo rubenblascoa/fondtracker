@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Area, AreaChart, Cell, Line, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ArrowRight, Download, FileText, MessageCircle, PlusCircle, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { api, type Investment, type PortfolioHistoryPoint, type PortfolioHistoryRange, type Status } from "../../api";
 import { allocationBy, performers } from "../../allocation";
@@ -7,8 +7,8 @@ import { fundView } from "../../fundView";
 import { formatCompactEur, formatEur, formatPct, maskPhone } from "../../utils";
 import { Button, Card, EmptyState, Label, Stat, Tag } from "../ui";
 import type { DashboardSection } from "./DashboardNav";
+import { AllocationDonut } from "./AllocationDonut";
 
-const PALETTE = ["#c084fc", "#e3b25b", "#818cf8", "#f472b6", "#60a5fa", "#34d399", "#fb923c", "#a19d94"];
 const RANGES: { label: string; value: PortfolioHistoryRange }[] = [
   { label: "1M", value: "1m" },
   { label: "3M", value: "3m" },
@@ -201,36 +201,7 @@ export function OverviewTab({ funds, status, phone, onNavigate, onExportPdf, isE
               Ver análisis
             </button>
           </div>
-          <div className="relative mx-auto mt-2 h-[170px] w-[170px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={byBank} dataKey="value" nameKey="name" innerRadius={58} outerRadius={80} paddingAngle={byBank.length > 1 ? 3 : 0} stroke="none">
-                  {byBank.map((_, i) => (
-                    <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
-              <div>
-                <p className="font-heading text-base font-semibold text-[var(--color-fg-1)]">{formatCompactEur(current)}</p>
-                <Label>Total</Label>
-              </div>
-            </div>
-          </div>
-          <ul className="mt-4 space-y-2">
-            {byBank.map((b, i) => (
-              <li key={b.name} className="flex items-center justify-between gap-3 text-sm">
-                <span className="flex min-w-0 items-center gap-2">
-                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: PALETTE[i % PALETTE.length] }} />
-                  <span className="truncate text-[var(--color-fg-2)]">{b.name}</span>
-                </span>
-                <span className="shrink-0 font-mono text-xs text-[var(--color-fg-3)]">
-                  {b.pct.toFixed(1).replace(".", ",")} % · <span className="text-[var(--color-fg-1)]">{formatEur(b.value)}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
+          <AllocationDonut items={byBank} total={current} />
         </Card>
       </div>
 

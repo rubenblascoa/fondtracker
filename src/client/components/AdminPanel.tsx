@@ -1,3 +1,5 @@
+import { investedOverTime } from "../adminStats";
+import { formatCompactEur } from "../utils";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { api, type User, getSpecificFundUrl, getFundDataSourceInfo, getBankPortalInfo } from "../api";
 import { useTheme } from "../theme";
@@ -43,32 +45,12 @@ function timeAgo(iso: string | null) {
 
 // ─── Real AUM History Generator ───────────────────────────────────────────────
 function buildRealAumHistory(data: any, days = 30) {
-  if (!data || !data.aum_history_raw) return [];
-  const raw = data.aum_history_raw as { date: string | Date, amount: number }[];
-  raw.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
-  
-  const history = [];
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    
-    let cumulative = 0;
-    for (const r of raw) {
-      if (new Date(r.date) <= d) {
-        cumulative += r.amount;
-      }
-    }
-    
-    history.push({
-      name: `${d.getDate()} ${d.toLocaleString('es-ES', { month: 'short' }).replace('.', '')}`,
-      fullDate: d.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }),
-      value: Math.round(cumulative)
-    });
-  }
-  return history;
+  if (!data?.aum_history_raw) return [];
+  const MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  return investedOverTime(data.aum_history_raw, days).map((p) => {
+    const [, m, d] = p.date.split("-").map(Number);
+    return { name: `${d} ${MONTHS[m - 1]}`, fullDate: p.date, value: p.value };
+  });
 }
 
 // ─── Custom Tooltip for Charts ────────────────────────────────────────────────
@@ -1472,7 +1454,7 @@ export function AdminSectionContent({ user, initialSubSection }: { user: User; i
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-5 relative overflow-hidden">
               <div className="flex items-center justify-between text-[10px] text-[var(--color-fg-4)] uppercase tracking-wider mb-2">
-                <span>Total AUM</span>
+                <span>Invertido total</span>
                 <span className="text-[var(--color-accent)] font-bold font-mono">Nominal</span>
               </div>
               <p className="text-2xl sm:text-3xl font-bold font-mono text-[var(--color-fg-1)] tracking-tight">{fmtEur(data?.aum_total ?? 0)}</p>
@@ -1493,7 +1475,7 @@ export function AdminSectionContent({ user, initialSubSection }: { user: User; i
             <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-5">
               <div className="flex items-center justify-between text-[10px] text-[var(--color-fg-4)] uppercase tracking-wider mb-2">
                 <span>Catálogo Fondos</span>
-                <span className="text-[var(--color-accent)] font-bold font-mono">CNMV / Yahoo</span>
+                <span className="text-[var(--color-accent)] font-bold font-mono">QueFondos / Yahoo</span>
               </div>
               <p className="text-2xl sm:text-3xl font-bold font-mono text-[var(--color-fg-1)] tracking-tight">{fmtNum(data?.catalog_size ?? 0)}</p>
               <p className="text-[11px] text-[var(--color-fg-4)] mt-2 font-mono">{data?.cached_prices ?? 0} cotizaciones al día</p>
@@ -1516,8 +1498,8 @@ export function AdminSectionContent({ user, initialSubSection }: { user: User; i
             <div className="lg:col-span-2 bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-5 relative overflow-hidden">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
                 <div>
-                  <h2 className="text-sm sm:text-base font-semibold text-[var(--color-fg-1)]">Evolución Global del AUM</h2>
-                  <p className="text-xs text-[var(--color-fg-4)] mt-0.5">Volumen total de activos gestionados a lo largo del tiempo</p>
+                  <h2 className="text-sm sm:text-base font-semibold text-[var(--color-fg-1)]">Capital invertido acumulado</h2>
+                  <p className="text-xs text-[var(--color-fg-4)] mt-0.5">Lo invertido por todos los usuarios, según la fecha de alta de cada fondo</p>
                 </div>
 
                 <div className="flex items-center gap-1 bg-[var(--color-ink-2)] p-1 rounded-xl border border-[var(--color-ink-3)]">
@@ -1551,7 +1533,7 @@ export function AdminSectionContent({ user, initialSubSection }: { user: User; i
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 11}} dy={8} />
-                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 11}} tickFormatter={(v) => `€${v/1000}k`} dx={-8} />
+                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 11}} tickFormatter={formatCompactEur} dx={-8} />
                     <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }} />
                     <Area type="monotone" dataKey="value" stroke="var(--color-accent)" strokeWidth={2.5} fillOpacity={1} fill="url(#colorAumAdmin)" />
                   </AreaChart>
@@ -1764,7 +1746,7 @@ export function AdminPanel({ user, onLogout }: { user: User; onLogout: () => voi
             <h1 className="text-lg sm:text-xl font-bold text-[var(--color-fg-1)] tracking-tight flex items-center gap-2">
               <Shield size={18} className="text-[var(--color-accent)]" /> Panel de Administración Global
             </h1>
-            <p className="text-xs text-[var(--color-fg-4)] mt-0.5">Control integral de usuarios, catálogo CNMV, sincronizador y servidor</p>
+            <p className="text-xs text-[var(--color-fg-4)] mt-0.5">Control integral de usuarios, catálogo, sincronizador y servidor</p>
           </div>
           <div className="flex items-center gap-2">
             <button

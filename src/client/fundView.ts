@@ -69,3 +69,12 @@ export function chartRangesFor(source: string | undefined | null): ChartRange[] 
   if (source === "quefondos") return long;
   return [{ label: "1M", value: "1mo" }, { label: "3M", value: "3mo" }, ...long];
 }
+
+/** Rentabilidad (%) entre el primer y el último precio válido de una serie. null si hay menos de dos. */
+export function periodReturn(quotes: { close: number }[]): number | null {
+  const valid = quotes.filter((q) => Number.isFinite(q.close) && q.close > 0);
+  if (valid.length < 2) return null;
+  const first = valid[0].close;
+  const last = valid[valid.length - 1].close;
+  return Math.round(((last - first) / first) * 10000) / 100;
+}

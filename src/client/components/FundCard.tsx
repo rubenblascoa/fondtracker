@@ -37,7 +37,7 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
   // Interactive Hover/Tooltip state
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [hoveredPos, setHoveredPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [activeTab, setActiveTab] = useState<"chart" | "composition" | "details">("chart");
+  const [activeTab, setActiveTab] = useState<"chart" | "details">("chart");
 
   // External Links dropdown state
   const [showLinksMenu, setShowLinksMenu] = useState(false);
@@ -776,19 +776,6 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
 
               <button
                 type="button"
-                onClick={() => setActiveTab("composition")}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center gap-1 ${
-                  activeTab === "composition" 
-                    ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_8px_rgba(192,132,252,0.2)]" 
-                    : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
-                }`}
-              >
-                <PieIcon size={11} />
-                <span>Composición</span>
-              </button>
-
-              <button
-                type="button"
                 onClick={() => setActiveTab("details")}
                 className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center gap-1 ${
                   activeTab === "details" 
@@ -880,100 +867,14 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
             </div>
           )}
 
-          {/* TAB 2: COMPOSITION */}
-          {activeTab === "composition" && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 p-3 bg-[var(--color-ink-2)]/40 border border-[var(--color-ink-3)] rounded-xl text-[11px] animate-fade-in">
-              
-              {/* Top Holdings */}
-              <div className="space-y-1.5">
-                <h4 className="font-bold text-[var(--color-fg-1)] uppercase tracking-wider text-[10px] flex items-center gap-1">
-                  <Building2 size={11} className="text-[var(--color-accent)]" /> Top Posiciones
-                </h4>
-                {chartData?.topHoldings && chartData.topHoldings.length > 0 ? (
-                  <div className="space-y-1">
-                    {chartData.topHoldings.slice(0, 4).map((h, idx) => (
-                      <div key={idx} className="space-y-0.5">
-                        <div className="flex justify-between text-[var(--color-fg-2)] text-[10px]">
-                          <span className="truncate max-w-[120px]" title={h.name}>{h.name}</span>
-                          <span className="font-mono text-[var(--color-accent)] font-bold">{h.weight.toFixed(1)}%</span>
-                        </div>
-                        <div className="w-full h-1 bg-[var(--color-ink-2)] rounded-full overflow-hidden">
-                          <div className="h-full bg-[var(--color-accent)] rounded-full" style={{ width: `${Math.min(100, h.weight * 10)}%` }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[10px] text-[var(--color-fg-5)] italic">No disponible</p>
-                )}
-              </div>
-
-              {/* Sectors */}
-              <div className="space-y-1.5">
-                <h4 className="font-bold text-[var(--color-fg-1)] uppercase tracking-wider text-[10px] flex items-center gap-1">
-                  <PieIcon size={11} className="text-blue-400" /> Sectores
-                </h4>
-                {chartData?.sectors && chartData.sectors.length > 0 ? (
-                  <div className="space-y-1">
-                    {chartData.sectors.slice(0, 4).map((s, idx) => (
-                      <div key={idx} className="space-y-0.5">
-                        <div className="flex justify-between text-[var(--color-fg-2)] text-[10px]">
-                          <span className="truncate max-w-[120px]">{s.name}</span>
-                          <span className="font-mono text-blue-400 font-bold">{s.weight.toFixed(1)}%</span>
-                        </div>
-                        <div className="w-full h-1 bg-[var(--color-ink-2)] rounded-full overflow-hidden">
-                          <div className="h-full bg-blue-400 rounded-full" style={{ width: `${Math.min(100, s.weight * 2.5)}%` }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[10px] text-[var(--color-fg-5)] italic">No disponible</p>
-                )}
-              </div>
-
-              {/* Geography */}
-              <div className="space-y-1.5">
-                <h4 className="font-bold text-[var(--color-fg-1)] uppercase tracking-wider text-[10px] flex items-center gap-1">
-                  <Globe size={11} className="text-purple-400" /> Geografía
-                </h4>
-                {chartData?.geography && chartData.geography.length > 0 ? (
-                  <div className="space-y-1">
-                    {chartData.geography.slice(0, 4).map((g, idx) => (
-                      <div key={idx} className="space-y-0.5">
-                        <div className="flex justify-between text-[var(--color-fg-2)] text-[10px]">
-                          <span className="truncate max-w-[120px]">{g.name}</span>
-                          <span className="font-mono text-purple-400 font-bold">{g.weight.toFixed(1)}%</span>
-                        </div>
-                        <div className="w-full h-1 bg-[var(--color-ink-2)] rounded-full overflow-hidden">
-                          <div className="h-full bg-purple-400 rounded-full" style={{ width: `${Math.min(100, g.weight * 2)}%` }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[10px] text-[var(--color-fg-5)] italic">No disponible</p>
-                )}
-              </div>
-
-            </div>
-          )}
-
           {/* TAB 3: DETAILS */}
           {activeTab === "details" && (
             <div className="space-y-2.5 animate-fade-in">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-[var(--color-ink-2)]/40 border border-[var(--color-ink-3)] rounded-xl text-xs font-mono">
                 <div>
-                  <p className="text-[9px] text-[var(--color-fg-5)] uppercase tracking-wider mb-0.5">TER Anual</p>
-                  <p className="font-bold text-[#ffb547] text-xs">
-                    {chartData?.ter != null ? `${chartData.ter.toFixed(2)}%` : "0.20%"}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-[9px] text-[var(--color-fg-5)] uppercase tracking-wider mb-0.5">Retorno 1A</p>
-                  <p className="font-bold text-[var(--color-accent)] text-xs">
-                    {chartData?.return1Y != null ? `${chartData.return1Y.toFixed(2)}%` : "+14.20%"}
+                  <p className="text-[9px] text-[var(--color-fg-5)] uppercase tracking-wider mb-0.5">Rentabilidad 1 año</p>
+                  <p className="font-bold text-[var(--color-fg-1)] text-xs">
+                    {chartData?.return1Y != null ? formatPct(chartData.return1Y) : "—"}
                   </p>
                 </div>
 

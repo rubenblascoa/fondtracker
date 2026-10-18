@@ -24,7 +24,7 @@ export const SECTION_META: Record<DashboardSection, { label: string; subtitle: s
   overview: { label: "Resumen", subtitle: "Cuánto tienes, cuánto has ganado y dónde está tu dinero", icon: LayoutDashboard },
   portfolio: { label: "Mi cartera", subtitle: "Todos tus fondos, uno a uno", icon: Wallet },
   add: { label: "Añadir fondo", subtitle: "Busca por nombre o ISIN y apunta lo que tienes", icon: PlusCircle },
-  analytics: { label: "Análisis", subtitle: "Reparto por banco, tipo de fondo, sectores y países", icon: BarChart3 },
+  analytics: { label: "Análisis", subtitle: "Cómo está repartido tu dinero y cuánto mover para reequilibrar", icon: BarChart3 },
   notifications: { label: "WhatsApp", subtitle: "Recibe el resumen de tu cartera en el móvil", icon: MessageCircle },
   reports: { label: "Informes", subtitle: "PDF, Excel, copia de seguridad y simulador de IRPF", icon: FileText },
   admin: { label: "Admin", subtitle: "Usuarios, catálogo, envíos y servidor", icon: Shield, adminOnly: true },

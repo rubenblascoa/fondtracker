@@ -88,7 +88,7 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
       const targets = pages.length > 0 ? Array.from(pages) : [reportRef.current];
       for (let i = 0; i < targets.length; i++) {
         if (i > 0) pdf.addPage();
-        const img = await toJpeg(targets[i], { quality: 0.95, pixelRatio: 2, backgroundColor: "#0a0a0c" });
+        const img = await toJpeg(targets[i], { quality: 0.95, pixelRatio: 2, backgroundColor: "#ffffff" });
         pdf.addImage(img, "JPEG", 0, 0, w, h);
       }
       pdf.save(`FondTracker_Informe_${user.username}_${new Date().toISOString().slice(0, 10)}.pdf`);

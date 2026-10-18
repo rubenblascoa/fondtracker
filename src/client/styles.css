@@ -574,32 +574,8 @@ body.theme-light {
   background-color: var(--color-accent) !important;
 }
 
-/* ── Isolated Executive PDF Report Styles (Immune to theme switches) ── */
+/* ── Informe PDF: siempre claro e independiente del tema ── */
 .report-page,
 .report-page * {
-  color-scheme: dark !important;
+  color-scheme: light !important;
 }
-
-.report-page {
-  background-color: #0a0a0c !important;
-  color: #f8fafc !important;
-  box-sizing: border-box !important;
-}
-
-html[data-theme="light"] .report-page,
-body.theme-light .report-page {
-  background-color: #0a0a0c !important;
-  color: #f8fafc !important;
-}
-
-html[data-theme="light"] .report-page h1,
-html[data-theme="light"] .report-page h2,
-html[data-theme="light"] .report-page h3,
-html[data-theme="light"] .report-page p,
-html[data-theme="light"] .report-page span,
-html[data-theme="light"] .report-page td,
-html[data-theme="light"] .report-page th,
-html[data-theme="light"] .report-page div {
-  --color-accent: #c084fc !important;
-}
-

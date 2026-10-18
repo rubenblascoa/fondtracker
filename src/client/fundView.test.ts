@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { chartRangesFor, fundView } from "./fundView";
+import { chartRangesFor, fundView, periodReturn } from "./fundView";
 import type { Investment } from "./api";
 
 const n = (s: string | null) => (s ?? "").replace(/ | /g, " ");
@@ -65,5 +65,19 @@ describe("chartRangesFor", () => {
 
   it("los valores son rangos que entiende la API", () => {
     expect(chartRangesFor("quefondos").map((r) => r.value)).toEqual(["6mo", "1y", "2y", "5y", "max"]);
+  });
+});
+
+describe("periodReturn", () => {
+  const q = (close: number) => ({ timestamp: 0, close });
+  it("rentabilidad entre el primer y el último precio del periodo", () => {
+    expect(periodReturn([q(14.949122), q(16), q(18.408775)])).toBe(23.14);
+  });
+  it("menos de dos precios → null", () => {
+    expect(periodReturn([q(10)])).toBe(null);
+    expect(periodReturn([])).toBe(null);
+  });
+  it("ignora precios no válidos al principio", () => {
+    expect(periodReturn([q(0), q(10), q(11)])).toBe(10);
   });
 });
