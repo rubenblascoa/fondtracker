@@ -2,8 +2,9 @@ import { useEffect, useRef, useState, useCallback, memo } from "react";
 import { api, getBankUrl, getSpecificFundUrl, getFundDataSourceInfo, getBankPortalInfo, getFundMorningstarUrl, type Investment, type YahooChartData } from "../api";
 import { formatCurrency, formatEur, formatPct, profitColor, formatRelative, sanitizeFundName } from "../utils";
 import { chartRangesFor, fundView } from "../fundView";
+import { DcaTransactionsModal } from "./dashboard/DcaTransactionsModal";
 import { 
-  TrendingUp, ArrowUpRight, ArrowDownRight, Edit2, Trash2, 
+  TrendingUp, ArrowUpRight, ArrowDownRight, Edit2, Trash2, ListPlus, 
   ExternalLink, Calendar, Layers, ShieldCheck, AlertTriangle, 
   PieChart as PieIcon, Globe, Building2, Check, X, Tag, FileText,
   Activity, Clock, ChevronRight, BarChart3, HelpCircle
@@ -41,6 +42,9 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
   // External Links dropdown state
   const [showLinksMenu, setShowLinksMenu] = useState(false);
   const linksMenuRef = useRef<HTMLDivElement>(null);
+
+  // Movimientos (aportaciones, ventas, traspasos)
+  const [movementsOpen, setMovementsOpen] = useState(false);
 
   // Edit state
   const [editing, setEditing] = useState(false);
@@ -480,6 +484,13 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
 
           {/* Action Icons */}
           <div className="flex items-center gap-0.5 pl-2.5 border-l border-[var(--color-ink-3)]">
+            <button
+              onClick={() => setMovementsOpen(true)}
+              className="flex items-center gap-1 rounded-full border border-[var(--color-border)] px-2.5 py-1 text-[11px] font-semibold text-[var(--color-fg-2)] transition-all hover:bg-[var(--color-surface)] hover:text-[var(--color-fg-1)]"
+              title="Aportaciones, ventas y traspasos"
+            >
+              <ListPlus size={13} /> Movimientos
+            </button>
             <button
               onClick={startEditing}
               className="p-1.5 text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] hover:bg-[var(--color-ink-2)] rounded-lg transition-all"
@@ -1012,6 +1023,7 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
         </div>
       )}
 
+      <DcaTransactionsModal fund={fund} isOpen={movementsOpen} onClose={() => setMovementsOpen(false)} onUpdated={onChange} />
     </div>
   );
 });

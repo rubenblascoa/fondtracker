@@ -3,8 +3,6 @@ import {
   removeTransaction,
   getFundTransactions,
 } from "../transactions";
-import { queries } from "../db";
-import { getFundMetadata } from "../metadata";
 import {
   checkCSRF,
   rateLimit,
@@ -92,51 +90,6 @@ export const transactionRoutes = {
       try {
         const summary = await removeTransaction(user.id, fundId, txId);
         return json({ ok: true, summary });
-      } catch (err) {
-        return badRequest(safeError(err));
-      }
-    },
-  },
-
-  "/api/funds/:isin/metadata": {
-    async GET(req: Request) {
-      const user = await requireUser(req);
-      if (user instanceof Response) return user;
-      const isin = ((req as any).params?.isin || "").toUpperCase().trim();
-      if (!/^[A-Z]{2}[A-Z0-9]{10}$/.test(isin)) return badRequest("ISIN inválido");
-
-      const meta = await getFundMetadata(isin);
-      return json(meta);
-    },
-
-    async PUT(req: Request) {
-      const user = await requireUser(req);
-      if (user instanceof Response) return user;
-      if (!checkCSRF(req)) return json({ error: "Origen no permitido" }, { status: 403 });
-
-      const isin = ((req as any).params?.isin || "").toUpperCase().trim();
-      if (!/^[A-Z]{2}[A-Z0-9]{10}$/.test(isin)) return badRequest("ISIN inválido");
-
-      try {
-        const body = (await safeJson(req)) as {
-          ter?: number;
-          category?: string;
-          sectors?: { name: string; weight: number }[];
-          geography?: { name: string; weight: number }[];
-          topHoldings?: { name: string; ticker?: string; weight: number }[];
-        };
-
-        await queries.updateFundMetadata(isin, {
-          ter: body.ter,
-          category: body.category,
-          sectors: body.sectors,
-          geography: body.geography,
-          topHoldings: body.topHoldings,
-          isCustom: true,
-        });
-
-        const updated = await getFundMetadata(isin);
-        return json({ ok: true, metadata: updated });
       } catch (err) {
         return badRequest(safeError(err));
       }

@@ -1,14 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { api, type Investment, type Transaction, type PmpSummary, type TransactionType } from "../../api";
+import { formatEur } from "../../utils";
 import { Plus, Trash2, Calendar, DollarSign, Layers, Tag, X, Check, ArrowDownLeft, ArrowUpRight, Clock, AlertCircle } from "lucide-react";
 
-function fmtEur(n: number) {
-  return new Intl.NumberFormat("es-ES", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 2,
-  }).format(n);
-}
+const fmtEur = (n: number) => formatEur(n);
 
 function fmtNav(n: number) {
   return new Intl.NumberFormat("es-ES", {
@@ -16,6 +11,14 @@ function fmtNav(n: number) {
     maximumFractionDigits: 4,
   }).format(n);
 }
+
+const TYPE_LABEL: Record<TransactionType, string> = {
+  BUY: "Compra",
+  SELL: "Venta",
+  TRANSFER_IN: "Traspaso de entrada",
+  TRANSFER_OUT: "Traspaso de salida",
+};
+const fmtShares = (n: number) => new Intl.NumberFormat("es-ES", { maximumFractionDigits: 6 }).format(n);
 
 type Props = {
   fund: Investment;
@@ -97,7 +100,7 @@ export function DcaTransactionsModal({ fund, isOpen, onClose, onUpdated }: Props
         notes: notes.trim() || undefined,
       });
 
-      setSuccess("Aportación / Transacción registrada correctamente");
+      setSuccess("Movimiento guardado");
       setShares("");
       setNotes("");
       setShowAddForm(false);
@@ -139,7 +142,7 @@ export function DcaTransactionsModal({ fund, isOpen, onClose, onUpdated }: Props
               {fund.name}
             </h2>
             <p className="text-xs text-[var(--color-fg-4)] mt-0.5">
-              Gestión de Aportaciones Periódicas (DCA) y Precio Medio Ponderado (PMP)
+              Compras, ventas y traspasos de este fondo. El precio medio y las participaciones se recalculan solos.
             </p>
           </div>
           <button
@@ -156,25 +159,25 @@ export function DcaTransactionsModal({ fund, isOpen, onClose, onUpdated }: Props
             <div className="p-3 bg-[var(--color-ink-1)] rounded-xl border border-[var(--color-ink-3)]">
               <span className="text-[10px] text-[var(--color-fg-4)] uppercase tracking-wider font-semibold">Participaciones</span>
               <p className="text-sm font-mono font-bold text-[var(--color-fg-1)] mt-0.5">
-                {summary.currentShares.toFixed(4)}
+                {fmtShares(summary.currentShares)}
               </p>
             </div>
             <div className="p-3 bg-[var(--color-ink-1)] rounded-xl border border-[var(--color-ink-3)]">
-              <span className="text-[10px] text-[var(--color-accent)] uppercase tracking-wider font-semibold">Precio Medio (PMP)</span>
+              <span className="text-[10px] text-[var(--color-accent)] uppercase tracking-wider font-semibold">Precio medio</span>
               <p className="text-sm font-mono font-bold text-[var(--color-accent)] mt-0.5">
                 {fmtEur(summary.pmp)}
               </p>
             </div>
             <div className="p-3 bg-[var(--color-ink-1)] rounded-xl border border-[var(--color-ink-3)]">
-              <span className="text-[10px] text-[var(--color-fg-4)] uppercase tracking-wider font-semibold">Total Aportado</span>
+              <span className="text-[10px] text-[var(--color-fg-4)] uppercase tracking-wider font-semibold">Coste total</span>
               <p className="text-sm font-mono font-bold text-[var(--color-fg-1)] mt-0.5">
                 {fmtEur(summary.totalCostBasis)}
               </p>
             </div>
             <div className="p-3 bg-[var(--color-ink-1)] rounded-xl border border-[var(--color-ink-3)]">
-              <span className="text-[10px] text-[var(--color-fg-4)] uppercase tracking-wider font-semibold">Aportaciones</span>
+              <span className="text-[10px] text-[var(--color-fg-4)] uppercase tracking-wider font-semibold">Movimientos</span>
               <p className="text-sm font-mono font-bold text-[var(--color-fg-1)] mt-0.5">
-                {summary.transactionCount} mov.
+                {summary.transactionCount}
               </p>
             </div>
           </div>
@@ -202,7 +205,7 @@ export function DcaTransactionsModal({ fund, isOpen, onClose, onUpdated }: Props
               className="w-full py-3 px-4 bg-[var(--color-accent)]/10 hover:bg-[var(--color-accent)]/20 border border-[var(--color-accent)]/30 text-[var(--color-accent)] font-semibold rounded-2xl flex items-center justify-center gap-2 text-sm transition-all shadow-sm"
             >
               <Plus size={18} />
-              <span>Registrar Nueva Compra / Aportación DCA</span>
+              <span>Añadir movimiento</span>
             </button>
           ) : (
             <form onSubmit={handleAddTransaction} className="p-5 bg-[var(--color-ink-2)]/90 border border-[var(--color-accent)]/40 rounded-2xl space-y-4 animate-fade-in">
@@ -219,30 +222,27 @@ export function DcaTransactionsModal({ fund, isOpen, onClose, onUpdated }: Props
                 </button>
               </div>
 
-              {/* Transaction Type */}
+              {/* Tipo de movimiento */}
               <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setTxType("BUY")}
-                  className={`py-2 text-xs font-semibold rounded-xl border transition-all ${
-                    txType === "BUY"
-                      ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400"
-                      : "bg-[var(--color-ink-1)] border-[var(--color-ink-3)] text-[var(--color-fg-4)]"
-                  }`}
-                >
-                  Compra / Aportación DCA
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTxType("SELL")}
-                  className={`py-2 text-xs font-semibold rounded-xl border transition-all ${
-                    txType === "SELL"
-                      ? "bg-red-500/20 border-red-500/50 text-red-400"
-                      : "bg-[var(--color-ink-1)] border-[var(--color-ink-3)] text-[var(--color-fg-4)]"
-                  }`}
-                >
-                  Venta / Reembolso
-                </button>
+                {(["BUY", "SELL", "TRANSFER_IN", "TRANSFER_OUT"] as TransactionType[]).map((t) => {
+                  const isIn = t === "BUY" || t === "TRANSFER_IN";
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setTxType(t)}
+                      className={`rounded-full border py-2 text-xs font-semibold transition-all ${
+                        txType === t
+                          ? isIn
+                            ? "border-[var(--color-profit)]/50 bg-[var(--color-profit)]/12 text-[var(--color-profit)]"
+                            : "border-[var(--color-loss)]/50 bg-[var(--color-loss)]/12 text-[var(--color-loss)]"
+                          : "border-[var(--color-border)] text-[var(--color-fg-3)] hover:text-[var(--color-fg-1)]"
+                      }`}
+                    >
+                      {TYPE_LABEL[t]}
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -329,7 +329,7 @@ export function DcaTransactionsModal({ fund, isOpen, onClose, onUpdated }: Props
           {/* Transactions List */}
           <div className="space-y-3">
             <h3 className="text-xs font-semibold text-[var(--color-fg-4)] uppercase tracking-wider flex items-center gap-2">
-              <Clock size={14} /> Historial de Transacciones ({transactions.length})
+              <Clock size={14} /> Historial ({transactions.length})
             </h3>
 
             {loading ? (
@@ -362,14 +362,14 @@ export function DcaTransactionsModal({ fund, isOpen, onClose, onUpdated }: Props
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-[var(--color-fg-1)]">
-                            {tx.type === "BUY" ? "Compra" : tx.type === "SELL" ? "Venta" : tx.type}
+                            {TYPE_LABEL[tx.type] ?? tx.type}
                           </span>
                           <span className="text-[11px] font-mono text-[var(--color-fg-4)]">
                             {tx.date}
                           </span>
                         </div>
                         <p className="text-[11px] text-[var(--color-fg-3)] font-mono mt-0.5">
-                          {Number(tx.shares).toFixed(4)} part. × {fmtNav(Number(tx.price))} €
+                          {fmtShares(Number(tx.shares))} part. × {fmtNav(Number(tx.price))} €
                           {Number(tx.fees) > 0 && ` (+${fmtEur(Number(tx.fees))} comisión)`}
                         </p>
                         {tx.notes && (

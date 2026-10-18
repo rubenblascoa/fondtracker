@@ -116,6 +116,28 @@ export type Investment = {
   price_source?: "quefondos" | "yahoo" | "cache" | null;
 };
 
+export type TransactionType = "BUY" | "SELL" | "TRANSFER_IN" | "TRANSFER_OUT";
+export type Transaction = {
+  id: number;
+  fund_id: number;
+  type: TransactionType;
+  shares: number;
+  price: number;
+  amount: number;
+  date: string;
+  fees: number;
+  notes: string | null;
+  created_at: string;
+};
+export type PmpSummary = {
+  currentShares: number;
+  pmp: number;
+  totalCostBasis: number;
+  realizedGain: number;
+  totalFees: number;
+  transactionCount: number;
+};
+
 export type PortfolioHistoryRange = "1m" | "3m" | "6m" | "1y" | "max";
 export type PortfolioHistoryPoint = { date: string; invested: number; value: number };
 
@@ -464,6 +486,19 @@ export const api = {
   /** Single request returning both funds and status — use instead of status()+listFunds() */
   portfolio: () =>
     request<{ funds: Investment[]; status: Status }>("/api/portfolio"),
+
+  /** Movimientos de un fondo: compras, ventas y traspasos */
+  transactions: {
+    list: (fundId: number) => request<{ transactions: Transaction[]; summary: PmpSummary }>(`/api/funds/${fundId}/transactions`),
+    add: (fundId: number, data: { type: TransactionType; shares: number; price: number; date: string; fees?: number; notes?: string }) =>
+      request<{ transaction: Transaction; summary: PmpSummary }>(`/api/funds/${fundId}/transactions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    delete: (fundId: number, txId: number) =>
+      request<{ ok: true; summary: PmpSummary }>(`/api/funds/${fundId}/transactions/${txId}`, { method: "DELETE" }),
+  },
 
   /** Evolución del patrimonio: fotos diarias + reconstrucción con precios históricos */
   portfolioHistory: (range: PortfolioHistoryRange = "1y") =>

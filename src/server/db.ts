@@ -156,6 +156,38 @@ export async function ensureSchema() {
 
 
 
+  // Movimientos de cada fondo (compras, ventas, traspasos)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS fund_transactions (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      fund_id INT NOT NULL,
+      type VARCHAR(16) NOT NULL,
+      shares DECIMAL(18,6) NOT NULL,
+      price DECIMAL(15,6) NOT NULL,
+      amount DECIMAL(15,2) NOT NULL,
+      date DATE NOT NULL,
+      fees DECIMAL(15,2) NOT NULL DEFAULT 0,
+      notes TEXT,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_tx_fund_date (fund_id, date),
+      FOREIGN KEY (fund_id) REFERENCES investments(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+  `);
+  // Inversiones creadas antes de existir los movimientos → su compra inicial (una sola vez)
+  const [withoutTx] = await pool.query<any[]>(
+    `SELECT i.id, i.user_id, i.shares, i.purchase_price, i.purchase_date FROM investments i
+     WHERE i.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM fund_transactions t WHERE t.fund_id = i.id)`
+  );
+  for (const inv of withoutTx) {
+    const shares = Number(inv.shares);
+    const price = Number(inv.purchase_price);
+    await pool.query(
+      "INSERT INTO fund_transactions (user_id, fund_id, type, shares, price, amount, date, fees, notes) VALUES (?, ?, 'BUY', ?, ?, ?, ?, 0, 'Compra inicial')",
+      [inv.user_id, inv.id, shares, price, Number((shares * price).toFixed(2)), String(inv.purchase_date).slice(0, 10)]
+    );
+  }
+
   // Foto diaria del valor de cada cartera (historial real del patrimonio)
   await pool.query(`
     CREATE TABLE IF NOT EXISTS portfolio_snapshots (
@@ -213,6 +245,22 @@ export type InvestmentRow = {
 
 export type PriceSource = "quefondos" | "yahoo" | "cache";
 
+export type TransactionType = "BUY" | "SELL" | "TRANSFER_IN" | "TRANSFER_OUT";
+
+export type TransactionRow = {
+  id: number;
+  user_id: number;
+  fund_id: number;
+  type: TransactionType;
+  shares: number;
+  price: number;
+  amount: number;
+  date: string;
+  fees: number;
+  notes: string | null;
+  created_at: string;
+};
+
 export type InvestmentWithStats = InvestmentRow & {
   total_invested: number;
   current_value: number;
@@ -223,6 +271,22 @@ export type InvestmentWithStats = InvestmentRow & {
   price_date: string | null;
   price_source: PriceSource | null;
 };
+
+function toTransaction(r: any): TransactionRow {
+  return {
+    id: Number(r.id),
+    user_id: Number(r.user_id),
+    fund_id: Number(r.fund_id),
+    type: r.type,
+    shares: Number(r.shares),
+    price: Number(r.price),
+    amount: Number(r.amount),
+    date: String(r.date).slice(0, 10),
+    fees: Number(r.fees),
+    notes: r.notes ?? null,
+    created_at: String(r.created_at),
+  };
+}
 
 export const queries = {
   async listInvestments(userId?: number): Promise<InvestmentRow[]> {
@@ -513,6 +577,38 @@ export const queries = {
       "SELECT isin FROM fund_catalog"
     );
     return rows.map((r) => r.isin);
+  },
+
+  async listTransactions(fundId: number, userId: number): Promise<TransactionRow[]> {
+    const [rows] = await pool.query<any[]>(
+      "SELECT * FROM fund_transactions WHERE fund_id = ? AND user_id = ? ORDER BY date ASC, id ASC",
+      [fundId, userId]
+    );
+    return rows.map(toTransaction);
+  },
+
+  async getTransaction(txId: number, userId: number): Promise<TransactionRow | null> {
+    const [rows] = await pool.query<any[]>("SELECT * FROM fund_transactions WHERE id = ? AND user_id = ?", [txId, userId]);
+    return rows[0] ? toTransaction(rows[0]) : null;
+  },
+
+  async insertTransaction(tx: Omit<TransactionRow, "id" | "created_at">): Promise<TransactionRow> {
+    const [result] = await pool.query(
+      "INSERT INTO fund_transactions (user_id, fund_id, type, shares, price, amount, date, fees, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      [tx.user_id, tx.fund_id, tx.type, tx.shares, tx.price, tx.amount, tx.date, tx.fees, tx.notes]
+    );
+    return (await this.getTransaction((result as any).insertId, tx.user_id))!;
+  },
+
+  async updateTransaction(txId: number, userId: number, data: { shares: number; price: number; amount: number; date: string }): Promise<void> {
+    await pool.query(
+      "UPDATE fund_transactions SET shares = ?, price = ?, amount = ?, date = ? WHERE id = ? AND user_id = ?",
+      [data.shares, data.price, data.amount, data.date, txId, userId]
+    );
+  },
+
+  async deleteTransaction(txId: number, userId: number): Promise<void> {
+    await pool.query("DELETE FROM fund_transactions WHERE id = ? AND user_id = ?", [txId, userId]);
   },
 
   async upsertSnapshot(userId: number, date: string, invested: number, value: number): Promise<void> {

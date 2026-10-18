@@ -1,4 +1,5 @@
 import { fetchCurrentPrice, tryDiscoverTicker } from "./yahoo";
+import { initialBuyFromInvestment, planInvestmentEdit } from "./transactions";
 import { queries, type InvestmentRow, type InvestmentWithStats, type PriceSource } from "./db";
 
 // ─── In-memory price cache with LRU eviction ──────────────────────────────────
@@ -258,6 +259,9 @@ export async function addInvestment(
     ts
   );
 
+  // Cada fondo nace con su compra inicial (base de los movimientos)
+  await queries.insertTransaction(initialBuyFromInvestment(investment));
+
   // Bust cache so the new fund gets a fresh price on next load
   invalidatePriceCache(catalog.isin);
   return getInvestmentWithStats(investment.id, userId).then((s) => s!);
@@ -283,6 +287,13 @@ export async function editInvestment(
 ): Promise<InvestmentWithStats | null> {
   const inv = await queries.getInvestment(id, userId);
   if (!inv) return null;
+
+  // Mantener los movimientos cuadrados con la ficha (ver planInvestmentEdit)
+  const plan = planInvestmentEdit(await queries.listTransactions(id, userId), data);
+  if (plan.action === "reject") throw new Error(plan.reason);
+  if (plan.action === "update") {
+    await queries.updateTransaction(plan.txId, userId, { shares: plan.shares, price: plan.price, amount: plan.amount, date: plan.date });
+  }
 
   await queries.updateInvestment(
     id,

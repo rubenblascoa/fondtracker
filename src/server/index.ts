@@ -2,6 +2,7 @@ import { serve } from "bun";
 import { join, normalize, resolve, sep } from "node:path";
 import index from "../client/index.html";
 import { closeDatabase, ensureSchema } from "./db";
+import { transactionRoutes } from "./routes/transactions.routes";
 import { getPortfolioHistory, takeDailySnapshots, HISTORY_RANGES, type HistoryRange } from "./history.service";
 import {
   addInvestment,
@@ -391,6 +392,9 @@ const server = serve({
   },
 
   routes: {
+    // Movimientos de cada fondo (compras, ventas, traspasos)
+    ...transactionRoutes,
+
     "/favicon.svg": (req) => serveStatic(req),
     "/favicon.ico": (req) => serveStatic(req),
     "/robots.txt": (req) => serveStatic(req),
