@@ -1,6 +1,9 @@
 const YAHOO_BASE = "https://query1.finance.yahoo.com/v8/finance/chart";
 import { fetchQueFondosData } from "./quefondos";
 import { getFundExtraMetadata } from "./metadata";
+import { toIsoDate } from "./dates";
+
+export type CurrentPrice = { price: number; currency: string; date: string | null; source: "quefondos" | "yahoo" };
 
 export type YahooQuote = {
   timestamp: number;
@@ -48,7 +51,7 @@ const CHART_CACHE_TTL = 5 * 60 * 1000;
 
 // Request coalescing maps to prevent duplicate parallel fetches/scrapes
 const activeCharts = new Map<string, Promise<YahooChartResult | null>>();
-const activePrices = new Map<string, Promise<{ price: number; currency: string } | null>>();
+const activePrices = new Map<string, Promise<CurrentPrice | null>>();
 const activeDiscoveries = new Map<string, Promise<string | null>>();
 const discoveryCache = new Map<string, { ticker: string | null; fetchedAt: number }>();
 const DISCOVERY_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
@@ -220,18 +223,18 @@ export async function fetchYahooChart(
 
 export async function fetchCurrentPrice(
   ticker: string
-): Promise<{ price: number; currency: string } | null> {
+): Promise<CurrentPrice | null> {
   const cleanTicker = ticker.toUpperCase().trim();
   const active = activePrices.get(cleanTicker);
   if (active) return active;
 
-  const promise = (async () => {
+  const promise = (async (): Promise<CurrentPrice | null> => {
     const isinMatch = cleanTicker.match(/^([A-Z]{2}[A-Z0-9]{10})/i);
 
     if (isinMatch) {
       const qfData = await fetchQueFondosData(isinMatch[1]);
       if (qfData) {
-        return { price: qfData.currentPrice, currency: qfData.currency };
+        return { price: qfData.currentPrice, currency: qfData.currency, date: toIsoDate(qfData.dataDate), source: "quefondos" };
       }
     }
 
@@ -248,7 +251,7 @@ export async function fetchCurrentPrice(
 
       if (!res.ok) {
         const qfData = await fetchQueFondosData(cleanTicker);
-        if (qfData) return { price: qfData.currentPrice, currency: qfData.currency };
+        if (qfData) return { price: qfData.currentPrice, currency: qfData.currency, date: toIsoDate(qfData.dataDate), source: "quefondos" };
         return null;
       }
 
@@ -259,11 +262,13 @@ export async function fetchCurrentPrice(
       return {
         price: meta.regularMarketPrice,
         currency: meta.currency ?? "EUR",
+        date: toIsoDate(meta.regularMarketTime),
+        source: "yahoo",
       };
     } catch {
       const qfData = await fetchQueFondosData(cleanTicker);
       if (qfData) {
-        return { price: qfData.currentPrice, currency: qfData.currency };
+        return { price: qfData.currentPrice, currency: qfData.currency, date: toIsoDate(qfData.dataDate), source: "quefondos" };
       }
       return null;
     }

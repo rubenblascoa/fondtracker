@@ -6,20 +6,13 @@ import {
   Check, TrendingUp, ArrowUpRight, ArrowDownRight, Layers, 
   Building2, Activity, ExternalLink, Sparkles, RefreshCw, BarChart3
 } from "lucide-react";
-import { sanitizeFundName } from "../utils";
+import { formatEur, formatPct, sanitizeFundName } from "../utils";
+import { fundView } from "../fundView";
+import { performers } from "../allocation";
+import { Button, EmptyState, Stat } from "./ui";
 
-function fmtEur(n: number) {
-  return new Intl.NumberFormat('es-ES', { 
-    style: 'currency', 
-    currency: 'EUR', 
-    maximumFractionDigits: 2 
-  }).format(n);
-}
-
-function fmtPct(n: number) {
-  const sign = n > 0 ? '+' : '';
-  return `${sign}${n.toFixed(2)}%`;
-}
+const fmtEur = formatEur;
+const fmtPct = formatPct;
 
 interface PortfolioSectionProps {
   funds: Investment[];
@@ -36,10 +29,10 @@ export function PortfolioSection({ funds, status, onRefresh, onNavigateAdd }: Po
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
   const [copiedIsin, setCopiedIsin] = useState<string | null>(null);
 
-  const totalInvested = status?.total_initial ?? funds.reduce((acc, f) => acc + (f.total_invested || f.shares * f.purchase_price), 0);
-  const totalCurrent = status?.total_current ?? funds.reduce((acc, f) => acc + ((f.current_price ?? f.purchase_price) * f.shares), 0);
-  const totalProfitLoss = totalCurrent - totalInvested;
-  const totalProfitLossPct = totalInvested > 0 ? (totalProfitLoss / totalInvested) * 100 : 0;
+  const totalInvested = status?.total_initial ?? 0;
+  const totalCurrent = status?.total_current ?? 0;
+  const totalProfitLoss = status?.total_profit_loss ?? 0;
+  const totalProfitLossPct = status?.total_profit_loss_pct ?? 0;
 
   // Banks list
   const availableBanks = useMemo(() => {
@@ -55,18 +48,8 @@ export function PortfolioSection({ funds, status, onRefresh, onNavigateAdd }: Po
     return Array.from(cats);
   }, [funds]);
 
-  // Best performer
-  const bestPerformer = useMemo(() => {
-    if (funds.length === 0) return null;
-    const sorted = [...funds].map(f => {
-      const cur = (f.current_price ?? f.purchase_price) * f.shares;
-      const inv = f.total_invested || (f.shares * f.purchase_price);
-      const pl = cur - inv;
-      const pct = inv > 0 ? (pl / inv) * 100 : 0;
-      return { fund: f, pct, pl };
-    }).sort((a, b) => b.pct - a.pct);
-    return sorted[0];
-  }, [funds]);
+  const bestPerformer = useMemo(() => performers(funds).best, [funds]);
+  const views = useMemo(() => new Map(funds.map((f) => [f.id, fundView(f)])), [funds]);
 
   // Filtered and Sorted
   const filteredFunds = useMemo(() => {
@@ -81,22 +64,20 @@ export function PortfolioSection({ funds, status, onRefresh, onNavigateAdd }: Po
       const matchesCat = selectedCategoryFilter === "all" || f.category === selectedCategoryFilter;
       return matchesSearch && matchesBank && matchesCat;
     }).sort((a, b) => {
-      const aVal = (a.current_price ?? a.purchase_price) * a.shares;
-      const bVal = (b.current_price ?? b.purchase_price) * b.shares;
-      const aInv = a.total_invested || (a.shares * a.purchase_price);
-      const bInv = b.total_invested || (b.shares * b.purchase_price);
-      const aPL = aVal - aInv;
-      const bPL = bVal - bInv;
-      const aPct = aInv > 0 ? (aPL / aInv) : 0;
-      const bPct = bInv > 0 ? (bPL / bInv) : 0;
+      const av = views.get(a.id)!;
+      const bv = views.get(b.id)!;
+      const aPL = av.hasPrice ? av.value - av.invested : -Infinity;
+      const bPL = bv.hasPrice ? bv.value - bv.invested : -Infinity;
+      const aPct = av.hasPrice && av.invested > 0 ? aPL / av.invested : -Infinity;
+      const bPct = bv.hasPrice && bv.invested > 0 ? bPL / bv.invested : -Infinity;
 
-      if (sortBy === "value") return bVal - aVal;
+      if (sortBy === "value") return bv.value - av.value;
       if (sortBy === "profit") return bPL - aPL;
       if (sortBy === "profit_pct") return bPct - aPct;
       if (sortBy === "name") return a.name.localeCompare(b.name);
       return 0;
     });
-  }, [funds, searchQuery, selectedBankFilter, selectedCategoryFilter, sortBy]);
+  }, [funds, views, searchQuery, selectedBankFilter, selectedCategoryFilter, sortBy]);
 
   const copyIsinToClipboard = (isin: string) => {
     navigator.clipboard.writeText(isin);
@@ -104,61 +85,35 @@ export function PortfolioSection({ funds, status, onRefresh, onNavigateAdd }: Po
     setTimeout(() => setCopiedIsin(null), 2000);
   };
 
+  if (funds.length === 0) {
+    return (
+      <EmptyState
+        icon={Layers}
+        title="Aún no tienes fondos"
+        text="Busca tu fondo por nombre o ISIN y apunta las participaciones y el importe que te indica tu banco."
+        action={<Button onClick={onNavigateAdd}><Plus size={16} /> Añadir fondo</Button>}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6 dash-cascade">
       
-      {/* ── Portfolio Header KPIs Strip ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        
-        {/* Total Invested */}
-        <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between">
-          <div>
-            <div className="text-[10px] sm:text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-0.5 sm:mb-1">Total Invertido</div>
-            <div className="text-base sm:text-xl font-bold font-mono text-[var(--color-fg-1)] truncate">{fmtEur(totalInvested)}</div>
-          </div>
-          <div className="text-[10px] sm:text-[11px] text-[var(--color-fg-5)] mt-1 truncate">{funds.length} {funds.length === 1 ? "posición" : "posiciones"}</div>
-        </div>
-
-        {/* Current Market Value */}
-        <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between">
-          <div>
-            <div className="text-[10px] sm:text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-0.5 sm:mb-1">Valoración Actual</div>
-            <div className="text-base sm:text-xl font-bold font-mono text-[var(--color-fg-1)] truncate">{fmtEur(totalCurrent)}</div>
-          </div>
-          <div className="text-[10px] sm:text-[11px] text-[var(--color-fg-5)] mt-1 truncate">Precio liquidativo (NAV)</div>
-        </div>
-
-        {/* Total Profit / Loss */}
-        <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between">
-          <div>
-            <div className="text-[10px] sm:text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-0.5 sm:mb-1">Plusvalía Latente</div>
-            <div className={`text-base sm:text-xl font-bold font-mono truncate ${totalProfitLoss >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"}`}>
-              {totalProfitLoss >= 0 ? "+" : ""}{fmtEur(totalProfitLoss)}
-            </div>
-          </div>
-          <div className="text-[10px] sm:text-[11px] font-mono font-medium text-[var(--color-fg-4)] mt-1 truncate">
-            {fmtPct(totalProfitLossPct)} • Exenta IRPF
-          </div>
-        </div>
-
-        {/* Best Performer */}
-        <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between">
-          <div>
-            <div className="text-[10px] sm:text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-0.5 sm:mb-1">Activo Más Rentable</div>
-            {bestPerformer ? (
-              <>
-                <div className="text-xs sm:text-sm font-bold text-[var(--color-fg-1)] truncate">{sanitizeFundName(bestPerformer.fund.name)}</div>
-                <div className="text-[11px] sm:text-xs font-mono text-[var(--color-profit)] font-bold mt-0.5 truncate">
-                  {fmtPct(bestPerformer.pct)} ({fmtEur(bestPerformer.pl)})
-                </div>
-              </>
-            ) : (
-              <div className="text-xs text-[var(--color-fg-5)] mt-1">Sin fondos</div>
-            )}
-          </div>
-          <div className="text-[10px] sm:text-[11px] text-[var(--color-fg-5)] mt-1 truncate">{bestPerformer?.fund.isin || "—"}</div>
-        </div>
-
+      {/* ── Cifras de la cartera ── */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <Stat label="Invertido" value={fmtEur(totalInvested)} hint={<span>{funds.length} {funds.length === 1 ? "fondo" : "fondos"}</span>} />
+        <Stat label="Valor actual" value={fmtEur(totalCurrent)} hint={<span>Con el último valor liquidativo</span>} />
+        <Stat
+          label="Ganancia"
+          value={`${totalProfitLoss > 0 ? "+" : ""}${fmtEur(totalProfitLoss)}`}
+          delta={{ value: fmtPct(totalProfitLossPct), positive: totalProfitLoss >= 0 }}
+          hint={<span>No tributa hasta que vendas</span>}
+        />
+        <Stat
+          label="Mejor fondo"
+          value={bestPerformer ? fmtPct(bestPerformer.pct) : "—"}
+          hint={<span className="truncate">{bestPerformer ? sanitizeFundName(bestPerformer.fund.name) : "Sin fondos con precio"}</span>}
+        />
       </div>
 
       {/* ── Search, Filters & View Toggle Toolbar ── */}
@@ -230,7 +185,7 @@ export function PortfolioSection({ funds, status, onRefresh, onNavigateAdd }: Po
             onClick={() => setSelectedBankFilter("all")}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
               selectedBankFilter === "all"
-                ? "bg-white text-[var(--color-accent-fg)] font-bold shadow-sm"
+                ? "bg-[var(--color-btn-bg)] text-[var(--color-btn-fg)] font-bold"
                 : "bg-[var(--color-ink-2)] text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] border border-[var(--color-ink-3)]"
             }`}
           >
@@ -242,7 +197,7 @@ export function PortfolioSection({ funds, status, onRefresh, onNavigateAdd }: Po
               onClick={() => setSelectedBankFilter(b)}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
                 selectedBankFilter === b
-                  ? "bg-white text-[var(--color-accent-fg)] font-bold shadow-sm"
+                  ? "bg-[var(--color-btn-bg)] text-[var(--color-btn-fg)] font-bold"
                   : "bg-[var(--color-ink-2)] text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] border border-[var(--color-ink-3)]"
               }`}
             >
@@ -290,21 +245,17 @@ export function PortfolioSection({ funds, status, onRefresh, onNavigateAdd }: Po
                   <th className="py-3.5 px-4 font-medium">Entidad</th>
                   <th className="py-3.5 px-4 font-medium text-right">Participaciones</th>
                   <th className="py-3.5 px-4 font-medium text-right">Precio Compra</th>
-                  <th className="py-3.5 px-4 font-medium text-right">NAV Actual</th>
+                  <th className="py-3.5 px-4 font-medium text-right">Precio</th>
                   <th className="py-3.5 px-4 font-medium text-right">Invertido</th>
                   <th className="py-3.5 px-4 font-medium text-right">Valor Actual</th>
-                  <th className="py-3.5 px-4 font-medium text-right">Plusvalía (€)</th>
+                  <th className="py-3.5 px-4 font-medium text-right">Ganancia</th>
                   <th className="py-3.5 px-4 font-medium text-right">Rentabilidad</th>
                 </tr>
               </thead>
               <tbody className="text-[var(--color-fg-2)] divide-y divide-[var(--color-ink-3)]">
                 {filteredFunds.map((f) => {
-                  const invested = f.total_invested || (f.shares * f.purchase_price);
-                  const curPrice = f.current_price ?? f.purchase_price;
-                  const currentVal = curPrice * f.shares;
-                  const pl = currentVal - invested;
-                  const plPct = invested > 0 ? (pl / invested) * 100 : 0;
-                  const isP = pl >= 0;
+                  const v = views.get(f.id)!;
+                  const isP = v.plPositive !== false;
 
                   const sourceInfo = getFundDataSourceInfo(f);
                   const bankInfo = getBankPortalInfo(f);
@@ -351,16 +302,21 @@ export function PortfolioSection({ funds, status, onRefresh, onNavigateAdd }: Po
                       </td>
                       <td className="py-3.5 px-4 text-right font-bold text-[var(--color-fg-1)]">{f.shares.toFixed(4)}</td>
                       <td className="py-3.5 px-4 text-right text-[var(--color-fg-4)]">{fmtEur(f.purchase_price)}</td>
-                      <td className="py-3.5 px-4 text-right font-bold text-[var(--color-fg-1)]">{fmtEur(curPrice)}</td>
-                      <td className="py-3.5 px-4 text-right text-[var(--color-fg-4)]">{fmtEur(invested)}</td>
-                      <td className="py-3.5 px-4 text-right font-bold text-[var(--color-fg-1)]">{fmtEur(currentVal)}</td>
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="font-bold text-[var(--color-fg-1)]">{v.priceLabel}</div>
+                        {v.navDateLabel && <div className={`text-[10px] ${v.stale ? "text-[var(--color-warn)]" : "text-[var(--color-fg-4)]"}`}>{v.navDateLabel}</div>}
+                      </td>
+                      <td className="py-3.5 px-4 text-right text-[var(--color-fg-4)]">{fmtEur(v.invested)}</td>
+                      <td className="py-3.5 px-4 text-right font-bold text-[var(--color-fg-1)]">{fmtEur(v.value)}</td>
                       <td className={`py-3.5 px-4 text-right font-bold ${isP ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"}`}>
-                        {isP ? "+" : ""}{fmtEur(pl)}
+                        {v.plLabel ?? "—"}
                       </td>
                       <td className="py-3.5 px-4 text-right">
-                        <span className={`px-2 py-0.5 rounded font-bold ${isP ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"}`}>
-                          {fmtPct(plPct)}
-                        </span>
+                        {v.plPctLabel ? (
+                          <span className={`px-2 py-0.5 rounded-full font-bold ${isP ? "bg-[var(--color-profit)]/12 text-[var(--color-profit)]" : "bg-[var(--color-loss)]/12 text-[var(--color-loss)]"}`}>
+                            {v.plPctLabel}
+                          </span>
+                        ) : "—"}
                       </td>
                     </tr>
                   );

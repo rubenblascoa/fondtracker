@@ -1,5 +1,5 @@
 import { fetchCurrentPrice, tryDiscoverTicker } from "./yahoo";
-import { queries, type InvestmentRow, type InvestmentWithStats } from "./db";
+import { queries, type InvestmentRow, type InvestmentWithStats, type PriceSource } from "./db";
 
 // ─── In-memory price cache with LRU eviction ──────────────────────────────────
 // Avoids calling Yahoo Finance on every 10-second dashboard refresh.
@@ -7,7 +7,7 @@ import { queries, type InvestmentRow, type InvestmentWithStats } from "./db";
 const PRICE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const PRICE_CACHE_MAX = 500; // max entries before LRU eviction
 
-type CacheEntry = { price: number | null; currency: string; fetchedAt: number };
+type CacheEntry = { price: number | null; currency: string; fetchedAt: number; info: PriceInfo | null };
 const priceCache = new Map<string, CacheEntry>();
 
 function getCachedPrice(isin: string): CacheEntry | null {
@@ -16,13 +16,13 @@ function getCachedPrice(isin: string): CacheEntry | null {
   return null;
 }
 
-function setCachedPrice(isin: string, price: number | null, currency: string) {
+function setCachedPrice(isin: string, price: number | null, currency: string, info: PriceInfo | null = null) {
   if (priceCache.has(isin)) priceCache.delete(isin);
   else if (priceCache.size >= PRICE_CACHE_MAX) {
     const oldest = priceCache.keys().next().value;
     if (oldest) priceCache.delete(oldest);
   }
-  priceCache.set(isin, { price, currency, fetchedAt: Date.now() });
+  priceCache.set(isin, { price, currency, fetchedAt: Date.now(), info });
 }
 
 export function invalidatePriceCache(isin?: string) {
@@ -36,10 +36,13 @@ function now(): string {
   return new Date().toISOString().slice(0, 19).replace("T", " ");
 }
 
+export type PriceInfo = { date: string | null; source: PriceSource };
+
 export function computeInvestmentStats(
   investment: InvestmentRow,
   currentPrice: number | null,
-  resolvedTicker: string | null
+  resolvedTicker: string | null,
+  priceInfo?: PriceInfo | null
 ): InvestmentWithStats {
   const shares = Number.isFinite(Number(investment.shares)) ? Number(investment.shares) : 0;
   const purchasePrice = Number.isFinite(Number(investment.purchase_price)) ? Number(investment.purchase_price) : 0;
@@ -59,6 +62,8 @@ export function computeInvestmentStats(
     profit_loss: profitLoss,
     profit_loss_pct: profitLossPct,
     current_price: currentPrice,
+    price_date: priceInfo?.date ?? null,
+    price_source: priceInfo?.source ?? null,
   };
 }
 
@@ -78,6 +83,7 @@ export async function listInvestments(userId: number): Promise<InvestmentWithSta
   // ② Resolve tickers & prices per unique ISIN
   const resolvedTickers = new Map<string, string | null>();
   const resolvedPrices = new Map<string, number | null>();
+  const resolvedInfo = new Map<string, PriceInfo | null>();
 
   await Promise.all(
     uniqueIsins.map(async (isin) => {
@@ -103,6 +109,7 @@ export async function listInvestments(userId: number): Promise<InvestmentWithSta
       const mem = getCachedPrice(isin);
       if (mem) {
         resolvedPrices.set(isin, mem.price);
+        resolvedInfo.set(isin, mem.info);
         return;
       }
 
@@ -113,9 +120,11 @@ export async function listInvestments(userId: number): Promise<InvestmentWithSta
           return null;
         });
         if (quote?.price) {
-          setCachedPrice(isin, quote.price, quote.currency);
+          const info: PriceInfo = { date: quote.date, source: quote.source };
+          setCachedPrice(isin, quote.price, quote.currency, info);
           await queries.setFundPrice(isin, quote.price, quote.currency);
           resolvedPrices.set(isin, quote.price);
+          resolvedInfo.set(isin, info);
           return;
         }
       }
@@ -123,8 +132,11 @@ export async function listInvestments(userId: number): Promise<InvestmentWithSta
       // DB fallback (loaded in batch)
       const cached = pricesMap.get(isin);
       if (cached && cached.price > 0) {
-        setCachedPrice(isin, cached.price, cached.currency);
+        // Precio guardado de una consulta anterior: no sabemos de qué día es el liquidativo
+        const info: PriceInfo = { date: null, source: "cache" };
+        setCachedPrice(isin, cached.price, cached.currency, info);
         resolvedPrices.set(isin, cached.price);
+        resolvedInfo.set(isin, info);
         return;
       }
 
@@ -137,7 +149,7 @@ export async function listInvestments(userId: number): Promise<InvestmentWithSta
   return investments.map((inv) => {
     const ticker = resolvedTickers.get(inv.isin) ?? null;
     const price = resolvedPrices.get(inv.isin) ?? null;
-    return computeInvestmentStats(inv, price, ticker);
+    return computeInvestmentStats(inv, price, ticker, resolvedInfo.get(inv.isin) ?? null);
   });
 }
 
@@ -162,6 +174,7 @@ export async function getInvestmentWithStats(
   invalidatePriceCache(inv.isin);
 
   let currentPrice: number | null = null;
+  let priceInfo: PriceInfo | null = null;
   if (ticker) {
     const quote = await fetchCurrentPrice(ticker).catch((err) => {
       console.warn(`[sentinel] precio no obtenido para ${ticker}: ${err.message}`);
@@ -169,16 +182,20 @@ export async function getInvestmentWithStats(
     });
     currentPrice = quote?.price ?? null;
     if (currentPrice) {
-      setCachedPrice(inv.isin, currentPrice, quote!.currency);
+      priceInfo = { date: quote!.date, source: quote!.source };
+      setCachedPrice(inv.isin, currentPrice, quote!.currency, priceInfo);
       await queries.setFundPrice(inv.isin, currentPrice, quote!.currency);
     }
   }
   if (!currentPrice) {
     const db = await queries.getFundPrice(inv.isin);
-    if (db && db.price > 0) currentPrice = db.price;
+    if (db && db.price > 0) {
+      currentPrice = db.price;
+      priceInfo = { date: null, source: "cache" };
+    }
   }
 
-  return computeInvestmentStats(inv, currentPrice, ticker);
+  return computeInvestmentStats(inv, currentPrice, ticker, priceInfo);
 }
 
 // ─── Portfolio totals — computed from already-loaded investments ──────────────

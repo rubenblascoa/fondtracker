@@ -42,7 +42,7 @@ export function Tag({
   return (
     <span
       className={cx(
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
+        "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
         tone === "accent" && "bg-[var(--color-tag-bg)] text-[var(--color-tag-fg)]",
         tone === "neutral" && "bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-fg-3)]",
         tone === "profit" && "bg-[var(--color-profit)]/12 text-[var(--color-profit)]",

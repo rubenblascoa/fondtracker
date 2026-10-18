@@ -211,12 +211,17 @@ export type InvestmentRow = {
   updated_at: string;
 };
 
+export type PriceSource = "quefondos" | "yahoo" | "cache";
+
 export type InvestmentWithStats = InvestmentRow & {
   total_invested: number;
   current_value: number;
   profit_loss: number;
   profit_loss_pct: number;
   current_price: number | null;
+  /** Fecha (YYYY-MM-DD) del valor liquidativo/cotización usado, si se conoce */
+  price_date: string | null;
+  price_source: PriceSource | null;
 };
 
 export const queries = {

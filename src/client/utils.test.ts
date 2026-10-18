@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { formatEur, formatPct, maskPhone } from "./utils";
+import { formatCompactEur, formatEur, formatPct, maskPhone } from "./utils";
 
 // Intl usa espacio duro (U+00A0) antes del símbolo; normalizamos para comparar.
 const n = (s: string) => s.replace(/ | /g, " ");
@@ -62,5 +62,23 @@ describe("maskPhone", () => {
 
   it("no revela números cortos", () => {
     expect(maskPhone("1234")).toBe("•••");
+  });
+});
+
+describe("formatCompactEur (eje del gráfico)", () => {
+  it("menos de mil: euros enteros", () => {
+    expect(n(formatCompactEur(950))).toBe("950 €");
+  });
+  it("miles con un decimal y sin repetir etiquetas cercanas", () => {
+    expect(n(formatCompactEur(1755.22))).toBe("1,8 k €");
+    expect(n(formatCompactEur(1500))).toBe("1,5 k €");
+    expect(n(formatCompactEur(12480))).toBe("12,5 k €");
+  });
+  it("millones con dos decimales", () => {
+    expect(n(formatCompactEur(1_250_000))).toBe("1,25 M €");
+  });
+  it("cero y no finitos", () => {
+    expect(n(formatCompactEur(0))).toBe("0 €");
+    expect(formatCompactEur(NaN)).toBe("—");
   });
 });

@@ -1,65 +1,25 @@
-import { useEffect, useState, useRef, useMemo } from "react";
-import { api, clearToken, getFundDataSourceInfo, getBankPortalInfo, type Investment, type Status, type User } from "../../api";
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell
-} from "recharts";
-import { 
-  LayoutDashboard, Database, PlusCircle, Smartphone, BarChart3, 
-  FileText, Settings, LogOut, Search, ArrowUpRight, ArrowDownRight, 
-  Wallet, TrendingUp, Layers, Activity, Shield, RefreshCw, 
-  Download, Sparkles, Filter, ChevronRight, CheckCircle2,
-  AlertTriangle, ExternalLink, Calendar, Plus, Globe, Building2,
-  PieChart as PieIcon, ArrowUpDown, Table, LayoutGrid, Eye, Check, X,
-  Key, Mail, Lock, Phone, UserCheck, ShieldAlert, Sun, Moon, Palette, BookOpen,
-  Menu, MoreHorizontal
-} from 'lucide-react';
-import { COUNTRIES } from "../RegisterPage";
-import { useTheme } from "../../theme";
-import { maskPhone } from "../../utils";
+import { useEffect, useMemo, useState } from "react";
+import { Area, AreaChart, Cell, Line, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { ArrowRight, Download, FileText, MessageCircle, PlusCircle, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { api, type Investment, type PortfolioHistoryPoint, type PortfolioHistoryRange, type Status } from "../../api";
+import { allocationBy, performers } from "../../allocation";
+import { fundView } from "../../fundView";
+import { formatCompactEur, formatEur, formatPct, maskPhone } from "../../utils";
+import { Button, Card, EmptyState, Label, Stat, Tag } from "../ui";
 import type { DashboardSection } from "./DashboardNav";
 
-// ─── Formatters ────────────────────────────────────────────────────────────────
-function fmtEur(n: number) {
-  return new Intl.NumberFormat('es-ES', { 
-    style: 'currency', 
-    currency: 'EUR', 
-    maximumFractionDigits: 2 
-  }).format(n);
-}
-
-function fmtPct(n: number) {
-  const sign = n > 0 ? '+' : '';
-  return `${sign}${n.toFixed(2)}%`;
-}
-
-function timeAgo(date: Date | number | null) {
-  if (!date) return "hace un momento";
-  const diff = Date.now() - new Date(date).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "hace un momento";
-  if (mins < 60) return `hace ${mins}m`;
-  if (mins < 1440) return `hace ${Math.floor(mins / 60)}h`;
-  return `hace ${Math.floor(mins / 1440)}d`;
-}
-
-// ─── Custom Tooltip for Recharts ───────────────────────────────────────────────
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-[var(--color-ink-2)]/95 backdrop-blur-md border border-[var(--color-ink-3)] p-3 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
-        <p className="text-[var(--color-fg-4)] text-xs font-mono mb-1">{label}</p>
-        {payload.map((p: any, i: number) => (
-          <div key={i} className="flex items-center gap-2 text-xs">
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color || 'var(--color-accent)' }} />
-            <span className="text-[var(--color-fg-2)] font-medium">{p.name === 'value' ? 'Valor Cartera' : p.name}:</span>
-            <span className="text-[var(--color-fg-1)] font-mono font-bold">{fmtEur(p.value)}</span>
-          </div>
-        ))}
-      </div>
-    );
-  }
-  return null;
+const PALETTE = ["#c084fc", "#e3b25b", "#818cf8", "#f472b6", "#60a5fa", "#34d399", "#fb923c", "#a19d94"];
+const RANGES: { label: string; value: PortfolioHistoryRange }[] = [
+  { label: "1M", value: "1m" },
+  { label: "3M", value: "3m" },
+  { label: "6M", value: "6m" },
+  { label: "1A", value: "1y" },
+  { label: "Máx", value: "max" },
+];
+const MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+const dayLabel = (iso: string) => {
+  const [y, m, d] = iso.split("-").map(Number);
+  return `${d} ${MONTHS[m - 1]} ${String(y).slice(2)}`;
 };
 
 type Props = {
@@ -71,485 +31,309 @@ type Props = {
   isExportingPdf: boolean;
 };
 
-export function OverviewTab({ funds, status, phone, onNavigate, onExportPdf, isExportingPdf }: Props) {
-  const setSection = onNavigate;
-  const exportPdf = onExportPdf;
-  // Portfolio Totals & Calculations
-  const totalInvested = status?.total_initial ?? 0;
-  const totalCurrent = status?.total_current ?? 0;
-  const totalProfitLoss = status?.total_profit_loss ?? 0;
-  const totalProfitLossPct = status?.total_profit_loss_pct ?? 0;
-  const isOverallProfit = totalProfitLoss >= 0;
-
-  const filteredFunds = useMemo(
-    () => [...funds].sort((a, b) => (b.current_price ?? b.purchase_price) * b.shares - (a.current_price ?? a.purchase_price) * a.shares),
-    [funds]
+function HistoryTooltip({ active, payload }: any) {
+  if (!active || !payload?.length) return null;
+  const p = payload[0].payload as PortfolioHistoryPoint;
+  return (
+    <div className="ft-card px-3 py-2 text-xs shadow-xl" style={{ background: "var(--color-ink-1)" }}>
+      <p className="mb-1 font-mono text-[var(--color-fg-4)]">{dayLabel(p.date)}</p>
+      <p className="text-[var(--color-fg-1)]">Valor <b className="font-heading">{formatEur(p.value)}</b></p>
+      <p className="text-[var(--color-fg-3)]">Invertido {formatEur(p.invested)}</p>
+    </div>
   );
+}
 
-  // Asset Distribution (by Bank)
-  const bankDistribution = useMemo(() => {
-    const palette = ['#c084fc', '#e3b25b', '#818cf8', '#f472b6', '#60a5fa', '#34d399', '#f87171'];
-    const map = new Map<string, number>();
-    funds.forEach(f => {
-      const cur = (f.current_price ?? f.purchase_price) * f.shares;
-      const b = f.bank || 'Otros';
-      map.set(b, (map.get(b) || 0) + cur);
-    });
-    let idx = 0;
-    const res: { name: string; value: number; color: string; pct: number }[] = [];
-    map.forEach((val, key) => {
-      const pct = totalCurrent > 0 ? (val / totalCurrent) * 100 : 0;
-      res.push({
-        name: key,
-        value: Math.round(val),
-        color: palette[idx % palette.length],
-        pct: Math.round(pct * 10) / 10
-      });
-      idx++;
-    });
-    return res.sort((a, b) => b.value - a.value);
-  }, [funds, totalCurrent]);
+export function OverviewTab({ funds, status, phone, onNavigate, onExportPdf, isExportingPdf }: Props) {
+  const [range, setRange] = useState<PortfolioHistoryRange>("1y");
+  const [history, setHistory] = useState<{ points: PortfolioHistoryPoint[]; source: string } | null>(null);
+  const [historyError, setHistoryError] = useState(false);
 
-  // Best and Worst Performers
-  const { bestPerformer, worstPerformer } = useMemo(() => {
-    if (funds.length === 0) return { bestPerformer: null, worstPerformer: null };
-    const withStats = funds.map(f => {
-      const curVal = (f.current_price ?? f.purchase_price) * f.shares;
-      const inv = f.total_invested || (f.shares * f.purchase_price);
-      const pl = curVal - inv;
-      const pct = inv > 0 ? (pl / inv) * 100 : 0;
-      return { fund: f, pl, pct, curVal };
-    });
-    withStats.sort((a, b) => b.pct - a.pct);
-    return {
-      bestPerformer: withStats[0],
-      worstPerformer: withStats.length > 1 ? withStats[withStats.length - 1] : null
+  const fundsKey = funds.map((f) => `${f.id}:${f.shares}`).join("|");
+  useEffect(() => {
+    if (funds.length === 0) return;
+    let cancelled = false;
+    setHistoryError(false);
+    api
+      .portfolioHistory(range)
+      .then((h) => !cancelled && setHistory(h))
+      .catch(() => !cancelled && setHistoryError(true));
+    return () => {
+      cancelled = true;
     };
-  }, [funds]);
+  }, [range, fundsKey]);
 
-  // Synthetic Historical Trend for Chart (30 Days)
-  const portfolioHistory = useMemo(() => {
-    const days = 30;
-    const history = [];
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
+  const views = useMemo(() => funds.map((f) => ({ fund: f, view: fundView(f) })), [funds]);
+  const byBank = useMemo(() => allocationBy(funds, "bank"), [funds]);
+  const { best, worst } = useMemo(() => performers(funds), [funds]);
+  const top = useMemo(() => [...views].sort((a, b) => b.view.value - a.view.value).slice(0, 5), [views]);
 
-    for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
-      
-      // Calculate realistic curve
-      const progress = (days - 1 - i) / (days - 1);
-      const val = Math.round(totalInvested + (totalProfitLoss * (0.6 + progress * 0.4)));
+  if (funds.length === 0) {
+    return (
+      <EmptyState
+        icon={Wallet}
+        title="Tu cartera está vacía"
+        text="Añade tu primer fondo con las participaciones y el importe que te indica tu banco, y aquí verás cuánto vale hoy."
+        action={
+          <Button onClick={() => onNavigate("add")}>
+            <PlusCircle size={16} /> Añadir fondo
+          </Button>
+        }
+      />
+    );
+  }
 
-      history.push({
-        name: `${d.getDate()} ${d.toLocaleString('es-ES', { month: 'short' }).replace('.', '')}`,
-        fullDate: d.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }),
-        value: Math.max(0, val)
-      });
-    }
-    return history;
-  }, [totalInvested, totalProfitLoss]);
+  const invested = status?.total_initial ?? 0;
+  const current = status?.total_current ?? 0;
+  const pl = status?.total_profit_loss ?? 0;
+  const plPct = status?.total_profit_loss_pct ?? 0;
+  const pending = views.filter((v) => !v.view.hasPrice).length;
+  const points = history?.points ?? [];
 
   return (
-              <div key="overview" className="space-y-4 sm:space-y-5 dash-cascade">
-                
-                {/* ── Key Stat Cards (Neon Glass Style) ── */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
-                  
-                  {/* Total Invertido */}
-                  <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-3.5 sm:p-5 relative overflow-hidden group hover:border-[var(--color-ink-3)] transition-all flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-start mb-2 sm:mb-3">
-                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-                          <Wallet size={16} />
-                        </div>
-                        <span className="text-[9px] sm:text-[10px] font-mono text-[var(--color-fg-4)] uppercase tracking-wider bg-[var(--color-ink-2)] px-1.5 sm:px-2 py-0.5 rounded">
-                          Capital
-                        </span>
-                      </div>
-                      <p className="text-[10px] sm:text-[11px] text-[var(--color-fg-4)] font-medium mb-0.5 sm:mb-1 uppercase tracking-wider">Total Invertido</p>
-                      <p className="text-lg sm:text-[26px] font-bold font-mono text-[var(--color-fg-1)] tracking-tight truncate">{fmtEur(totalInvested)}</p>
-                    </div>
-                    <p className="text-[11px] sm:text-xs text-[var(--color-fg-5)] mt-2 sm:mt-2.5 flex items-center gap-1.5">
-                      <Layers size={12} /> {funds.length} {funds.length === 1 ? 'posición' : 'posiciones'}
-                    </p>
-                  </div>
+    <div className="space-y-5 fade-in">
+      {/* Cifras principales */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat label="Patrimonio" value={formatEur(current)} hint={<span>{funds.length} {funds.length === 1 ? "fondo" : "fondos"}</span>} />
+        <Stat
+          label="Ganancia"
+          value={`${pl > 0 ? "+" : ""}${formatEur(pl)}`}
+          delta={{ value: formatPct(plPct), positive: pl >= 0 }}
+          hint={pending > 0 ? <span>{pending} sin precio</span> : undefined}
+        />
+        <Stat label="Invertido" value={formatEur(invested)} hint={<span>Lo que has puesto de tu bolsillo</span>} />
+        <Card className="flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <Label>WhatsApp</Label>
+            <Tag tone={status?.whatsapp?.configured ? "profit" : "neutral"}>{status?.whatsapp?.configured ? "Activo" : "Inactivo"}</Tag>
+          </div>
+          <p className="mt-2 font-heading text-lg font-semibold text-[var(--color-fg-1)]">
+            {status?.whatsapp?.configured ? maskPhone(phone) || "Configurado" : "Sin configurar"}
+          </p>
+          <button onClick={() => onNavigate("notifications")} className="mt-2 flex items-center gap-1 text-xs font-medium text-[var(--color-accent)] hover:underline">
+            <MessageCircle size={13} /> {status?.whatsapp?.configured ? "Gestionar avisos" : "Activar resumen diario"}
+          </button>
+        </Card>
+      </div>
 
-                  {/* Valor Actual */}
-                  <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-3.5 sm:p-5 relative overflow-hidden group hover:border-[var(--color-accent)]/30 transition-all flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-start mb-2 sm:mb-3">
-                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-accent)] shadow-[0_0_12px_rgba(192,132,252,0.15)]">
-                          <TrendingUp size={16} />
-                        </div>
-                        <span className="text-[9px] sm:text-[10px] font-mono text-[var(--color-accent)] uppercase tracking-wider bg-[var(--color-accent)]/10 px-1.5 sm:px-2 py-0.5 rounded font-bold">
-                          Valoración
-                        </span>
-                      </div>
-                      <p className="text-[10px] sm:text-[11px] text-[var(--color-fg-4)] font-medium mb-0.5 sm:mb-1 uppercase tracking-wider">Valor Actual</p>
-                      <p className="text-lg sm:text-[26px] font-bold font-mono text-[var(--color-fg-1)] tracking-tight truncate">{fmtEur(totalCurrent)}</p>
-                    </div>
-                    <div className="flex items-center gap-1 mt-2 sm:mt-2.5 text-[11px] sm:text-xs truncate">
-                      <span className={`flex items-center gap-0.5 font-semibold shrink-0 ${isOverallProfit ? 'text-[var(--color-profit)]' : 'text-[var(--color-loss)]'}`}>
-                        {isOverallProfit ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-                        {fmtPct(totalProfitLossPct)}
-                      </span>
-                      <span className="text-[var(--color-fg-5)] hidden sm:inline">total</span>
-                    </div>
-                  </div>
+      {/* Evolución + reparto */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <Card className="xl:col-span-2">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--color-fg-1)]">Evolución</h2>
+              <p className="text-xs text-[var(--color-fg-4)]">
+                {history?.source === "snapshots"
+                  ? "Valor guardado cada día"
+                  : "Calculado con los precios históricos de tus fondos" + (history?.source === "mixed" ? " y el valor guardado cada día" : "")}
+              </p>
+            </div>
+            <div className="flex rounded-full border border-[var(--color-border)] p-0.5">
+              {RANGES.map((r) => (
+                <button
+                  key={r.value}
+                  onClick={() => setRange(r.value)}
+                  className={`rounded-full px-3 py-1 font-mono text-[11px] font-semibold transition-colors ${
+                    range === r.value ? "bg-[var(--color-tag-bg)] text-[var(--color-fg-1)]" : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
+                  }`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-                  {/* Ganancia / Pérdida */}
-                  <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-3.5 sm:p-5 relative overflow-hidden group hover:border-[var(--color-ink-3)] transition-all flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-start mb-2 sm:mb-3">
-                        <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl border flex items-center justify-center ${
-                          isOverallProfit 
-                            ? 'bg-[var(--color-profit)]/10 border-[var(--color-profit)]/20 text-[var(--color-profit)]' 
-                            : 'bg-[var(--color-loss)]/10 border-[var(--color-loss)]/20 text-[var(--color-loss)]'
-                        }`}>
-                          {isOverallProfit ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
-                        </div>
-                        <span className={`text-[9px] sm:text-[10px] font-mono uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded font-bold ${
-                          isOverallProfit ? 'bg-[var(--color-profit)]/10 text-[var(--color-profit)]' : 'bg-[var(--color-loss)]/10 text-[var(--color-loss)]'
-                        }`}>
-                          {isOverallProfit ? 'Plusvalía' : 'Minusvalía'}
-                        </span>
-                      </div>
-                      <p className="text-[10px] sm:text-[11px] text-[var(--color-fg-4)] font-medium mb-0.5 sm:mb-1 uppercase tracking-wider">Beneficio Neto</p>
-                      <p className={`text-lg sm:text-[26px] font-bold font-mono tracking-tight truncate ${isOverallProfit ? 'text-[var(--color-profit)] glow' : 'text-[var(--color-loss)]'}`}>
-                        {fmtEur(totalProfitLoss)}
-                      </p>
-                    </div>
-                    <p className="text-[10px] sm:text-xs text-[var(--color-fg-5)] mt-2 sm:mt-2.5 truncate">
-                      Retorno absoluto
-                    </p>
-                  </div>
+          <div className="mt-4 h-[260px]">
+            {historyError ? (
+              <p className="grid h-full place-items-center text-sm text-[var(--color-fg-4)]">No se pudo cargar la evolución. Prueba a actualizar.</p>
+            ) : !history ? (
+              <div className="shimmer h-full rounded-2xl" />
+            ) : points.length < 2 ? (
+              <p className="grid h-full place-items-center text-center text-sm text-[var(--color-fg-4)]">
+                Aún no hay suficiente historial en este periodo.
+                <br />
+                Prueba con un rango más largo.
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={points} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="ftLine" x1="0" x2="1" y1="0" y2="0">
+                      <stop offset="0" stopColor="#e3b25b" />
+                      <stop offset="1" stopColor="#c084fc" />
+                    </linearGradient>
+                    <linearGradient id="ftArea" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0" stopColor="#c084fc" stopOpacity={0.22} />
+                      <stop offset="1" stopColor="#c084fc" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="date" tickFormatter={dayLabel} tick={{ fontSize: 10, fill: "var(--color-fg-4)" }} axisLine={false} tickLine={false} minTickGap={40} />
+                  <YAxis
+                    tickFormatter={formatCompactEur}
+                    tick={{ fontSize: 10, fill: "var(--color-fg-4)" }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={58}
+                    domain={["auto", "auto"]}
+                    tickCount={5}
+                    allowDecimals={false}
+                  />
+                  <Tooltip content={<HistoryTooltip />} />
+                  <Area type="monotone" dataKey="value" stroke="url(#ftLine)" strokeWidth={2.2} fill="url(#ftArea)" />
+                  <Line type="stepAfter" dataKey="invested" stroke="var(--color-fg-4)" strokeDasharray="4 4" strokeWidth={1.2} dot={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+          <div className="mt-3 flex gap-4 text-[11px] text-[var(--color-fg-4)]">
+            <span className="flex items-center gap-1.5">
+              <span className="h-0.5 w-4 rounded" style={{ background: "var(--gradient-accent)" }} /> Valor
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-0 w-4 border-t border-dashed border-[var(--color-fg-4)]" /> Invertido
+            </span>
+          </div>
+        </Card>
 
-                  {/* WhatsApp Status Widget */}
-                  <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-3.5 sm:p-5 relative overflow-hidden group hover:border-[var(--color-ink-3)] transition-all flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-start mb-2 sm:mb-3">
-                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[var(--color-warn)]/10 border border-[var(--color-warn)]/20 flex items-center justify-center text-[var(--color-warn)]">
-                          <Smartphone size={16} />
-                        </div>
-                        <span className={`text-[9px] sm:text-[10px] font-mono uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded font-bold ${
-                          status?.whatsapp?.configured ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' : 'bg-gray-800 text-[var(--color-fg-4)]'
-                        }`}>
-                          {status?.whatsapp?.configured ? 'Conectado' : 'Inactivo'}
-                        </span>
-                      </div>
-                      <p className="text-[10px] sm:text-[11px] text-[var(--color-fg-4)] font-medium mb-0.5 sm:mb-1 uppercase tracking-wider">Digest Diario</p>
-                      <p className="text-xs sm:text-base font-bold text-[var(--color-fg-1)] tracking-tight truncate">
-                        {status?.whatsapp?.configured ? (maskPhone(phone) || "Activo") : "Sin configurar"}
-                      </p>
-                    </div>
-                    <button 
-                      onClick={() => setSection("notifications")} 
-                      className="text-[11px] sm:text-xs text-[var(--color-accent)] hover:underline mt-2 sm:mt-2.5 flex items-center gap-1 font-medium"
-                    >
-                      Alertas <ChevronRight size={12} />
-                    </button>
-                  </div>
-
-                </div>
-
-                {/* ── Portfolio Chart & Bank Breakdown Row ── */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                  
-                  {/* Interactive Portfolio Growth Chart */}
-                  <div className="lg:col-span-2 bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-5 relative overflow-hidden">
-                    <div className="flex flex-wrap justify-between items-start gap-3 mb-4">
-                      <div>
-                        <h2 className="text-sm sm:text-base font-semibold text-[var(--color-fg-1)]">Evolución de Patrimonio</h2>
-                        <p className="text-xs text-[var(--color-fg-4)] mt-0.5">Valoración consolidada de tu cartera (últimos 30 días)</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1 text-[var(--color-accent)] text-xs font-medium bg-[var(--color-accent)]/10 px-2.5 py-1 rounded-lg">
-                          <ArrowUpRight size={13} /> {fmtPct(totalProfitLossPct)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="h-[200px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={portfolioHistory}>
-                          <defs>
-                            <linearGradient id="userAumGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.3}/>
-                              <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0}/>
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#71717a', fontSize: 11}} dy={8} />
-                          <YAxis axisLine={false} tickLine={false} tick={{fill: '#71717a', fontSize: 11}} tickFormatter={(v) => `€${Math.round(v/1000)}k`} dx={-8} />
-                          <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }} />
-                          <Area type="monotone" dataKey="value" stroke="var(--color-accent)" strokeWidth={2.5} fillOpacity={1} fill="url(#userAumGrad)" />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-
-                  {/* Bank Asset Distribution Donut */}
-                  <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-start mb-0.5">
-                        <h2 className="text-sm sm:text-base font-semibold text-[var(--color-fg-1)]">Distribución por Entidad</h2>
-                        <button onClick={() => setSection("analytics")} className="text-xs text-[var(--color-accent)] hover:underline">
-                          Detalles
-                        </button>
-                      </div>
-                      <p className="text-xs text-[var(--color-fg-4)] mb-3">Ponderación de tu capital en cada banco</p>
-                    </div>
-
-                    <div className="h-[145px] relative flex items-center justify-center">
-                      <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
-                        <p className="text-base sm:text-lg font-bold font-mono text-[var(--color-fg-1)]">{fmtEur(totalCurrent)}</p>
-                        <p className="text-[10px] text-[var(--color-fg-5)] uppercase tracking-widest">Total</p>
-                      </div>
-                      <ResponsiveContainer width="100%" height="100%">
-                        {bankDistribution.length > 0 ? (
-                          <PieChart>
-                            <Pie
-                              data={bankDistribution}
-                              innerRadius={50}
-                              outerRadius={68}
-                              paddingAngle={bankDistribution.length > 1 ? 3 : 0}
-                              dataKey="value"
-                              stroke="none"
-                            >
-                              {bankDistribution.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                              ))}
-                            </Pie>
-                            <Tooltip content={<CustomTooltip />} />
-                          </PieChart>
-                        ) : (
-                          <div className="flex items-center justify-center text-xs text-[var(--color-fg-5)]">Sin fondos</div>
-                        )}
-                      </ResponsiveContainer>
-                    </div>
-
-                    <div className="space-y-1.5 mt-3">
-                      {bankDistribution.slice(0, 3).map(b => (
-                        <div key={b.name} className="flex justify-between items-center text-xs">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: b.color }} />
-                            <span className="text-[var(--color-fg-2)] font-medium truncate max-w-[120px]">{b.name}</span>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-[var(--color-fg-4)] font-mono">{b.pct}%</span>
-                            <span className="font-mono text-[var(--color-fg-1)] font-semibold">{fmtEur(b.value)}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                </div>
-
-                {/* ── Best / Worst Performers & Quick Action Highlights ── */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
-                  
-                  {/* Best Performer */}
-                  <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between mb-2.5">
-                        <span className="text-xs font-semibold text-[var(--color-fg-1)] uppercase tracking-wider flex items-center gap-1.5">
-                          <Sparkles size={14} className="text-[var(--color-accent)]" /> Mejor Rendimiento
-                        </span>
-                        {bestPerformer && (
-                          <span className="px-2 py-0.5 bg-[var(--color-accent)]/10 text-[var(--color-accent)] font-mono text-xs font-bold rounded">
-                            {fmtPct(bestPerformer.pct)}
-                          </span>
-                        )}
-                      </div>
-                      {bestPerformer ? (
-                        <>
-                          <h3 className="text-sm font-semibold text-[var(--color-fg-1)] truncate max-w-[260px]">{bestPerformer.fund.name}</h3>
-                          <p className="text-xs font-mono text-[var(--color-fg-4)] mt-1">{bestPerformer.fund.isin} • {bestPerformer.fund.bank || '—'}</p>
-                          <div className="flex justify-between items-center mt-3 pt-2.5 border-t border-[var(--color-ink-3)] text-xs font-mono">
-                            <span className="text-[var(--color-fg-4)]">Ganancia:</span>
-                            <span className="text-[var(--color-accent)] font-bold">{fmtEur(bestPerformer.pl)}</span>
-                          </div>
-                        </>
-                      ) : (
-                        <p className="text-xs text-[var(--color-fg-5)] mt-1">Añade fondos para ver el ranking.</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Worst Performer */}
-                  <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between mb-2.5">
-                        <span className="text-xs font-semibold text-[var(--color-fg-1)] uppercase tracking-wider flex items-center gap-1.5">
-                          <AlertTriangle size={14} className="text-[var(--color-warn)]" /> Menor Rendimiento
-                        </span>
-                        {worstPerformer && (
-                          <span className={`px-2 py-0.5 font-mono text-xs font-bold rounded ${worstPerformer.pct >= 0 ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' : 'bg-[var(--color-danger)]/10 text-[var(--color-danger)]'}`}>
-                            {fmtPct(worstPerformer.pct)}
-                          </span>
-                        )}
-                      </div>
-                      {worstPerformer ? (
-                        <>
-                          <h3 className="text-sm font-semibold text-[var(--color-fg-1)] truncate max-w-[260px]">{worstPerformer.fund.name}</h3>
-                          <p className="text-xs font-mono text-[var(--color-fg-4)] mt-1">{worstPerformer.fund.isin} • {worstPerformer.fund.bank || '—'}</p>
-                          <div className="flex justify-between items-center mt-3 pt-2.5 border-t border-[var(--color-ink-3)] text-xs font-mono">
-                            <span className="text-[var(--color-fg-4)]">Resultado:</span>
-                            <span className={`font-bold ${worstPerformer.pl >= 0 ? 'text-[var(--color-accent)]' : 'text-[var(--color-danger)]'}`}>
-                              {fmtEur(worstPerformer.pl)}
-                            </span>
-                          </div>
-                        </>
-                      ) : (
-                        <p className="text-xs text-[var(--color-fg-5)] mt-1">Solo tienes 1 fondo activo o cartera vacía.</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Quick Export / Report Widget */}
-                  <div className="bg-gradient-to-br from-[var(--color-accent)]/15 to-[var(--color-ink-1)] border border-[var(--color-accent)]/20 rounded-2xl p-4 sm:p-5 flex flex-col justify-between relative overflow-hidden group">
-                    <div className="absolute -top-8 -right-8 w-28 h-28 bg-[var(--color-accent)]/20 blur-2xl rounded-full pointer-events-none group-hover:bg-[var(--color-accent)]/30 transition-all" />
-                    <div>
-                      <h3 className="text-sm font-semibold text-[var(--color-fg-1)] mb-1 flex items-center gap-2">
-                        <FileText size={16} className="text-[var(--color-accent)]" /> Informe Ejecutivo PDF
-                      </h3>
-                      <p className="text-xs text-[var(--color-fg-4)] leading-relaxed mb-3.5">
-                        Descarga un resumen con gráficos de rendimiento y desglose de activos.
-                      </p>
-                    </div>
-                    <button 
-                      disabled={isExportingPdf || funds.length === 0} 
-                      onClick={exportPdf} 
-                      className="w-full py-2.5 bg-[var(--color-accent)] text-[#0a0a0c] hover:brightness-110 text-xs font-bold rounded-xl shadow-[0_0_15px_rgba(192,132,252,0.25)] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      <Download size={14} />
-                      {isExportingPdf ? 'Generando PDF...' : 'Descargar PDF'}
-                    </button>
-                  </div>
-
-                </div>
-
-                {/* ── Recent Investments Table Summary ── */}
-                <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-5">
-                  <div className="flex justify-between items-center mb-4">
-                    <div>
-                      <h2 className="text-sm sm:text-base font-semibold text-[var(--color-fg-1)]">Posiciones Principales</h2>
-                      <p className="text-xs text-[var(--color-fg-4)] mt-0.5">Tus fondos con mayor capital invertido</p>
-                    </div>
-                    <button 
-                      onClick={() => setSection("portfolio")} 
-                      className="text-xs text-[var(--color-accent)] hover:text-[var(--color-fg-1)] font-medium bg-[var(--color-accent)]/10 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
-                    >
-                      Ver todas ({funds.length}) <ChevronRight size={12} />
-                    </button>
-                  </div>
-
-                  {funds.length === 0 ? (
-                    <div className="border border-dashed border-[var(--color-ink-3)] rounded-xl p-8 text-center">
-                      <div className="w-11 h-11 rounded-full bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 mx-auto flex items-center justify-center mb-2.5">
-                        <Database size={18} className="text-[var(--color-accent)]" />
-                      </div>
-                      <p className="text-sm text-[var(--color-fg-1)] font-medium mb-1">Tu cartera está vacía</p>
-                      <p className="text-xs text-[var(--color-fg-4)] max-w-sm mx-auto mb-3.5">
-                        Registra tu primera inversión para comenzar a monitorear tus rendimientos.
-                      </p>
-                      <button 
-                        onClick={() => setSection("add")} 
-                        className="px-4 py-2 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-xs rounded-xl shadow-[0_0_12px_rgba(192,132,252,0.2)] hover:brightness-110 transition-all"
-                      >
-                        Añadir Primer Fondo
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto touch-scroll">
-                      <table className="w-full text-left border-collapse text-xs min-w-[520px]">
-                        <thead>
-                          <tr className="border-b border-[var(--color-ink-3)] text-[var(--color-fg-4)] uppercase tracking-wider font-mono">
-                            <th className="pb-2.5 font-medium">Fondo</th>
-                            <th className="pb-2.5 font-medium">Entidad</th>
-                            <th className="pb-2.5 font-medium text-right">Invertido</th>
-                            <th className="pb-2.5 font-medium text-right">Valor Actual</th>
-                            <th className="pb-2.5 font-medium text-right">Rentabilidad</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredFunds.slice(0, 5).map((f) => {
-                            const invested = f.total_invested || (f.shares * f.purchase_price);
-                            const currentVal = (f.current_price ?? f.purchase_price) * f.shares;
-                            const pl = currentVal - invested;
-                            const plPct = invested > 0 ? (pl / invested) * 100 : 0;
-                            const isP = pl >= 0;
-
-                            const sourceInfo = getFundDataSourceInfo(f);
-                            const bankInfo = getBankPortalInfo(f);
-
-                            return (
-                              <tr key={f.id} className="border-b border-[var(--color-ink-3)] hover:bg-[var(--color-ink-2)] transition-colors">
-                                <td className="py-3">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-7 h-7 rounded-lg bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] flex items-center justify-center font-mono font-bold text-[11px] text-[var(--color-fg-1)] shrink-0">
-                                      {f.name.slice(0, 2).toUpperCase()}
-                                    </div>
-                                    <div className="min-w-0">
-                                      <a
-                                        href={sourceInfo.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="font-medium text-[var(--color-fg-1)] hover:text-[var(--color-accent)] truncate max-w-[220px] sm:max-w-sm block transition-colors"
-                                        title={`Ver en ${sourceInfo.name}`}
-                                      >
-                                        {f.name}
-                                      </a>
-                                      <div className="flex items-center gap-1.5 mt-0.5">
-                                        <span className="text-[10px] font-mono text-[var(--color-fg-5)]">{f.isin}</span>
-                                        <a
-                                          href={sourceInfo.url}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="text-[var(--color-fg-5)] hover:text-[var(--color-accent)] transition-colors"
-                                          title={`Ver en ${sourceInfo.name}`}
-                                        >
-                                          <ExternalLink size={9} />
-                                        </a>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="py-3 font-medium">
-                                  {bankInfo ? (
-                                    <a
-                                      href={bankInfo.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-[var(--color-fg-2)] hover:text-[var(--color-accent)] hover:underline inline-flex items-center gap-1 group"
-                                      title={`Ver en web de ${bankInfo.name}`}
-                                    >
-                                      <span>{bankInfo.name}</span>
-                                      <ExternalLink size={9} className="text-[var(--color-fg-5)] group-hover:text-[var(--color-accent)] transition-colors" />
-                                    </a>
-                                  ) : (
-                                    <span className="text-[var(--color-fg-5)]">—</span>
-                                  )}
-                                </td>
-                                <td className="py-3 text-right font-mono text-[var(--color-fg-4)]">{fmtEur(invested)}</td>
-                                <td className="py-3 text-right font-mono text-[var(--color-fg-1)] font-bold">{fmtEur(currentVal)}</td>
-                                <td className="py-3 text-right font-mono font-bold">
-                                  <span className={`px-2 py-0.5 rounded-md ${isP ? 'bg-[var(--color-profit)]/10 text-[var(--color-profit)]' : 'bg-[var(--color-loss)]/10 text-[var(--color-loss)]'}`}>
-                                    {fmtPct(plPct)}
-                                  </span>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-
+        <Card>
+          <div className="flex items-start justify-between">
+            <h2 className="text-lg font-semibold text-[var(--color-fg-1)]">Por entidad</h2>
+            <button onClick={() => onNavigate("analytics")} className="text-xs font-medium text-[var(--color-accent)] hover:underline">
+              Ver análisis
+            </button>
+          </div>
+          <div className="relative mx-auto mt-2 h-[170px] w-[170px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={byBank} dataKey="value" nameKey="name" innerRadius={58} outerRadius={80} paddingAngle={byBank.length > 1 ? 3 : 0} stroke="none">
+                  {byBank.map((_, i) => (
+                    <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
+              <div>
+                <p className="font-heading text-base font-semibold text-[var(--color-fg-1)]">{formatCompactEur(current)}</p>
+                <Label>Total</Label>
               </div>
+            </div>
+          </div>
+          <ul className="mt-4 space-y-2">
+            {byBank.map((b, i) => (
+              <li key={b.name} className="flex items-center justify-between gap-3 text-sm">
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: PALETTE[i % PALETTE.length] }} />
+                  <span className="truncate text-[var(--color-fg-2)]">{b.name}</span>
+                </span>
+                <span className="shrink-0 font-mono text-xs text-[var(--color-fg-3)]">
+                  {b.pct.toFixed(1).replace(".", ",")} % · <span className="text-[var(--color-fg-1)]">{formatEur(b.value)}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      </div>
+
+      {/* Mejor / peor / informe */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {[
+          { title: "Mejor fondo", p: best, icon: TrendingUp },
+          { title: "Peor fondo", p: worst, icon: TrendingDown },
+        ].map(({ title, p, icon: Icon }) => (
+          <Card key={title}>
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-1.5">
+                <Icon size={12} /> {title}
+              </Label>
+              {p && <Tag tone={p.pl >= 0 ? "profit" : "loss"}>{formatPct(p.pct)}</Tag>}
+            </div>
+            {p ? (
+              <>
+                <p className="mt-3 truncate font-semibold text-[var(--color-fg-1)]" title={p.fund.name}>
+                  {p.fund.name}
+                </p>
+                <p className="mt-0.5 font-mono text-[11px] text-[var(--color-fg-4)]">
+                  {p.fund.isin} · {p.fund.bank}
+                </p>
+                <p className={`mt-3 font-heading text-xl font-semibold ${p.pl >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"}`}>
+                  {p.pl > 0 ? "+" : ""}
+                  {formatEur(p.pl)}
+                </p>
+              </>
+            ) : (
+              <p className="mt-3 text-sm text-[var(--color-fg-4)]">Con un solo fondo no hay comparación.</p>
+            )}
+          </Card>
+        ))}
+        <Card className="flex flex-col justify-between" padded>
+          <div>
+            <Label className="flex items-center gap-1.5">
+              <FileText size={12} /> Informe PDF
+            </Label>
+            <p className="mt-3 text-sm text-[var(--color-fg-3)]">Tu cartera en un documento: posiciones, reparto y evolución de cada fondo.</p>
+          </div>
+          <Button className="mt-4 w-full" onClick={onExportPdf} disabled={isExportingPdf}>
+            <Download size={15} /> {isExportingPdf ? "Generando…" : "Descargar PDF"}
+          </Button>
+        </Card>
+      </div>
+
+      {/* Posiciones principales */}
+      <Card padded={false}>
+        <div className="flex items-center justify-between p-5 pb-3">
+          <h2 className="text-lg font-semibold text-[var(--color-fg-1)]">Posiciones principales</h2>
+          <button onClick={() => onNavigate("portfolio")} className="flex items-center gap-1 text-xs font-medium text-[var(--color-accent)] hover:underline">
+            Ver cartera <ArrowRight size={13} />
+          </button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-sm">
+            <thead>
+              <tr className="border-y border-[var(--color-border)] text-left">
+                {["Fondo", "Invertido", "Valor", "Ganancia", "Precio"].map((h, i) => (
+                  <th key={h} className={`px-5 py-2.5 ${i > 0 ? "text-right" : ""}`}>
+                    <Label>{h}</Label>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {top.map(({ fund, view }) => (
+                <tr key={fund.id} className="border-b border-[var(--color-border)] last:border-0">
+                  <td className="px-5 py-3">
+                    <p className="max-w-[280px] truncate font-medium text-[var(--color-fg-1)]" title={fund.name}>
+                      {fund.name}
+                    </p>
+                    <p className="font-mono text-[11px] text-[var(--color-fg-4)]">
+                      {fund.isin} · {fund.bank}
+                    </p>
+                  </td>
+                  <td className="px-5 py-3 text-right font-mono text-xs text-[var(--color-fg-3)]">{formatEur(view.invested)}</td>
+                  <td className="px-5 py-3 text-right font-mono text-xs text-[var(--color-fg-1)]">{formatEur(view.value)}</td>
+                  <td className="px-5 py-3 text-right">
+                    {view.plLabel ? (
+                      <Tag tone={view.plPositive ? "profit" : "loss"}>
+                        {view.plLabel} · {view.plPctLabel}
+                      </Tag>
+                    ) : (
+                      <span className="text-xs text-[var(--color-fg-4)]">—</span>
+                    )}
+                  </td>
+                  <td className="px-5 py-3 text-right">
+                    <p className="font-mono text-xs text-[var(--color-fg-2)]">{view.priceLabel}</p>
+                    {view.navDateLabel && (
+                      <p className={`font-mono text-[10px] ${view.stale ? "text-[var(--color-warn)]" : "text-[var(--color-fg-4)]"}`} title={view.stale ? "Precio antiguo" : undefined}>
+                        {view.stale ? "⚠ " : ""}
+                        {view.navDateLabel}
+                      </p>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
   );
 }

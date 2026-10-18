@@ -20,9 +20,18 @@ export function maskPhone(phone: string | null | undefined): string {
   return `${prefix}••• ••• ${p.slice(-3)}`;
 }
 
-export function formatEur(value: number): string {
+export function formatEur(value: number, decimals = 2): string {
   if (!Number.isFinite(value)) return "—";
-  return `${formatEsNumber(value)} €`;
+  return `${formatEsNumber(value, decimals)} €`;
+}
+
+/** Formato corto para ejes de gráfico: "950 €", "1,8 k €", "1,25 M €". */
+export function formatCompactEur(value: number): string {
+  if (!Number.isFinite(value)) return "—";
+  const abs = Math.abs(value);
+  if (abs < 1000) return `${formatEsNumber(value, 0)} €`;
+  if (abs < 1_000_000) return `${formatEsNumber(value / 1000, 1)} k €`;
+  return `${formatEsNumber(value / 1_000_000, 2)} M €`;
 }
 
 export function formatPct(value: number): string {

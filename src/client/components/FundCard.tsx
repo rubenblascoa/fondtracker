@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback, memo } from "react";
 import { api, getBankUrl, getSpecificFundUrl, getFundDataSourceInfo, getBankPortalInfo, getFundMorningstarUrl, type Investment, type YahooChartData } from "../api";
-import { formatCurrency, formatPct, profitColor, formatRelative, sanitizeFundName } from "../utils";
+import { formatCurrency, formatEur, formatPct, profitColor, formatRelative, sanitizeFundName } from "../utils";
+import { chartRangesFor, fundView } from "../fundView";
 import { 
   TrendingUp, ArrowUpRight, ArrowDownRight, Edit2, Trash2, 
   ExternalLink, Calendar, Layers, ShieldCheck, AlertTriangle, 
@@ -72,11 +73,12 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showLinksMenu]);
 
-  const invested = fund.total_invested || (fund.shares * fund.purchase_price);
-  const currentVal = (currentPrice ?? fund.purchase_price) * fund.shares;
-  const totalPL = currentVal - invested;
-  const totalPLPct = invested > 0 ? (totalPL / invested) * 100 : 0;
-  const isProfit = totalPL >= 0;
+  // Cifras del fondo: siempre desde fundView (mismo cálculo que el Resumen)
+  const view = fundView(fund);
+  const invested = view.invested;
+  const currentVal = view.value;
+  const isProfit = view.plPositive !== false;
+  const ranges = chartRangesFor(chartData?.dataSource);
 
   function fmtDataDate(d: string): string {
     if (!d) return "";
@@ -176,10 +178,10 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
     setEditLoading(true);
     setEditError(null);
     try {
-      await api.updateFund(fund.id, {
+      await api.editFund(fund.id, {
         shares: s,
         purchase_price: p,
-        purchase_date: editDate || undefined,
+        purchase_date: editDate,
         notes: editNotes.trim() || undefined,
       });
       setEditing(false);
@@ -402,32 +404,18 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
               </span>
             )}
 
-            {hasPrice && chartData && !chartData.isStale && (
+            {view.hasPrice && view.navDateLabel && (
               <a
                 href={dataSourceInfo.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                title={`Ver fuente en ${dataSourceInfo.name}`}
-                className="flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.5 bg-[var(--color-accent)]/10 hover:bg-[var(--color-accent)]/20 text-[var(--color-accent)] rounded border border-[var(--color-accent)]/20 transition-colors cursor-pointer"
+                title={view.stale ? `Precio antiguo — ver en ${dataSourceInfo.name}` : `Valor liquidativo del ${view.navDateLabel} — ver en ${dataSourceInfo.name}`}
+                className={`flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold transition-colors ${
+                  view.stale ? "bg-[var(--color-warn)]/12 text-[var(--color-warn)]" : "bg-[var(--color-tag-bg)] text-[var(--color-tag-fg)]"
+                }`}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)] animate-pulse" />
-                {chartData.dataSource === "quefondos" && chartData.dataDate
-                  ? `NAV ${fmtDataDate(chartData.dataDate)}`
-                  : "LIVE"}
-                <ExternalLink size={8} className="opacity-70" />
-              </a>
-            )}
-
-            {hasPrice && chartData?.isStale && (
-              <a
-                href={dataSourceInfo.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={`${chartData.staleWarning || 'Desactualizado'} - Ver en ${dataSourceInfo.name}`}
-                className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded border border-amber-500/20 transition-colors cursor-pointer"
-              >
-                <AlertTriangle size={10} />
-                <span>{chartData.dataDate ? fmtDataDate(chartData.dataDate) : "Desactualizado"}</span>
+                {view.stale && <AlertTriangle size={10} />}
+                NAV {view.navDateLabel}
                 <ExternalLink size={8} className="opacity-70" />
               </a>
             )}
@@ -443,7 +431,7 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
             </span>
             <span className="text-[var(--color-fg-5)]">•</span>
             <span className="text-[var(--color-fg-2)]">
-              Invertido: <strong className="text-[var(--color-fg-1)]">{formatCurrency(invested, fund.currency)}</strong>
+              Invertido: <strong className="text-[var(--color-fg-1)]">{formatEur(invested)}</strong>
             </span>
             {fund.purchase_date && (
               <>
@@ -468,21 +456,25 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
           
           <div className="text-left lg:text-right space-y-0.5">
             <div className="flex items-center lg:justify-end gap-2">
-              <span className={`text-base sm:text-lg font-bold font-mono tracking-tight ${isProfit ? 'text-[var(--color-profit)] glow' : 'text-[var(--color-loss)]'}`}>
-                {isProfit ? '+' : ''}{formatCurrency(totalPL, fund.currency)}
-              </span>
+              {view.plLabel ? (
+                <span className={`font-heading text-base font-semibold tracking-tight sm:text-lg ${isProfit ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"}`}>
+                  {view.plLabel}
+                </span>
+              ) : (
+                <span className="text-sm text-[var(--color-fg-4)]">Sin precio</span>
+              )}
               <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold font-mono px-1.5 py-0.5 rounded ${
                 isProfit ? 'bg-[var(--color-profit)]/10 text-[var(--color-profit)]' : 'bg-[var(--color-loss)]/10 text-[var(--color-loss)]'
               }`}>
                 {isProfit ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
-                {formatPct(totalPLPct)}
+                {view.plPctLabel ?? "—"}
               </span>
             </div>
 
             <div className="flex items-center lg:justify-end gap-2 text-[10px] font-mono text-[var(--color-fg-4)]">
-              <span>NAV: <strong className="text-[var(--color-fg-1)]">€{(currentPrice ?? fund.purchase_price).toFixed(4)}</strong></span>
+              <span>Precio: <strong className="text-[var(--color-fg-1)]">{view.priceLabel}</strong></span>
               <span>•</span>
-              <span>Valor: <strong className="text-[var(--color-fg-1)]">{formatCurrency(currentVal, fund.currency)}</strong></span>
+              <span>Valor: <strong className="text-[var(--color-fg-1)]">{formatEur(currentVal)}</strong></span>
             </div>
           </div>
 
@@ -801,7 +793,7 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
             {/* Timeframe selector (when in chart tab) */}
             {activeTab === "chart" && (
               <div className="flex items-center gap-1 overflow-x-auto no-scrollbar touch-scroll py-0.5">
-                {(["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "max"] as const).map((r) => (
+                {ranges.map(({ label, value: r }) => (
                   <button
                     key={r}
                     type="button"
@@ -812,7 +804,7 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
                         : "text-[var(--color-fg-5)] hover:text-[var(--color-fg-2)] hover:bg-[var(--color-ink-2)]"
                     }`}
                   >
-                    {r}
+                    {label}
                   </button>
                 ))}
               </div>

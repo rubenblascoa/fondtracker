@@ -111,7 +111,13 @@ export type Investment = {
   profit_loss: number;
   profit_loss_pct: number;
   current_price: number | null;
+  /** Fecha (YYYY-MM-DD) del valor liquidativo usado; null si no se conoce */
+  price_date?: string | null;
+  price_source?: "quefondos" | "yahoo" | "cache" | null;
 };
+
+export type PortfolioHistoryRange = "1m" | "3m" | "6m" | "1y" | "max";
+export type PortfolioHistoryPoint = { date: string; invested: number; value: number };
 
 export type YahooChartData = {
   symbol: string;
@@ -458,6 +464,10 @@ export const api = {
   /** Single request returning both funds and status — use instead of status()+listFunds() */
   portfolio: () =>
     request<{ funds: Investment[]; status: Status }>("/api/portfolio"),
+
+  /** Evolución del patrimonio: fotos diarias + reconstrucción con precios históricos */
+  portfolioHistory: (range: PortfolioHistoryRange = "1y") =>
+    request<{ points: PortfolioHistoryPoint[]; source: "snapshots" | "reconstructed" | "mixed" }>(`/api/portfolio/history?range=${range}`),
 
   addFund: (data: {
     isin: string;
