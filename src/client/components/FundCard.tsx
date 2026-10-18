@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, memo } from "react";
 import { api, getBankUrl, getSpecificFundUrl, getFundDataSourceInfo, getBankPortalInfo, getFundMorningstarUrl, type Investment, type YahooChartData } from "../api";
 import { formatCurrency, formatEur, formatPct, profitColor, formatRelative, sanitizeFundName } from "../utils";
 import { chartRangesFor, fundView } from "../fundView";
+import { checkBuyPrice } from "../purchase";
 import { DcaTransactionsModal } from "./dashboard/DcaTransactionsModal";
 import { 
   TrendingUp, ArrowUpRight, ArrowDownRight, Edit2, Trash2, ListPlus, 
@@ -45,6 +46,9 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
 
   // Movimientos (aportaciones, ventas, traspasos)
   const [movementsOpen, setMovementsOpen] = useState(false);
+  // Compras cuyo precio no coincide con el valor liquidativo publicado en su fecha
+  const [priceIssues, setPriceIssues] = useState<{ date: string; price: number; nav: { date: string; price: number } }[]>([]);
+  const [txCount, setTxCount] = useState(0);
 
   // Edit state
   const [editing, setEditing] = useState(false);
@@ -217,6 +221,29 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
       loadChart(chartRange);
     }
   }, [isVisible, chartRange, loadChart]);
+
+  // Con la serie completa, comprueba cada compra contra el valor liquidativo de su fecha
+  useEffect(() => {
+    if (!chartData || chartRange !== "max" || chartData.quotes.length === 0) return;
+    let cancelled = false;
+    api.transactions
+      .list(fund.id)
+      .then(({ transactions }) => {
+        if (cancelled) return;
+        const issues = [];
+        for (const t of transactions) {
+          if (t.type !== "BUY") continue;
+          const check = checkBuyPrice(chartData.quotes, t.date, Number(t.price));
+          if (check && !check.ok) issues.push({ date: t.date.slice(0, 10), price: Number(t.price), nav: check.nav });
+        }
+        setPriceIssues(issues);
+        setTxCount(transactions.length);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [chartData, chartRange, fund.id, fund.shares, fund.purchase_price]);
 
   // Intersection Observer for lazy loading chart
   useEffect(() => {
@@ -452,6 +479,26 @@ export const FundCard = memo(function FundCard({ fund, onChange }: Props) {
               </>
             )}
           </div>
+
+          {priceIssues.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-[var(--color-warn)]/30 bg-[var(--color-warn)]/10 px-2.5 py-1.5 text-[11px] leading-snug text-[var(--color-fg-2)]">
+              <AlertTriangle size={12} className="shrink-0 text-[var(--color-warn)]" />
+              <span className="min-w-0 flex-1">
+                La compra del {priceIssues[0].date.split("-").reverse().join("/")} está guardada a{" "}
+                {priceIssues[0].price.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 4 })} €/part., pero el
+                valor liquidativo publicado el {priceIssues[0].nav.date.split("-").reverse().join("/")} fue{" "}
+                {priceIssues[0].nav.price.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 4 })} €.
+                {priceIssues.length > 1 && ` Y ${priceIssues.length - 1} compra${priceIssues.length > 2 ? "s" : ""} más.`} Revisa
+                participaciones e importe con tu extracto.
+              </span>
+              <button
+                onClick={txCount === 1 ? startEditing : () => setMovementsOpen(true)}
+                className="shrink-0 font-semibold text-[var(--color-fg-1)] underline underline-offset-2 hover:text-[var(--color-warn)]"
+              >
+                Corregir
+              </button>
+            </div>
+          )}
 
         </div>
 

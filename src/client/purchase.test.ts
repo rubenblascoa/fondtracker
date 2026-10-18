@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { parseEsNumber, purchaseFromStatement, referencePrice } from "./purchase";
+import { checkBuyPrice, parseEsNumber, purchaseFromStatement, referencePrice } from "./purchase";
 
 const day = (iso: string) => Math.floor(new Date(iso + "T00:00:00").getTime() / 1000);
 
@@ -59,5 +59,34 @@ describe("referencePrice", () => {
   it("sin datos o sin precio calculado → null", () => {
     expect(referencePrice([], "2025-07-15", 15)).toBe(null);
     expect(referencePrice(quotes, "", 15)).toBe(null);
+  });
+});
+
+describe("checkBuyPrice", () => {
+  // Valores liquidativos diarios reales (FT) alrededor de las compras
+  const audaz = [["2025-07-11", 15.12], ["2025-07-14", 15.14], ["2025-07-15", 15.18], ["2025-07-16", 15.14], ["2025-07-17", 15.28], ["2025-07-18", 15.26]].map(([d, c]) => ({ timestamp: day(d as string), close: c as number }));
+  const smallCaps = [["2026-07-07", 546.98], ["2026-07-08", 529.74], ["2026-07-09", 534.54], ["2026-07-10", 532.9]].map(([d, c]) => ({ timestamp: day(d as string), close: c as number }));
+
+  it("da por buena una compra al valor liquidativo de ese día", () => {
+    expect(checkBuyPrice(smallCaps, "2026-07-08", 529.74)).toEqual({ ok: true });
+  });
+
+  it("acepta el valor del día siguiente (orden dada tras la hora de corte)", () => {
+    expect(checkBuyPrice(audaz, "2025-07-15", 15.14)).toEqual({ ok: true });
+  });
+
+  it("admite el redondeo de importe ÷ participaciones", () => {
+    expect(checkBuyPrice(smallCaps, "2026-07-08", Math.round((529.74 / 1.000002) * 1e6) / 1e6)).toEqual({ ok: true });
+  });
+
+  it("detecta un precio de compra que no coincide con ningún valor de esos días (cierre del mes anterior)", () => {
+    const r = checkBuyPrice(audaz, "2025-07-15", 14.9491);
+    expect(r).toEqual({ ok: false, nav: { date: "2025-07-15", price: 15.18 } });
+    expect(checkBuyPrice(smallCaps, "2026-07-08", 536.1863)).toEqual({ ok: false, nav: { date: "2026-07-08", price: 529.74 } });
+  });
+
+  it("no opina si la serie no tiene datos cerca de la fecha", () => {
+    expect(checkBuyPrice(audaz, "2023-01-10", 12)).toBeNull();
+    expect(checkBuyPrice([], "2025-07-15", 15)).toBeNull();
   });
 });

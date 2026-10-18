@@ -1,6 +1,7 @@
 import type { YahooChartResult, YahooQuote } from "./yahoo";
 import { queries } from "./db";
 import { getFundExtraMetadata } from "./metadata";
+import { fetchFtDailyQuotes } from "./ft";
 
 // Helper to parse Spanish localized numbers like "283,805151" to 283.805151
 export function parseSpanishFloat(val: string): number {
@@ -37,6 +38,30 @@ export type QueFondosPage = {
   historicalQuotes: YahooQuote[];
 };
 
+/**
+ * Rentabilidades a 1, 3 y 5 años. La ficha actual las publica en la fila «Fondo» de la tabla
+ * de rentabilidades (<tr id="rXm_row">: 1 mes, 3 meses, 1 año, 3 años, 5 años). Si la ficha
+ * no trae esa fila, se prueba el formato antiguo (etiqueta en una celda y % en la siguiente).
+ * Las que no se publican (fondo reciente, «-») quedan en 0.
+ */
+function extractReturns(html: string): { return1Y: number; return3Y: number; return5Y: number } {
+  const toPct = (cell: string | undefined) => {
+    const m = cell?.match(/(-?[\d.,]+)\s*%/);
+    const v = m ? parseSpanishFloat(m[1]) : NaN;
+    return Number.isFinite(v) ? v : 0;
+  };
+
+  const row = html.match(/<tr[^>]*id="rXm_row"[^>]*>([\s\S]*?)<\/tr>/i);
+  if (row) {
+    const cells = [...row[1].matchAll(/<td(?![^>]*class="label")[^>]*>([\s\S]*?)<\/td>/gi)].map((c) => c[1]);
+    if (cells.length >= 5) return { return1Y: toPct(cells[2]), return3Y: toPct(cells[3]), return5Y: toPct(cells[4]) };
+  }
+
+  const legacy = (years: string) =>
+    toPct(html.match(new RegExp(`${years} a(?:&ntilde;|ñ)os?<\\/td>\\s*<td[^>]*>\\s*<span class="(?:mas|menos)">(-?[\\d,.]+%)<\\/span>`, "i"))?.[1]);
+  return { return1Y: legacy("1"), return3Y: legacy("3"), return5Y: legacy("5") };
+}
+
 /** Extrae NAV, fecha, rentabilidades y serie histórica de una ficha de QueFondos. Sin red: testeable. */
 export function extractQueFondosHtml(html: string): QueFondosPage {
   const empty: QueFondosPage = { currentPrice: null, dataDate: null, return1Y: 0, return3Y: 0, return5Y: 0, historicalQuotes: [] };
@@ -56,13 +81,7 @@ export function extractQueFondosHtml(html: string): QueFondosPage {
     if (altMatch) dataDate = altMatch[1];
   }
 
-  const pct = (re: RegExp) => {
-    const m = html.match(re);
-    return m ? parseSpanishFloat(m[1]) : 0;
-  };
-  const return1Y = pct(/1 a(?:&ntilde;|ñ)o(?:.|[\r\n])*?<span class="(?:mas|menos)">(-?[\d,\.]+)%<\/span>/i);
-  const return3Y = pct(/3 a(?:&ntilde;|ñ)os<\/td>\s*<td[^>]*><span class="(?:mas|menos)">(-?[\d,\.]+)%<\/span><\/td>/i);
-  const return5Y = pct(/5 a(?:&ntilde;|ñ)os<\/td>\s*<td[^>]*><span class="(?:mas|menos)">(-?[\d,\.]+)%<\/span><\/td>/i);
+  const { return1Y, return3Y, return5Y } = extractReturns(html);
 
   const historicalQuotes: YahooQuote[] = [];
   const fondoMatch = html.match(/var fondo\s*=\s*(\[\[[\s\S]*?\]\]);/);
@@ -84,7 +103,48 @@ export function extractQueFondosHtml(html: string): QueFondosPage {
     }
   }
   historicalQuotes.sort((a, b) => a.timestamp - b.timestamp);
+
+  // La serie fecha el último NAV con el día en que se publicó (p. ej. 15/10 para el NAV del 14/10).
+  // Si ese punto es el valor liquidativo vigente, se le pone la fecha oficial de la ficha.
+  const last = historicalQuotes[historicalQuotes.length - 1];
+  const official = dataDate ? parseSpanishDate(dataDate) : null;
+  if (last && official && Math.abs(last.close - currentPrice) < 1e-9) {
+    const ts = Math.floor(official.getTime() / 1000);
+    if (ts < last.timestamp) last.timestamp = ts;
+  }
   return { currentPrice, dataDate, return1Y, return3Y, return5Y, historicalQuotes };
+}
+
+// Día (YYYY-MM-DD) de una cotización: igual que en history.ts, +6 h acierta tanto con la
+// medianoche de Madrid (QueFondos) como con la medianoche UTC (FT).
+const quoteDay = (q: YahooQuote) => new Date((q.timestamp + 6 * 3600) * 1000).toISOString().slice(0, 10);
+
+/**
+ * Une la serie mensual de QueFondos con la diaria del FT: lo mensual solo antes de que empiece
+ * lo diario. El último punto de QueFondos (el NAV vigente, con 6 decimales) manda sobre el
+ * cierre redondeado del FT de ese mismo día, y se añade si el FT aún no lo tiene.
+ */
+export function mergeDailyQuotes(monthly: YahooQuote[], daily: YahooQuote[]): YahooQuote[] {
+  if (daily.length === 0) return monthly;
+  const firstDaily = quoteDay(daily[0]);
+  const merged = [...monthly.filter((q) => quoteDay(q) < firstDaily), ...daily];
+  const latest = monthly[monthly.length - 1];
+  if (latest) {
+    const latestDay = quoteDay(latest);
+    const i = merged.findIndex((q) => quoteDay(q) === latestDay);
+    if (i >= 0) merged[i] = { ...merged[i], open: latest.close, high: latest.close, low: latest.close, close: latest.close };
+    else if (latestDay > quoteDay(merged[merged.length - 1])) merged.push(latest);
+  }
+  return merged;
+}
+
+/** Máximo y mínimo del último año de la serie (hasta su último punto). */
+export function lastYearRange(quotes: YahooQuote[]): { high: number; low: number } {
+  const last = quotes[quotes.length - 1];
+  if (!last) return { high: 0, low: 0 };
+  const yearAgo = last.timestamp - 365 * 24 * 3600;
+  const closes = quotes.filter((q) => q.timestamp >= yearAgo).map((q) => q.close);
+  return { high: Math.max(...closes), low: Math.min(...closes) };
 }
 
 // In-memory cache for QueFondos scraping results (5 minutes TTL)
@@ -109,6 +169,11 @@ export async function fetchQueFondosData(isin: string): Promise<YahooChartResult
 
   // 3. Initiate fetch and scrape
   const promise = (async () => {
+    // Catálogo y valores diarios del FT en paralelo con la ficha (si el FT falla, queda lo mensual)
+    const metaPromise = queries.getFundCatalogByIsin(cleanIsin).catch(() => null);
+    const dailyPromise = metaPromise
+      .then((m) => fetchFtDailyQuotes(cleanIsin, m?.currency ?? "EUR"))
+      .catch(() => [] as YahooQuote[]);
     const url = `https://www.quefondos.com/es/fondos/ficha/index.html?isin=${cleanIsin}`;
     try {
       const res = await fetch(url, {
@@ -144,11 +209,11 @@ export async function fetchQueFondosData(isin: string): Promise<YahooChartResult
       }
 
     // Lookup metadata
-    const fundMeta = await queries.getFundCatalogByIsin(isin);
+    const fundMeta = await metaPromise;
     const name = fundMeta?.name ?? isin;
     const currency = fundMeta?.currency ?? "EUR";
 
-    let quotes: YahooQuote[] = [...page.historicalQuotes];
+    let quotes: YahooQuote[] = mergeDailyQuotes(page.historicalQuotes, await dailyPromise);
 
     // Fallback: If no real historical series was parsed, synthesize one
     if (quotes.length === 0) {
@@ -198,8 +263,8 @@ export async function fetchQueFondosData(isin: string): Promise<YahooChartResult
       name,
       currentPrice,
       previousClose: quotes.length > 1 ? quotes[quotes.length - 2].close : currentPrice,
-      weekHigh52: Math.max(...quotes.map(q => q.close)),
-      weekLow52: Math.min(...quotes.map(q => q.close)),
+      weekHigh52: lastYearRange(quotes).high,
+      weekLow52: lastYearRange(quotes).low,
       dataPoints: quotes.length,
       quotes,
       dataDate: dataDate ?? undefined,

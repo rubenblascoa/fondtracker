@@ -25,6 +25,30 @@ const isoDay = (ts: number) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
+const DAY = 86400;
+/** Margen que cubre el redondeo del FT (2 decimales) y el de importe ÷ participaciones. */
+const BUY_TOLERANCE = 0.0015;
+
+/**
+ * ¿El precio de una compra coincide con algún valor liquidativo publicado entre el día anterior
+ * y los 4 siguientes? (una orden tras la hora de corte se liquida al valor del día siguiente).
+ * null si la serie no tiene datos en esas fechas; si no coincide, el valor del día de compra
+ * (o el primero posterior) para enseñarlo.
+ */
+export function checkBuyPrice(
+  quotes: { timestamp: number; close: number }[],
+  dateIso: string,
+  price: number,
+): { ok: true } | { ok: false; nav: { date: string; price: number } } | null {
+  if (!dateIso || !(price > 0)) return null;
+  const target = new Date(dateIso.slice(0, 10) + "T00:00:00").getTime() / 1000;
+  const window = quotes.filter((q) => q.close > 0 && q.timestamp >= target - DAY && q.timestamp < target + 5 * DAY);
+  if (window.length === 0) return null;
+  if (window.some((q) => Math.abs(price - q.close) / q.close <= BUY_TOLERANCE)) return { ok: true };
+  const ref = window.find((q) => q.timestamp >= target) ?? window[window.length - 1];
+  return { ok: false, nav: { date: isoDay(ref.timestamp), price: ref.close } };
+}
+
 /**
  * Precio publicado más cercano a la fecha de compra, solo como referencia.
  * gapPct = diferencia (en %, valor absoluto) entre el precio calculado y la referencia; warn si > 2 %.
