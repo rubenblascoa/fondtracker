@@ -52,8 +52,13 @@ export function App() {
   const [funds, setFunds] = useState<Investment[]>([]);
 
   const isLoginPath = window.location.pathname.startsWith("/login") || window.location.pathname.startsWith("/register");
-  const isPrivacyPath = window.location.pathname.startsWith("/legal/privacy-policy") || window.location.pathname.startsWith("/legal/privacy");
-  const isTermsPath = window.location.pathname.startsWith("/legal/terms-of-service") || window.location.pathname.startsWith("/legal/terms");
+  // Sección legal: /legal/privacy-policy, /legal/terms-of-service y /legal/security (cualquier otra → privacidad)
+  const isLegalPath = window.location.pathname.startsWith("/legal");
+  const legalView: "privacy" | "terms" | "security" = window.location.pathname.startsWith("/legal/terms")
+    ? "terms"
+    : window.location.pathname.startsWith("/legal/security")
+      ? "security"
+      : "privacy";
   const isRootPath = window.location.pathname === "/";
   const isAdminPath = window.location.pathname.startsWith("/admin");
 
@@ -65,7 +70,7 @@ export function App() {
     let title = "FondTracker";
     if (isLoginPath) {
       title = authView === "register" ? "FondTracker | Register" : "FondTracker | Login";
-    } else if (isPrivacyPath || isTermsPath) {
+    } else if (isLegalPath) {
       title = "FondTracker | Legal";
     } else if (isAdminPath) {
       title = "FondTracker | Admin";
@@ -73,7 +78,7 @@ export function App() {
       title = "FondTracker | Dashboard";
     }
     document.title = title;
-  }, [isLoginPath, isPrivacyPath, isTermsPath, isAdminPath, authView]);
+  }, [isLoginPath, isLegalPath, isAdminPath, authView]);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -99,7 +104,7 @@ export function App() {
     }
 
     if (!getToken()) {
-      if (isRootPath || isLoginPath || isPrivacyPath || isTermsPath || isAdminPath) {
+      if (isRootPath || isLoginPath || isLegalPath || isAdminPath) {
         setChecking(false);
         return;
       }
@@ -116,13 +121,13 @@ export function App() {
       })
       .catch(() => {
         clearToken();
-        if (isRootPath || isLoginPath || isPrivacyPath || isTermsPath || isAdminPath) return;
+        if (isRootPath || isLoginPath || isLegalPath || isAdminPath) return;
         window.location.replace("/login");
       })
       .finally(() => {
         setChecking(false);
       });
-  }, [isLoginPath, isPrivacyPath, isTermsPath, isAdminPath]);
+  }, [isLoginPath, isLegalPath, isAdminPath]);
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -154,7 +159,7 @@ export function App() {
         refreshUser();
       } else {
         setUser(null);
-        if (!isRootPath && !isPrivacyPath && !isTermsPath) {
+        if (!isRootPath && !isLegalPath) {
           window.location.replace("/login");
         }
       }
@@ -174,7 +179,7 @@ export function App() {
       unsubscribe();
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [refreshUser, isRootPath, isPrivacyPath, isTermsPath]);
+  }, [refreshUser, isRootPath, isLegalPath]);
 
   useEffect(() => {
     if (!user) return;
@@ -213,13 +218,13 @@ export function App() {
   // Synchronize theme: Only user dashboard uses the saved custom theme (Light/Dark).
   // Landing page, Login, Register, and Legal views are always forced to the dark theme.
   useEffect(() => {
-    const isDashboardView = !isRootPath && !isPrivacyPath && !isTermsPath && (user !== null || isAdminPath);
+    const isDashboardView = !isRootPath && !isLegalPath && (user !== null || isAdminPath);
     if (isDashboardView) {
       applyTheme(getStoredTheme(), false);
     } else {
       applyTheme("dark", false);
     }
-  }, [isRootPath, isPrivacyPath, isTermsPath, isAdminPath, user]);
+  }, [isRootPath, isLegalPath, isAdminPath, user]);
 
   async function handleLogout() {
     clearToken();
@@ -247,22 +252,8 @@ export function App() {
     );
   }
 
-  if (isPrivacyPath) {
-    return (
-      <div className="min-h-screen bg-[var(--color-ink-0)] text-[var(--color-fg-1)] font-sans relative">
-        <AnimatedBackground />
-        <LegalPage view="privacy" user={user} onLogout={handleLogout} />
-      </div>
-    );
-  }
-
-  if (isTermsPath) {
-    return (
-      <div className="min-h-screen bg-[var(--color-ink-0)] text-[var(--color-fg-1)] font-sans relative">
-        <AnimatedBackground />
-        <LegalPage view="terms" user={user} onLogout={handleLogout} />
-      </div>
-    );
+  if (isLegalPath) {
+    return <LegalPage view={legalView} user={user} onLogout={handleLogout} />;
   }
 
 
