@@ -201,9 +201,7 @@ function TopBar(props: Props & { badgeFor: (id: DashboardSection) => ReactNode }
   const menuItem = "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-[var(--color-fg-2)] hover:bg-[var(--color-surface)] hover:text-[var(--color-fg-1)]";
 
   return (
-    <header className="relative z-30 hidden shrink-0 lg:block">
-      {/* Mismo ancho y margen que el contenido, para que todo quede alineado */}
-      <div className="relative mx-auto flex max-w-[1280px] items-center justify-between gap-6 px-8 py-4">
+    <header className="relative z-30 hidden shrink-0 items-center justify-between gap-6 px-8 py-4 lg:flex">
       <Logo href="/" />
       <nav aria-label="Secciones" className="flex items-center gap-1 rounded-full xl:absolute xl:left-1/2 xl:-translate-x-1/2 border border-[var(--color-border)] bg-[var(--color-ink-1)]/70 p-1 backdrop-blur-xl">
         {pill.map((id) => {
@@ -265,7 +263,6 @@ function TopBar(props: Props & { badgeFor: (id: DashboardSection) => ReactNode }
             </div>
           )}
         </div>
-      </div>
       </div>
     </header>
   );

@@ -1,22 +1,8 @@
-import { useEffect, useState, useRef, useMemo } from "react";
-import { api, clearToken, getFundDataSourceInfo, getBankPortalInfo, type Investment, type Status, type User } from "../../api";
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell
-} from "recharts";
-import { 
-  LayoutDashboard, Database, PlusCircle, Smartphone, BarChart3, 
-  FileText, Settings, LogOut, Search, ArrowUpRight, ArrowDownRight, 
-  Wallet, TrendingUp, Layers, Activity, Shield, RefreshCw, 
-  Download, Sparkles, Filter, ChevronRight, CheckCircle2,
-  AlertTriangle, ExternalLink, Calendar, Plus, Globe, Building2,
-  PieChart as PieIcon, ArrowUpDown, Table, LayoutGrid, Eye, Check, X,
-  Key, Mail, Lock, Phone, UserCheck, ShieldAlert, Sun, Moon, Palette, BookOpen,
-  Menu, MoreHorizontal
-} from 'lucide-react';
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { api, clearToken, type User } from "../../api";
+import { AlertTriangle, Check, CheckCircle2, Lock, Mail, MessageCircle, Moon, Palette, Sun, Trash2, UserRound, X } from "lucide-react";
 import { COUNTRIES } from "../RegisterPage";
 import { useTheme } from "../../theme";
-import type { DashboardSection } from "./DashboardNav";
 
 type Props = {
   user: User;
@@ -24,540 +10,414 @@ type Props = {
   onClose: () => void;
 };
 
+type Tab = "profile" | "appearance" | "phone" | "email" | "password" | "danger";
+
+const SECTIONS: Record<Tab, { label: string; title: string; description: string; icon: typeof UserRound }> = {
+  profile: { label: "Perfil", title: "Perfil", description: "Cómo te llamamos en el panel y en el resumen por WhatsApp.", icon: UserRound },
+  appearance: { label: "Apariencia", title: "Apariencia", description: "Elige cómo se ve tu panel. La web pública y el acceso se ven siempre en oscuro.", icon: Palette },
+  phone: { label: "WhatsApp", title: "Teléfono de WhatsApp", description: "El número donde recibes el resumen diario de tu cartera.", icon: MessageCircle },
+  email: { label: "Email", title: "Email", description: "Con este email entras en FondTracker.", icon: Mail },
+  password: { label: "Contraseña", title: "Contraseña", description: "Cambia la contraseña con la que entras.", icon: Lock },
+  danger: { label: "Eliminar cuenta", title: "Eliminar cuenta", description: "Cierra tu cuenta y deja de mostrar tus fondos.", icon: Trash2 },
+};
+const MAIN_TABS: Tab[] = ["profile", "appearance", "phone", "email", "password"];
+
+const inputClass =
+  "w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-ink-2)] px-3.5 py-2.5 text-sm text-[var(--color-fg-1)] outline-none transition-colors placeholder:text-[var(--color-fg-4)] focus:border-[var(--color-accent)]";
+
+function Field({ label, hint, htmlFor, children }: { label: string; hint?: string; htmlFor?: string; children: ReactNode }) {
+  return (
+    <div>
+      <label htmlFor={htmlFor} className="mb-1.5 block text-xs font-medium text-[var(--color-fg-2)]">
+        {label}
+      </label>
+      {children}
+      {hint && <p className="mt-1.5 text-[11px] text-[var(--color-fg-4)]">{hint}</p>}
+    </div>
+  );
+}
+
 export function SettingsModal({ user, isOpen, onClose }: Props) {
-  const { theme, isDark, isLight, toggleTheme, setTheme } = useTheme();
-  const setSettingsOpen = (open: boolean) => { if (!open) onClose(); };
-  const [settingsTab, setSettingsTab] = useState<"profile" | "appearance" | "phone" | "email" | "password" | "danger">("profile");
-  
-  // Settings Form States
-  const [phoneCountry, setPhoneCountry] = useState(() => COUNTRIES.find(c => c.code === "ES") ?? COUNTRIES[0]);
+  const { isDark, isLight, setTheme } = useTheme();
+  const [tab, setTab] = useState<Tab>("profile");
+
+  const [displayName, setDisplayName] = useState(user.display_name ?? "");
+  const [phoneCountry, setPhoneCountry] = useState(() => COUNTRIES.find((c) => c.code === "ES") ?? COUNTRIES[0]);
   const [localPhone, setLocalPhone] = useState("");
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [countrySearch, setCountrySearch] = useState("");
   const countryRef = useRef<HTMLDivElement>(null);
-  
-  const [displayName, setDisplayName] = useState(user.display_name ?? "");
   const [currentEmail, setCurrentEmail] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [deletePassword, setDeletePassword] = useState("");
-  
-  const [settingsLoading, setSettingsLoading] = useState(false);
-  const [settingsError, setSettingsError] = useState("");
-  const [settingsSuccess, setSettingsSuccess] = useState("");
 
-  // Initialize Phone
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  // Teléfono guardado → prefijo del país + número
   useEffect(() => {
-    if (user?.phone) {
-      const matchingCountry = COUNTRIES.slice().sort((a, b) => b.dial.length - a.dial.length).find(c => user.phone!.startsWith(c.dial));
-      if (matchingCountry) {
-        setPhoneCountry(matchingCountry);
-        setLocalPhone(user.phone.slice(matchingCountry.dial.length));
-      } else {
-        setLocalPhone(user.phone);
-      }
+    if (!user?.phone) return setLocalPhone("");
+    const country = COUNTRIES.slice().sort((a, b) => b.dial.length - a.dial.length).find((c) => user.phone!.startsWith(c.dial));
+    if (country) {
+      setPhoneCountry(country);
+      setLocalPhone(user.phone.slice(country.dial.length));
     } else {
-      setLocalPhone("");
+      setLocalPhone(user.phone);
     }
   }, [user?.phone]);
 
-  // Click outside country picker
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (countryRef.current && !countryRef.current.contains(e.target as Node)) {
-        setShowCountryPicker(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    const onDown = (e: MouseEvent) => countryRef.current && !countryRef.current.contains(e.target as Node) && setShowCountryPicker(false);
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
   }, []);
 
-  // Save Settings Handlers
-  const handleSaveName = async () => {
-    setSettingsError("");
-    setSettingsSuccess("");
-    setSettingsLoading(true);
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [isOpen, onClose]);
+
+  const goTo = (next: Tab) => {
+    setTab(next);
+    setError("");
+    setSuccess("");
+  };
+
+  /** Ejecuta un guardado mostrando el resultado al lado del botón. */
+  const run = async (action: () => Promise<string>) => {
+    setError("");
+    setSuccess("");
+    setLoading(true);
     try {
-      await api.updateAccount({ display_name: displayName });
-      const clean = displayName.trim().replace(/s+/g, " ");
+      setSuccess(await action());
+      setTimeout(() => setSuccess(""), 3500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo guardar");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveName = () =>
+    run(async () => {
+      const clean = displayName.trim().replace(/\s+/g, " ");
+      await api.updateAccount({ display_name: clean });
       user.display_name = clean || null;
       setDisplayName(clean);
-      setSettingsSuccess(clean ? "Nombre guardado" : "Nombre borrado: se usará tu usuario");
-      setTimeout(() => setSettingsSuccess(""), 3000);
-    } catch (err) {
-      setSettingsError(err instanceof Error ? err.message : "Error al guardar");
-    } finally {
-      setSettingsLoading(false);
-    }
-  };
+      return clean ? "Nombre guardado" : "Nombre borrado: usaremos tu usuario";
+    });
 
-  const handleSavePhone = async () => {
-    setSettingsError("");
-    setSettingsSuccess("");
+  const savePhone = () => {
     const num = localPhone.replace(/\D/g, "");
     const full = num ? `${phoneCountry.dial}${num}` : "";
-    if (num && !/^\+[1-9]\d{6,14}$/.test(full.replace(/[\s-]/g, ""))) {
-      setSettingsError("Número inválido. Formato: +34612345678");
-      return;
-    }
-    setSettingsLoading(true);
-    try {
-      await api.updateAccount({ phone: full || null } as any);
+    if (num && !/^\+[1-9]\d{6,14}$/.test(full)) return setError("Número no válido. Ejemplo: 612345678");
+    return run(async () => {
+      await api.updateAccount({ phone: full || null });
       user.phone = full || null;
-      setSettingsSuccess("Teléfono de WhatsApp guardado correctamente");
-      setTimeout(() => setSettingsSuccess(""), 3000);
-    } catch (err) {
-      setSettingsError(err instanceof Error ? err.message : "Error al guardar");
-    } finally {
-      setSettingsLoading(false);
-    }
+      return full ? "Teléfono guardado" : "Teléfono borrado";
+    });
   };
 
-  const handleChangeEmail = async () => {
-    setSettingsError("");
-    setSettingsSuccess("");
-    if (!currentEmail.includes("@") || !newEmail.includes("@")) {
-      setSettingsError("Introduce direcciones de correo válidas");
-      return;
-    }
-    setSettingsLoading(true);
-    try {
+  const saveEmail = () => {
+    if (!currentEmail.includes("@") || !newEmail.includes("@")) return setError("Escribe tu email actual y el nuevo");
+    return run(async () => {
       await api.updateAccount({ currentEmail: currentEmail.trim(), email: newEmail.trim() });
       user.email = newEmail.trim();
-      setSettingsSuccess("Email actualizado correctamente");
       setCurrentEmail("");
       setNewEmail("");
-      setTimeout(() => setSettingsSuccess(""), 3000);
-    } catch (err) {
-      setSettingsError(err instanceof Error ? err.message : "Error al cambiar email");
-    } finally {
-      setSettingsLoading(false);
-    }
+      return "Email actualizado";
+    });
   };
 
-  const handleChangePassword = async () => {
-    setSettingsError("");
-    setSettingsSuccess("");
-    if (!currentPassword || !newPassword) {
-      setSettingsError("Rellena todos los campos");
-      return;
-    }
-    if (newPassword.length < 8) {
-      setSettingsError("La nueva contraseña debe tener al menos 8 caracteres");
-      return;
-    }
-    setSettingsLoading(true);
-    try {
+  const savePassword = () => {
+    if (!currentPassword || !newPassword) return setError("Rellena las dos contraseñas");
+    if (newPassword.length < 8) return setError("La nueva contraseña necesita al menos 8 caracteres");
+    return run(async () => {
       await api.updateAccount({ currentPassword, newPassword });
-      setSettingsSuccess("Contraseña cambiada con éxito");
       setCurrentPassword("");
       setNewPassword("");
-      setTimeout(() => setSettingsSuccess(""), 3000);
-    } catch (err) {
-      setSettingsError(err instanceof Error ? err.message : "Error al cambiar contraseña");
-    } finally {
-      setSettingsLoading(false);
-    }
+      return "Contraseña cambiada";
+    });
   };
 
-  const handleDeleteAccount = async () => {
-    setSettingsError("");
-    if (!deletePassword) {
-      setSettingsError("Introduce tu contraseña para confirmar");
-      return;
-    }
-    setSettingsLoading(true);
+  const deleteAccount = async () => {
+    if (!deletePassword) return setError("Escribe tu contraseña para confirmar");
+    setError("");
+    setLoading(true);
     try {
       await api.deleteAccount(deletePassword);
       clearToken();
       window.location.replace("/login");
     } catch (err) {
-      setSettingsError(err instanceof Error ? err.message : "Error al eliminar cuenta");
-      setSettingsLoading(false);
+      setError(err instanceof Error ? err.message : "No se pudo eliminar la cuenta");
+      setLoading(false);
     }
   };
 
   if (!isOpen) return null;
+
+  const section = SECTIONS[tab];
+  const shownName = user.display_name || user.username;
+  const action: { label: string; onClick: () => void; danger?: boolean } | null =
+    tab === "profile" ? { label: "Guardar nombre", onClick: saveName }
+    : tab === "phone" ? { label: "Guardar teléfono", onClick: savePhone }
+    : tab === "email" ? { label: "Cambiar email", onClick: saveEmail }
+    : tab === "password" ? { label: "Cambiar contraseña", onClick: savePassword }
+    : tab === "danger" ? { label: "Eliminar mi cuenta", onClick: deleteAccount, danger: true }
+    : null;
+
+  const navItem = (id: Tab) => {
+    const { label, icon: Icon } = SECTIONS[id];
+    const active = tab === id;
+    const danger = id === "danger";
+    return (
+      <button
+        key={id}
+        onClick={() => goTo(id)}
+        aria-current={active ? "page" : undefined}
+        className={`flex shrink-0 items-center gap-2.5 whitespace-nowrap rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors sm:w-full ${
+          active
+            ? danger
+              ? "bg-[var(--color-loss)]/12 text-[var(--color-loss)]"
+              : "bg-[var(--color-surface)] text-[var(--color-fg-1)] ring-1 ring-[var(--color-border)]"
+            : danger
+              ? "text-[var(--color-fg-4)] hover:text-[var(--color-loss)]"
+              : "text-[var(--color-fg-3)] hover:bg-[var(--color-surface)] hover:text-[var(--color-fg-1)]"
+        }`}
+      >
+        <Icon size={16} className={active && !danger ? "text-[var(--color-accent)]" : ""} />
+        {label}
+      </button>
+    );
+  };
+
   return (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/75 backdrop-blur-md p-2.5 sm:p-4 overflow-y-auto pt-4 sm:pt-4 animate-fade-in">
-          <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl sm:rounded-3xl w-full max-w-lg overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.7)] flex flex-col max-h-[85vh] sm:max-h-[90vh] my-auto">
-            
-            {/* Modal Header */}
-            <div className="p-4 sm:p-6 border-b border-[var(--color-ink-3)] flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-accent)] shrink-0">
-                  <Settings size={17} />
-                </div>
-                <div className="truncate">
-                  <h3 className="text-sm sm:text-base font-bold text-[var(--color-fg-1)] truncate">Ajustes de la cuenta</h3>
-                  <p className="text-[11px] sm:text-xs text-[var(--color-fg-4)] truncate">{user.username} • {user.email}</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setSettingsOpen(false)}
-                className="p-1.5 sm:p-2 text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] rounded-xl hover:bg-[var(--color-ink-2)] transition-colors shrink-0"
-              >
-                <X size={18} />
-              </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 backdrop-blur-md sm:p-6 fade-in" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-title"
+        className="flex h-[min(620px,92vh)] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[var(--color-ink-1)] shadow-[0_30px_80px_rgba(0,0,0,0.6)] sm:flex-row"
+      >
+        {/* Menú: lateral en escritorio, fila deslizable en móvil */}
+        <aside className="shrink-0 border-b border-[var(--color-border)] sm:flex sm:w-60 sm:flex-col sm:border-b-0 sm:border-r">
+          <div className="flex items-center gap-3 px-5 pb-3 pt-5 sm:pb-5">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[var(--color-tag-bg)] font-heading text-base font-semibold text-[var(--color-tag-fg)]">
+              {shownName.slice(0, 1).toUpperCase()}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-[var(--color-fg-1)]">{shownName}</p>
+              <p className="truncate text-xs text-[var(--color-fg-4)]">{user.email}</p>
             </div>
-
-            {/* Modal Tabs */}
-            <div className="flex border-b border-[var(--color-ink-3)] px-3 sm:px-6 pt-2 gap-1 sm:gap-2 overflow-x-auto no-scrollbar touch-scroll shrink-0">
-              <button 
-                onClick={() => { setSettingsTab("profile"); setSettingsError(""); setSettingsSuccess(""); }}
-                className={`pb-2.5 sm:pb-3 px-2 sm:px-2.5 text-xs font-medium border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
-                  settingsTab === "profile" ? "border-[var(--color-accent)] text-[var(--color-accent)] font-semibold" : "border-transparent text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
-                }`}
-              >
-                <UserCheck size={13} /> Perfil
-              </button>
-              <button 
-                onClick={() => { setSettingsTab("appearance"); setSettingsError(""); setSettingsSuccess(""); }}
-                className={`pb-2.5 sm:pb-3 px-2 sm:px-2.5 text-xs font-medium border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
-                  settingsTab === "appearance" ? "border-[var(--color-accent)] text-[var(--color-accent)] font-semibold" : "border-transparent text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
-                }`}
-              >
-                <Palette size={13} /> Apariencia
-              </button>
-              <button 
-                onClick={() => { setSettingsTab("phone"); setSettingsError(""); setSettingsSuccess(""); }}
-                className={`pb-2.5 sm:pb-3 px-2 sm:px-2.5 text-xs font-medium border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
-                  settingsTab === "phone" ? "border-[var(--color-accent)] text-[var(--color-accent)] font-semibold" : "border-transparent text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
-                }`}
-              >
-                <Phone size={13} /> WhatsApp
-              </button>
-              <button 
-                onClick={() => { setSettingsTab("email"); setSettingsError(""); setSettingsSuccess(""); }}
-                className={`pb-2.5 sm:pb-3 px-2 sm:px-2.5 text-xs font-medium border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
-                  settingsTab === "email" ? "border-[var(--color-accent)] text-[var(--color-accent)] font-semibold" : "border-transparent text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
-                }`}
-              >
-                <Mail size={13} /> Email
-              </button>
-              <button 
-                onClick={() => { setSettingsTab("password"); setSettingsError(""); setSettingsSuccess(""); }}
-                className={`pb-2.5 sm:pb-3 px-2 sm:px-2.5 text-xs font-medium border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
-                  settingsTab === "password" ? "border-[var(--color-accent)] text-[var(--color-accent)] font-semibold" : "border-transparent text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
-                }`}
-              >
-                <Lock size={13} /> Contraseña
-              </button>
-              <button 
-                onClick={() => { setSettingsTab("danger"); setSettingsError(""); setSettingsSuccess(""); }}
-                className={`pb-2.5 sm:pb-3 px-2 sm:px-2.5 text-xs font-medium border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ml-auto ${
-                  settingsTab === "danger" ? "border-[var(--color-danger)] text-[var(--color-danger)] font-semibold" : "border-transparent text-[var(--color-fg-5)] hover:text-red-400"
-                }`}
-              >
-                <ShieldAlert size={13} /> Peligro
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-4 sm:p-6 overflow-y-auto touch-scroll space-y-4 flex-1">
-              
-              {settingsError && (
-                <div className="p-3 bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/20 rounded-xl text-xs text-[var(--color-danger)] flex items-center gap-2">
-                  <AlertTriangle size={14} className="shrink-0" />
-                  <span>{settingsError}</span>
-                </div>
-              )}
-
-              {settingsSuccess && (
-                <div className="p-3 bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 rounded-xl text-xs text-[var(--color-accent)] flex items-center gap-2">
-                  <CheckCircle2 size={14} className="shrink-0" />
-                  <span>{settingsSuccess}</span>
-                </div>
-              )}
-
-              {/* Appearance / Theme Tab */}
-              {settingsTab === "appearance" && (
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-xs text-[var(--color-fg-3)] mb-1">
-                      Personaliza la interfaz visual de toda la plataforma según tu preferencia.
-                    </p>
-                    <p className="text-[11px] text-[var(--color-fg-4)]">
-                      El tema se aplica a tu panel. La web pública y el acceso se ven siempre en oscuro.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                    {/* Dark Theme Option */}
-                    <button
-                      type="button"
-                      onClick={() => setTheme("dark")}
-                      className={`p-4 rounded-2xl border text-left transition-all relative overflow-hidden group ${
-                        isDark 
-                          ? "border-[var(--color-accent)] bg-[var(--color-ink-2)] shadow-[0_0_20px_rgba(192,132,252,0.15)] ring-1 ring-[var(--color-accent)]" 
-                          : "border-[var(--color-ink-3)] bg-[var(--color-ink-2)] hover:border-[var(--color-ink-3)]"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg bg-black border border-[var(--color-ink-3)] flex items-center justify-center text-emerald-400 shadow-sm">
-                            <Moon size={14} />
-                          </div>
-                          <div>
-                            <p className="text-xs font-bold text-[var(--color-fg-1)]">Modo oscuro</p>
-                            <span className="text-[10px] text-[var(--color-fg-4)]">Predeterminado</span>
-                          </div>
-                        </div>
-                        {isDark && (
-                          <div className="w-5 h-5 rounded-full bg-[var(--color-accent)] text-[var(--color-accent-fg)] flex items-center justify-center shadow-[0_0_8px_rgba(192,132,252,0.5)]">
-                            <Check size={11} strokeWidth={3} />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Visual Mini Preview */}
-                      <div className="h-14 bg-[#0a0a0c] border border-[var(--color-ink-3)] rounded-xl p-2 flex flex-col justify-between">
-                        <div className="flex items-center justify-between">
-                          <div className="h-2 w-12 bg-white/20 rounded" />
-                          <div className="h-2 w-6 bg-[var(--color-accent)] rounded" />
-                        </div>
-                        <div className="flex gap-1.5">
-                          <div className="h-5 flex-1 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded" />
-                          <div className="h-5 flex-1 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded" />
-                        </div>
-                      </div>
-                    </button>
-
-                    {/* Light Theme Option */}
-                    <button
-                      type="button"
-                      onClick={() => setTheme("light")}
-                      className={`p-4 rounded-2xl border text-left transition-all relative overflow-hidden group ${
-                        isLight 
-                          ? "border-[var(--color-accent)] bg-[var(--color-ink-2)] shadow-[0_0_20px_rgba(5,150,105,0.15)] ring-1 ring-[var(--color-accent)]" 
-                          : "border-[var(--color-ink-3)] bg-[var(--color-ink-2)] hover:border-[var(--color-ink-3)]"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-amber-500 shadow-sm">
-                            <Sun size={14} />
-                          </div>
-                          <div>
-                            <p className="text-xs font-bold text-[var(--color-fg-1)]">Modo claro</p>
-                            <span className="text-[10px] text-[var(--color-fg-5)]">Luminoso & Nítido</span>
-                          </div>
-                        </div>
-                        {isLight && (
-                          <div className="w-5 h-5 rounded-full bg-[var(--color-accent)] text-[var(--color-fg-1)] flex items-center justify-center shadow-[0_0_8px_rgba(5,150,105,0.5)]">
-                            <Check size={11} strokeWidth={3} />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Visual Mini Preview */}
-                      <div className="h-14 bg-white border border-slate-200 rounded-xl p-2 flex flex-col justify-between shadow-sm">
-                        <div className="flex items-center justify-between">
-                          <div className="h-2 w-12 bg-slate-400 rounded" />
-                          <div className="h-2 w-6 bg-emerald-600 rounded" />
-                        </div>
-                        <div className="flex gap-1.5">
-                          <div className="h-5 flex-1 bg-slate-100 border border-slate-200 rounded" />
-                          <div className="h-5 flex-1 bg-slate-100 border border-slate-200 rounded" />
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-
-                  <div className="p-3 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl flex items-center gap-2 text-[11px] text-[var(--color-fg-4)]">
-                    <CheckCircle2 size={13} className="text-[var(--color-accent)] shrink-0" />
-                    <span>El cambio de tema se guarda automáticamente en tus preferencias locales.</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Phone Tab */}
-              {settingsTab === "profile" && (
-                <div className="space-y-4">
-                  <p className="text-xs text-[var(--color-fg-4)]">
-                    Así te saludamos en el panel y en el resumen por WhatsApp. Si lo dejas vacío, usamos tu usuario ({user.username}).
-                  </p>
-                  <div>
-                    <label htmlFor="display-name" className="text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-1.5 block">Tu nombre</label>
-                    <input
-                      id="display-name"
-                      type="text"
-                      value={displayName}
-                      maxLength={40}
-                      autoComplete="given-name"
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
-                      placeholder="Rubén"
-                      className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-sm text-[var(--color-fg-1)] outline-none transition-all"
-                    />
-                  </div>
-                  <button
-                    onClick={handleSaveName}
-                    disabled={settingsLoading}
-                    className="w-full py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-xs rounded-xl hover:brightness-110 transition-all shadow-[0_0_15px_rgba(192,132,252,0.2)] disabled:opacity-50"
-                  >
-                    {settingsLoading ? "Guardando..." : "Guardar nombre"}
-                  </button>
-                </div>
-              )}
-
-              {settingsTab === "phone" && (
-                <div className="space-y-4">
-                  <p className="text-xs text-[var(--color-fg-4)]">
-                    Introduce el número donde quieres recibir los resúmenes diarios de cotizaciones por WhatsApp.
-                  </p>
-                  <div>
-                    <label className="text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-1.5 block">Teléfono WhatsApp</label>
-                    <div className="flex gap-2 relative" ref={countryRef}>
-                      <button
-                        type="button"
-                        onClick={() => setShowCountryPicker(!showCountryPicker)}
-                        className="flex items-center gap-1.5 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] px-3 py-2.5 rounded-xl text-xs text-[var(--color-fg-1)] hover:border-[var(--color-accent)] transition-all shrink-0"
-                      >
-                        <span>{phoneCountry.flag}</span>
-                        <span className="font-mono text-[var(--color-fg-4)]">{phoneCountry.dial}</span>
-                      </button>
-
-                      {showCountryPicker && (
-                        <div className="absolute left-0 top-full mt-2 w-64 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-2xl shadow-2xl z-50 p-2 max-h-52 overflow-y-auto">
-                          <input
-                            type="text"
-                            placeholder="Buscar país..."
-                            value={countrySearch}
-                            onChange={(e) => setCountrySearch(e.target.value)}
-                            className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] px-2.5 py-1.5 rounded-lg text-xs text-[var(--color-fg-1)] mb-2 outline-none"
-                          />
-                          {COUNTRIES.filter(c => !countrySearch || c.name.toLowerCase().includes(countrySearch.toLowerCase()) || c.dial.includes(countrySearch)).map(c => (
-                            <button
-                              key={c.code}
-                              type="button"
-                              onClick={() => { setPhoneCountry(c); setShowCountryPicker(false); }}
-                              className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-left hover:bg-[var(--color-ink-2)] rounded-lg text-[var(--color-fg-2)] hover:text-[var(--color-fg-1)]"
-                            >
-                              <span>{c.flag}</span>
-                              <span className="font-mono text-[var(--color-fg-4)] text-[10px] w-10">{c.dial}</span>
-                              <span className="truncate">{c.name}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      <input
-                        type="tel"
-                        value={localPhone}
-                        onChange={(e) => setLocalPhone(e.target.value.replace(/\D/g, ""))}
-                        placeholder="612345678"
-                        className="flex-1 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-sm text-[var(--color-fg-1)] outline-none transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={handleSavePhone}
-                    disabled={settingsLoading}
-                    className="w-full py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-xs rounded-xl hover:brightness-110 transition-all shadow-[0_0_15px_rgba(192,132,252,0.2)] disabled:opacity-50"
-                  >
-                    {settingsLoading ? "Guardando..." : "Guardar Teléfono"}
-                  </button>
-                </div>
-              )}
-
-              {/* Email Tab */}
-              {settingsTab === "email" && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-1.5 block">Email Actual</label>
-                    <input
-                      type="email"
-                      value={currentEmail}
-                      onChange={(e) => setCurrentEmail(e.target.value)}
-                      placeholder={user.email}
-                      className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-sm text-[var(--color-fg-1)] outline-none transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-1.5 block">Nuevo Email</label>
-                    <input
-                      type="email"
-                      value={newEmail}
-                      onChange={(e) => setNewEmail(e.target.value)}
-                      placeholder="nuevo@email.com"
-                      className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-sm text-[var(--color-fg-1)] outline-none transition-all"
-                    />
-                  </div>
-                  <button
-                    onClick={handleChangeEmail}
-                    disabled={settingsLoading}
-                    className="w-full py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-xs rounded-xl hover:brightness-110 transition-all shadow-[0_0_15px_rgba(192,132,252,0.2)] disabled:opacity-50"
-                  >
-                    {settingsLoading ? "Actualizando..." : "Actualizar Email"}
-                  </button>
-                </div>
-              )}
-
-              {/* Password Tab */}
-              {settingsTab === "password" && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-1.5 block">Contraseña Actual</label>
-                    <input
-                      type="password"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-sm text-[var(--color-fg-1)] outline-none transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-1.5 block">Nueva Contraseña (mín. 8 caracteres)</label>
-                    <input
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] px-3 py-2.5 rounded-xl text-sm text-[var(--color-fg-1)] outline-none transition-all"
-                    />
-                  </div>
-                  <button
-                    onClick={handleChangePassword}
-                    disabled={settingsLoading}
-                    className="w-full py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-xs rounded-xl hover:brightness-110 transition-all shadow-[0_0_15px_rgba(192,132,252,0.2)] disabled:opacity-50"
-                  >
-                    {settingsLoading ? "Cambiando..." : "Cambiar Contraseña"}
-                  </button>
-                </div>
-              )}
-
-              {/* Danger Zone */}
-              {settingsTab === "danger" && (
-                <div className="space-y-4">
-                  <div className="p-4 bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/20 rounded-2xl">
-                    <p className="text-xs font-bold text-[var(--color-danger)] mb-1">Zona de Peligro</p>
-                    <p className="text-xs text-[var(--color-fg-4)] leading-relaxed">
-                      Esta acción eliminará permanentemente tu cuenta, tus fondos registrados y todo tu historial. No se puede deshacer.
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-mono uppercase text-[var(--color-fg-4)] mb-1.5 block">Introduce tu contraseña para confirmar</label>
-                    <input
-                      type="password"
-                      value={deletePassword}
-                      onChange={(e) => setDeletePassword(e.target.value)}
-                      className="w-full bg-[var(--color-ink-2)] border border-[var(--color-danger)]/40 focus:border-[var(--color-danger)] px-3 py-2.5 rounded-xl text-sm text-[var(--color-fg-1)] outline-none transition-all"
-                    />
-                  </div>
-                  <button
-                    onClick={handleDeleteAccount}
-                    disabled={settingsLoading}
-                    className="w-full py-2.5 bg-[var(--color-danger)] text-[var(--color-fg-1)] font-bold text-xs rounded-xl hover:brightness-110 transition-all shadow-[0_0_15px_rgba(255,90,74,0.3)] disabled:opacity-50"
-                  >
-                    {settingsLoading ? "Eliminando..." : "Eliminar Cuenta Definitivamente"}
-                  </button>
-                </div>
-              )}
-
-            </div>
-
+            <button onClick={onClose} aria-label="Cerrar ajustes" className="rounded-full p-2 text-[var(--color-fg-4)] hover:bg-[var(--color-surface)] hover:text-[var(--color-fg-1)] sm:hidden">
+              <X size={18} />
+            </button>
           </div>
-        </div>
+          <nav aria-label="Secciones de ajustes" className="flex gap-1 overflow-x-auto px-3 pb-3 no-scrollbar sm:flex-1 sm:flex-col sm:overflow-visible sm:pb-0">
+            {MAIN_TABS.map(navItem)}
+            <div className="hidden flex-1 sm:block" />
+            <div className="sm:border-t sm:border-[var(--color-border)] sm:py-3">{navItem("danger")}</div>
+          </nav>
+        </aside>
+
+        {/* Contenido de la sección */}
+        <section className="flex min-h-0 flex-1 flex-col">
+          <header className="flex items-start justify-between gap-4 px-6 pb-4 pt-6">
+            <div>
+              <h2 id="settings-title" className={`font-heading text-xl font-semibold ${tab === "danger" ? "text-[var(--color-loss)]" : "text-[var(--color-fg-1)]"}`}>
+                {section.title}
+              </h2>
+              <p className="mt-1 text-sm text-[var(--color-fg-3)]">{section.description}</p>
+            </div>
+            <button onClick={onClose} aria-label="Cerrar ajustes" className="hidden rounded-full p-2 text-[var(--color-fg-4)] hover:bg-[var(--color-surface)] hover:text-[var(--color-fg-1)] sm:block">
+              <X size={18} />
+            </button>
+          </header>
+
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 pb-6">
+            {tab === "profile" && (
+              <Field label="Tu nombre" htmlFor="display-name" hint={`Si lo dejas vacío, usamos tu usuario (${user.username}).`}>
+                <input
+                  id="display-name"
+                  type="text"
+                  value={displayName}
+                  maxLength={40}
+                  autoComplete="given-name"
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && saveName()}
+                  placeholder="Escribe tu nombre"
+                  className={inputClass}
+                />
+              </Field>
+            )}
+
+            {tab === "appearance" && (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {[
+                  { id: "dark" as const, label: "Oscuro", note: "Predeterminado", active: isDark, Icon: Moon, preview: "bg-[#0b0b0a] border-white/10", bar: "bg-white/25", card: "bg-white/[.06] border-white/10" },
+                  { id: "light" as const, label: "Claro", note: "Fondo claro", active: isLight, Icon: Sun, preview: "bg-white border-black/10", bar: "bg-black/25", card: "bg-black/[.04] border-black/10" },
+                ].map((o) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => setTheme(o.id)}
+                    aria-pressed={o.active}
+                    className={`rounded-2xl border p-3 text-left transition-colors ${
+                      o.active ? "border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]" : "border-[var(--color-border)] hover:border-[var(--color-fg-4)]"
+                    }`}
+                  >
+                    <div className={`h-24 rounded-xl border p-3 ${o.preview}`}>
+                      <div className={`h-2 w-16 rounded ${o.bar}`} />
+                      <div className="mt-3 grid grid-cols-3 gap-1.5">
+                        <div className="h-9 rounded-md" style={{ background: "linear-gradient(140deg,#0e7fa3,#4b4fd6,#9b36c9)" }} />
+                        <div className={`h-9 rounded-md border ${o.card}`} />
+                        <div className={`h-9 rounded-md border ${o.card}`} />
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between px-1">
+                      <span className="flex items-center gap-2 text-sm font-medium text-[var(--color-fg-1)]">
+                        <o.Icon size={15} /> {o.label}
+                        <span className="text-xs font-normal text-[var(--color-fg-4)]">· {o.note}</span>
+                      </span>
+                      {o.active && (
+                        <span className="grid h-5 w-5 place-items-center rounded-full bg-[var(--color-accent)] text-[var(--color-accent-fg)]">
+                          <Check size={12} strokeWidth={3} />
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {tab === "phone" && (
+              <Field label="Número de teléfono" htmlFor="settings-phone" hint="Para recibirlo necesitas también tu clave de CallMeBot (sección WhatsApp). Déjalo vacío para no recibir nada.">
+                <div className="relative flex gap-2" ref={countryRef}>
+                  <button
+                    type="button"
+                    onClick={() => setShowCountryPicker((v) => !v)}
+                    aria-label={`Prefijo ${phoneCountry.dial}`}
+                    className="flex shrink-0 items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-ink-2)] px-3 text-sm text-[var(--color-fg-1)] hover:border-[var(--color-fg-4)]"
+                  >
+                    <span>{phoneCountry.flag}</span>
+                    <span className="font-mono text-xs text-[var(--color-fg-3)]">{phoneCountry.dial}</span>
+                  </button>
+                  {showCountryPicker && (
+                    <div className="absolute left-0 top-full z-10 mt-2 max-h-60 w-72 overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-ink-2)] p-2 shadow-2xl">
+                      <input
+                        type="text"
+                        autoFocus
+                        placeholder="Buscar país…"
+                        value={countrySearch}
+                        onChange={(e) => setCountrySearch(e.target.value)}
+                        className="mb-2 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-ink-1)] px-2.5 py-1.5 text-xs text-[var(--color-fg-1)] outline-none"
+                      />
+                      {COUNTRIES.filter((c) => !countrySearch || c.name.toLowerCase().includes(countrySearch.toLowerCase()) || c.dial.includes(countrySearch)).map((c) => (
+                        <button
+                          key={c.code}
+                          type="button"
+                          onClick={() => {
+                            setPhoneCountry(c);
+                            setShowCountryPicker(false);
+                          }}
+                          className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-[var(--color-fg-2)] hover:bg-[var(--color-surface)] hover:text-[var(--color-fg-1)]"
+                        >
+                          <span>{c.flag}</span>
+                          <span className="w-10 font-mono text-[10px] text-[var(--color-fg-4)]">{c.dial}</span>
+                          <span className="truncate">{c.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <input
+                    id="settings-phone"
+                    type="tel"
+                    inputMode="numeric"
+                    value={localPhone}
+                    onChange={(e) => setLocalPhone(e.target.value.replace(/\D/g, ""))}
+                    onKeyDown={(e) => e.key === "Enter" && savePhone()}
+                    placeholder="612345678"
+                    className={inputClass}
+                  />
+                </div>
+              </Field>
+            )}
+
+            {tab === "email" && (
+              <>
+                <Field label="Email actual" htmlFor="settings-email-current">
+                  <input id="settings-email-current" type="email" autoComplete="email" value={currentEmail} onChange={(e) => setCurrentEmail(e.target.value)} placeholder={user.email} className={inputClass} />
+                </Field>
+                <Field label="Nuevo email" htmlFor="settings-email-new">
+                  <input id="settings-email-new" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="nuevo@email.com" className={inputClass} />
+                </Field>
+              </>
+            )}
+
+            {tab === "password" && (
+              <>
+                <Field label="Contraseña actual" htmlFor="settings-pw-current">
+                  <input id="settings-pw-current" type="password" autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className={inputClass} />
+                </Field>
+                <Field label="Nueva contraseña" htmlFor="settings-pw-new" hint="Al menos 8 caracteres, con mayúscula, minúscula y número.">
+                  <input id="settings-pw-new" type="password" autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className={inputClass} />
+                </Field>
+              </>
+            )}
+
+            {tab === "danger" && (
+              <>
+                <div className="flex gap-3 rounded-2xl border border-[var(--color-loss)]/25 bg-[var(--color-loss)]/8 p-4 text-sm text-[var(--color-fg-2)]">
+                  <AlertTriangle size={18} className="mt-0.5 shrink-0 text-[var(--color-loss)]" />
+                  <p>Tu cuenta y tus fondos se desactivan al momento y ya no podrás entrar ni recibir el resumen por WhatsApp. Tú no podrás deshacerlo desde la web.</p>
+                </div>
+                <Field label="Escribe tu contraseña para confirmar" htmlFor="settings-delete">
+                  <input
+                    id="settings-delete"
+                    type="password"
+                    autoComplete="current-password"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    className={`${inputClass} focus:border-[var(--color-loss)]`}
+                  />
+                </Field>
+              </>
+            )}
+          </div>
+
+          {/* Pie: resultado y acción de la sección */}
+          {(action || error || success) && (
+            <footer className="flex flex-wrap items-center justify-end gap-3 border-t border-[var(--color-border)] px-6 py-4">
+              {error && (
+                <p className="mr-auto flex items-center gap-1.5 text-xs text-[var(--color-loss)]">
+                  <AlertTriangle size={14} className="shrink-0" /> {error}
+                </p>
+              )}
+              {success && !error && (
+                <p className="mr-auto flex items-center gap-1.5 text-xs text-[var(--color-profit)]">
+                  <CheckCircle2 size={14} className="shrink-0" /> {success}
+                </p>
+              )}
+              {action && (
+                <button
+                  onClick={action.onClick}
+                  disabled={loading}
+                  className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-opacity hover:opacity-85 disabled:opacity-50 ${
+                    action.danger ? "bg-[var(--color-loss)] text-white" : "bg-[var(--color-btn-bg)] text-[var(--color-btn-fg)]"
+                  }`}
+                >
+                  {loading ? "Un momento…" : action.label}
+                </button>
+              )}
+            </footer>
+          )}
+        </section>
+      </div>
+    </div>
   );
 }

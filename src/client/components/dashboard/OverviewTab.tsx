@@ -391,7 +391,7 @@ export function OverviewTab({ funds, status, phone, onNavigate, onExportPdf, isE
               }
             >
               <p className="flex items-center gap-2 font-heading text-lg font-semibold text-[var(--color-fg-1)]">
-                <span className={`h-2 w-2 rounded-full ${status?.whatsapp?.configured ? "bg-[var(--color-profit)]" : "bg-[var(--color-fg-5)]"}`} />
+                <span className={`h-2 w-2 rounded-full ${status?.whatsapp?.configured ? "bg-[var(--color-profit)]" : "bg-[var(--color-fg-4)]"}`} />
                 {status?.whatsapp?.configured ? "Activo" : "Inactivo"}
               </p>
               <p className="mt-0.5 truncate font-mono text-[11px] text-[var(--color-fg-4)]">

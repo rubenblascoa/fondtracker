@@ -1,1087 +1,395 @@
-import React, { useState } from "react";
-import { 
-  BookOpen, Layers, Database, Shield, Smartphone, Server, 
-  Code2, Key, Search, Copy, Check, ChevronRight, FileText, 
-  Cpu, ExternalLink, Zap, Terminal, Sparkles, FolderTree, RefreshCw,
-  Play, CheckCircle2, AlertCircle, ArrowRight, Table, Globe, Sliders, Lock
-} from "lucide-react";
+import { useMemo, useState } from "react";
+import { Check, Copy, Database, Play, Search, Server, ShieldCheck, Smartphone } from "lucide-react";
 import { getToken } from "../api";
+import { Card, Label, Tag } from "./ui";
+
+// Documentación de la API de FondTracker. Cada ruta, protección y límite sale del código
+// del servidor (src/server/index.ts y src/server/routes/*.ts); al cambiar una ruta, actualízala aquí.
+
+type Method = "GET" | "POST" | "PUT" | "DELETE";
+type Access = "público" | "usuario" | "admin" | "cron";
+type Endpoint = {
+  method: Method;
+  path: string;
+  access: Access;
+  description: string;
+  /** Límite por minuto (por IP o por usuario) */
+  limit?: number;
+  /** Comprueba Origin/Referer contra ALLOWED_ORIGIN */
+  csrf?: boolean;
+  params?: string;
+  body?: string;
+  returns?: string;
+};
+
+const GROUPS: { title: string; endpoints: Endpoint[] }[] = [
+  {
+    title: "Cuenta y acceso",
+    endpoints: [
+      { method: "POST", path: "/api/auth/register", access: "público", csrf: true, limit: 5, description: "Crea una cuenta.", body: '{ "username", "email", "password", "phone"? }', returns: "{ user, token }" },
+      { method: "POST", path: "/api/auth/login", access: "público", csrf: true, limit: 10, description: "Entra con email o usuario.", body: '{ "identifier", "password" }', returns: "{ user, token }" },
+      { method: "POST", path: "/api/auth/logout", access: "público", description: "Cierra la sesión y borra la cookie ft_session." },
+      { method: "GET", path: "/api/auth/google", access: "público", description: "Empieza el acceso con Google (redirección OAuth)." },
+      { method: "GET", path: "/api/auth/google/callback", access: "público", description: "Vuelta de Google: crea o enlaza la cuenta y deja la sesión iniciada." },
+      { method: "GET", path: "/api/auth/github", access: "público", description: "Empieza el acceso con GitHub (redirección OAuth)." },
+      { method: "GET", path: "/api/auth/github/callback", access: "público", description: "Vuelta de GitHub: crea o enlaza la cuenta y deja la sesión iniciada." },
+      { method: "GET", path: "/api/auth/me", access: "usuario", limit: 30, description: "Perfil del usuario.", returns: "{ id, username, display_name, email, phone, is_admin, created_at }" },
+      {
+        method: "PUT",
+        path: "/api/auth/me",
+        access: "usuario",
+        csrf: true,
+        limit: 5,
+        description: "Actualiza el perfil. Cada campo es opcional; el límite de 5/min aplica al cambio de contraseña.",
+        body: '{ "display_name"?, "phone"?, "currentEmail"? + "email"?, "currentPassword"? + "newPassword"? }',
+        returns: "{ ok: true }",
+      },
+      { method: "DELETE", path: "/api/auth/me", access: "usuario", csrf: true, description: "Desactiva la cuenta: marca deleted_at en el usuario y en sus fondos, y borra su fund_history.", body: '{ "password" }', returns: "{ ok: true }" },
+    ],
+  },
+  {
+    title: "Cartera",
+    endpoints: [
+      { method: "GET", path: "/api/portfolio", access: "usuario", limit: 30, description: "Fondos del usuario con su valor actual y los totales, en una sola llamada.", returns: "{ funds: Investment[], status }" },
+      { method: "GET", path: "/api/portfolio/history", access: "usuario", limit: 20, params: "range = 1m | 3m | 6m | 1y | max", description: "Evolución del patrimonio: fotos diarias guardadas y, antes de la primera, reconstrucción con precios históricos.", returns: '{ points: [{ date, invested, value }], source: "snapshots" | "reconstructed" | "mixed" }' },
+      { method: "GET", path: "/api/funds", access: "usuario", description: "Fondos del usuario (sin totales)." },
+      { method: "POST", path: "/api/funds", access: "usuario", csrf: true, limit: 30, description: "Añade un fondo con lo que dice el extracto del banco.", body: '{ "isin", "name", "shares", "purchase_price", "purchase_date", "bank"?, "category"?, "ticker"?, "notes"? }' },
+      { method: "GET", path: "/api/funds/:id", access: "usuario", description: "Un fondo del usuario." },
+      { method: "PUT", path: "/api/funds/:id", access: "usuario", csrf: true, description: "Edita un fondo. Si solo tiene la compra inicial, también la actualiza; con más movimientos se editan desde ellos.", body: '{ "shares"?, "purchase_price"?, "purchase_date"?, "notes"? … }' },
+      { method: "DELETE", path: "/api/funds/:id", access: "usuario", csrf: true, description: "Borra el fondo y, con él, todos sus movimientos." },
+      { method: "GET", path: "/api/funds/:id/transactions", access: "usuario", description: "Movimientos del fondo y su precio medio ponderado.", returns: "{ transactions, summary: { currentShares, pmp, totalCostBasis, … } }" },
+      { method: "POST", path: "/api/funds/:id/transactions", access: "usuario", csrf: true, description: "Añade una compra, venta o traspaso.", body: '{ "type": "BUY" | "SELL" | "TRANSFER_IN" | "TRANSFER_OUT", "shares", "price", "date", "fees"?, "notes"? }' },
+      { method: "DELETE", path: "/api/funds/:id/transactions/:txId", access: "usuario", csrf: true, description: "Borra un movimiento y recalcula el fondo." },
+    ],
+  },
+  {
+    title: "Fondos y precios",
+    endpoints: [
+      { method: "GET", path: "/api/funds/search", access: "usuario", params: "q, bank?, category?", description: "Busca en el catálogo por nombre o ISIN." },
+      { method: "GET", path: "/api/funds/catalog/:isin", access: "usuario", description: "Ficha de un fondo del catálogo." },
+      { method: "GET", path: "/api/funds/chart/:ticker", access: "usuario", params: "range = 1d | 5d | 1mo | 3mo | 6mo | 1y | 2y | 5y | max, interval?", description: "Precio actual y serie histórica de un fondo (por ISIN) o ETF (ticker de Yahoo).", returns: "{ currentPrice, dataDate, quotes, return1Y, return3Y, return5Y, dataSource, … }" },
+      { method: "GET", path: "/api/banks", access: "público", description: "Entidades presentes en el catálogo." },
+      { method: "GET", path: "/api/health", access: "público", description: "Estado del servidor." },
+    ],
+  },
+  {
+    title: "Avisos por WhatsApp",
+    endpoints: [
+      { method: "GET", path: "/api/whatsapp/config", access: "usuario", description: "Configuración del resumen: teléfono, clave de CallMeBot, horas y zona horaria." },
+      { method: "PUT", path: "/api/whatsapp/config", access: "usuario", csrf: true, description: "Guarda la configuración del resumen." },
+      { method: "POST", path: "/api/whatsapp/test", access: "usuario", limit: 3, description: "Envía un mensaje de prueba." },
+      { method: "GET", path: "/api/notify/preview", access: "usuario", limit: 10, description: "Vista previa del resumen que se enviaría ahora." },
+      { method: "POST", path: "/api/notify/test", access: "usuario", description: "Envía el resumen completo ahora." },
+      { method: "GET", path: "/api/digest/trigger", access: "cron", params: "secret (o cabecera x-cron-secret)", description: "Lanza el envío programado. Pensado para un cron externo; exige CRON_SECRET." },
+      { method: "POST", path: "/api/digest/trigger", access: "cron", description: "Igual que el GET, por POST." },
+    ],
+  },
+  {
+    title: "Administración",
+    endpoints: [
+      { method: "GET", path: "/api/admin/overview", access: "admin", description: "Cifras generales de la plataforma." },
+      { method: "GET", path: "/api/admin/users", access: "admin", params: "search?, status?, offset?", description: "Usuarios, con búsqueda y paginación." },
+      { method: "GET", path: "/api/admin/users/:id", access: "admin", description: "Detalle de un usuario y su cartera." },
+      { method: "POST", path: "/api/admin/users/:id/test-whatsapp", access: "admin", description: "Envía un WhatsApp de prueba a ese usuario." },
+      { method: "POST", path: "/api/admin/users/:id/promote", access: "admin", description: "Da o quita permisos de administración.", body: '{ "is_admin": boolean }' },
+      { method: "POST", path: "/api/admin/users/:id/delete", access: "admin", description: "Desactiva la cuenta (borrado lógico)." },
+      { method: "POST", path: "/api/admin/users/:id/restore", access: "admin", description: "Reactiva una cuenta desactivada." },
+      { method: "GET", path: "/api/admin/catalog", access: "admin", params: "q?, bank?, page?, limit?", description: "Catálogo de fondos." },
+      { method: "POST", path: "/api/admin/catalog", access: "admin", description: "Añade un fondo al catálogo." },
+      { method: "PUT", path: "/api/admin/catalog/:isin", access: "admin", description: "Edita un fondo del catálogo." },
+      { method: "DELETE", path: "/api/admin/catalog/:isin", access: "admin", description: "Quita un fondo del catálogo." },
+      { method: "PUT", path: "/api/admin/catalog/:isin/ticker", access: "admin", description: "Fija el ticker de Yahoo de un fondo." },
+      { method: "POST", path: "/api/admin/catalog/:isin/refresh-price", access: "admin", description: "Vuelve a pedir el precio de un fondo." },
+      { method: "POST", path: "/api/admin/catalog/:isin/invalidate-price", access: "admin", description: "Descarta el precio guardado de un fondo." },
+      { method: "POST", path: "/api/admin/catalog/refresh-all-prices", access: "admin", description: "Actualiza el precio de todo el catálogo." },
+      { method: "POST", path: "/api/admin/catalog-refresh-all", access: "admin", description: "Refresca los datos del catálogo." },
+      { method: "GET", path: "/api/admin/notifications", access: "admin", description: "Estado de los envíos de WhatsApp." },
+      { method: "GET", path: "/api/admin/notifications/preview", access: "admin", description: "Vista previa de los resúmenes de todos los usuarios." },
+      { method: "GET", path: "/api/admin/notifications/preview/:id", access: "admin", description: "Vista previa del resumen de un usuario." },
+      { method: "POST", path: "/api/admin/notifications/trigger", access: "admin", description: "Lanza el envío de resúmenes ahora." },
+      { method: "GET", path: "/api/admin/activity-logs", access: "admin", description: "Registro de actividad." },
+      { method: "GET", path: "/api/admin/system", access: "admin", description: "Estado del servidor, la base de datos y las cachés." },
+      { method: "POST", path: "/api/admin/system/clear-cache", access: "admin", csrf: true, description: "Vacía las cachés en memoria." },
+    ],
+  },
+];
+
+const TABLES: { name: string; purpose: string; columns: string }[] = [
+  { name: "users", purpose: "Cuentas", columns: "id PK, username, display_name?, email, password_hash?, google_id?, github_id?, phone?, is_admin, created_at, deleted_at?" },
+  { name: "investments", purpose: "Fondos de cada usuario (posición actual)", columns: "id PK, user_id, isin, name, bank, category, ticker?, shares, purchase_price, purchase_date, currency, notes?, created_at, updated_at, deleted_at?" },
+  { name: "fund_transactions", purpose: "Compras, ventas y traspasos", columns: "id PK, user_id, fund_id → investments, type, shares, price, amount, date, fees, notes?, created_at" },
+  { name: "portfolio_snapshots", purpose: "Foto diaria del patrimonio", columns: "(user_id, snap_date) PK, invested, value" },
+  { name: "fund_catalog", purpose: "Catálogo de fondos buscables", columns: "id PK, isin UNIQUE, name, bank, category, risk_level, currency, yahoo_ticker?" },
+  { name: "fund_prices", purpose: "Último precio conocido por ISIN", columns: "isin PK → fund_catalog, price, currency, updated_at" },
+  { name: "fund_history", purpose: "Valores guardados de cada fondo", columns: "id PK, fund_id → investments, value, recorded_at" },
+  { name: "settings", purpose: "Configuración (WhatsApp, horas, zona horaria…)", columns: "setting_key PK, setting_value" },
+];
+
+const METHOD_TONE: Record<Method, string> = {
+  GET: "bg-emerald-500/12 text-emerald-400",
+  POST: "bg-sky-500/12 text-sky-400",
+  PUT: "bg-amber-500/12 text-amber-400",
+  DELETE: "bg-red-500/12 text-red-400",
+};
+const ACCESS_TONE: Record<Access, "neutral" | "accent" | "loss" | "profit"> = { público: "neutral", usuario: "accent", admin: "loss", cron: "profit" };
+
+type Section = "endpoints" | "how" | "database" | "whatsapp";
+const SECTIONS: { id: Section; label: string; icon: typeof Server }[] = [
+  { id: "endpoints", label: "Endpoints", icon: Server },
+  { id: "how", label: "Cómo funciona", icon: ShieldCheck },
+  { id: "database", label: "Base de datos", icon: Database },
+  { id: "whatsapp", label: "Avisos por WhatsApp", icon: Smartphone },
+];
+
+function Code({ children }: { children: string }) {
+  return <code className="rounded-md bg-[var(--color-surface)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--color-fg-1)]">{children}</code>;
+}
 
 export function DocsTab() {
-  const [activeCategory, setActiveCategory] = useState<"overview" | "apis" | "scraper" | "database" | "whatsapp" | "security" | "deployment">("overview");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  
-  // Interactive API Console state
-  const [selectedEndpoint, setSelectedEndpoint] = useState<string>("/api/portfolio");
-  const [customParams, setCustomParams] = useState<string>("");
-  const [consoleLoading, setConsoleLoading] = useState(false);
-  const [consoleResponse, setConsoleResponse] = useState<any>(null);
-  const [consoleStatus, setConsoleStatus] = useState<{ code: number; text: string; ms: number } | null>(null);
-  const [selectedLang, setSelectedLang] = useState<"curl" | "fetch" | "python">("curl");
+  const [section, setSection] = useState<Section>("endpoints");
+  const [query, setQuery] = useState("");
+  const [copied, setCopied] = useState<string | null>(null);
+  const [consolePath, setConsolePath] = useState("/api/portfolio");
+  const [consoleState, setConsoleState] = useState<{ loading: boolean; status?: number; ms?: number; body?: string }>({ loading: false });
 
-  const sectionRef = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
-    if (sectionRef.current) {
-      const scrollParent = sectionRef.current.closest('.overflow-y-auto');
-      if (scrollParent) {
-        scrollParent.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-      }
-    }
-  }, [activeCategory]);
+  const total = GROUPS.reduce((n, g) => n + g.endpoints.length, 0);
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return GROUPS;
+    return GROUPS.map((g) => ({
+      ...g,
+      endpoints: g.endpoints.filter((e) => `${e.method} ${e.path} ${e.description} ${e.access}`.toLowerCase().includes(q)),
+    })).filter((g) => g.endpoints.length > 0);
+  }, [query]);
 
-  const copyToClipboard = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedCode(id);
-    setTimeout(() => setCopiedCode(null), 2000);
+  // Rutas GET de usuario sin parámetros de ruta: se pueden probar con la sesión actual
+  const testable = GROUPS.flatMap((g) => g.endpoints).filter((e) => e.method === "GET" && e.access !== "cron" && !e.path.includes(":") && !/(google|github)/.test(e.path));
+
+  const copy = (text: string, id: string) => {
+    navigator.clipboard.writeText(text).catch(() => {});
+    setCopied(id);
+    setTimeout(() => setCopied(null), 1600);
   };
 
-  // Run live API test
-  const runLiveTest = async (endpoint: string) => {
-    setConsoleLoading(true);
-    setConsoleResponse(null);
-    setConsoleStatus(null);
-    const start = performance.now();
-
+  const runConsole = async () => {
+    setConsoleState({ loading: true });
+    const t0 = performance.now();
     try {
       const token = getToken();
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-
-      const res = await fetch(endpoint, { headers });
-      const elapsed = Math.round(performance.now() - start);
-      setConsoleStatus({ code: res.status, text: res.statusText, ms: elapsed });
-
-      const data = await res.json().catch(() => ({ message: "Respuesta no es JSON válido" }));
-      setConsoleResponse(data);
-    } catch (err: any) {
-      const elapsed = Math.round(performance.now() - start);
-      setConsoleStatus({ code: 0, text: "Error de red", ms: elapsed });
-      setConsoleResponse({ error: err.message || "Error al conectar con la API" });
-    } finally {
-      setConsoleLoading(false);
+      const res = await fetch(consolePath, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const text = await res.text();
+      let body = text;
+      try {
+        body = JSON.stringify(JSON.parse(text), null, 2);
+      } catch {}
+      setConsoleState({ loading: false, status: res.status, ms: Math.round(performance.now() - t0), body: body.length > 20000 ? body.slice(0, 20000) + "\n…" : body });
+    } catch (err) {
+      setConsoleState({ loading: false, status: 0, ms: Math.round(performance.now() - t0), body: err instanceof Error ? err.message : "Error de red" });
     }
   };
 
-    const API_ENDPOINTS = [
-    {
-      group: "1. Autenticación, Usuarios & Seguridad",
-      items: [
-        { 
-          method: "POST", 
-          path: "/api/auth/register", 
-          desc: "Crea una nueva cuenta de usuario con validación estricta de contraseña (8+ car., mayúscula, minúscula, número) y teléfono internacional opcional.",
-          body: `{\n  "username": "inversor_pro",\n  "email": "usuario@ejemplo.com",\n  "password": "Password123!",\n  "phone": "+34600000000"\n}`, 
-          res: `{\n  "user": {\n    "id": 1,\n    "username": "inversor_pro",\n    "email": "usuario@ejemplo.com",\n    "phone": "+34600000000"\n  },\n  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."\n}` 
-        },
-        { 
-          method: "POST", 
-          path: "/api/auth/login", 
-          desc: "Autentica al usuario mediante email o nombre de usuario y genera un token firmado JWT HS256.", 
-          body: `{\n  "identifier": "usuario@ejemplo.com",\n  "password": "Password123!"\n}`, 
-          res: `{\n  "user": { "id": 1, "username": "inversor_pro", "email": "usuario@ejemplo.com", "phone": "+34600000000" },\n  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."\n}` 
-        },
-        { 
-          method: "GET", 
-          path: "/api/auth/me", 
-          desc: "Devuelve el perfil del usuario autenticado actual a partir del token Bearer enviado en la cabecera.", 
-          auth: true, 
-          res: `{\n  "id": 1,\n  "username": "inversor_pro",\n  "email": "usuario@ejemplo.com",\n  "phone": "+34600000000",\n  "is_admin": true,\n  "created_at": "2026-08-10T12:00:00.000Z"\n}` 
-        },
-        { 
-          method: "POST", 
-          path: "/api/auth/email", 
-          desc: "Actualiza la dirección de correo electrónico del usuario autenticado previa validación de formato.", 
-          auth: true, 
-          body: `{\n  "newEmail": "nuevo_email@ejemplo.com"\n}`, 
-          res: `{\n  "ok": true\n}` 
-        },
-        { 
-          method: "POST", 
-          path: "/api/auth/password", 
-          desc: "Modifica la contraseña del usuario verificando previamente la contraseña actual mediante Bcrypt.", 
-          auth: true, 
-          body: `{\n  "currentPassword": "Password123!",\n  "newPassword": "NewSecurePassword456!"\n}`, 
-          res: `{\n  "ok": true\n}` 
-        },
-        { 
-          method: "POST", 
-          path: "/api/auth/phone", 
-          desc: "Actualiza el número de teléfono con código de país para el envío de resúmenes por WhatsApp.", 
-          auth: true, 
-          body: `{\n  "phone": "+34612345678"\n}`, 
-          res: `{\n  "ok": true\n}` 
-        },
-        { 
-          method: "POST", 
-          path: "/api/auth/delete", 
-          desc: "Elimina de forma segura la cuenta del usuario y todas sus posiciones asociadas previa confirmación de contraseña.", 
-          auth: true, 
-          body: `{\n  "password": "Password123!"\n}`, 
-          res: `{\n  "ok": true\n}` 
-        }
-      ]
-    },
-    {
-      group: "2. Cartera, Posiciones & Gráficos",
-      items: [
-        { 
-          method: "GET", 
-          path: "/api/portfolio", 
-          desc: "Calcula en tiempo real la valoración total de la cartera del usuario, rentabilidades absolutas/porcentuales y lista enriquecida de fondos con cotizaciones actualizadas.", 
-          auth: true, 
-          res: `{\n  "funds": [\n    {\n      "id": 10,\n      "isin": "ES0113312003",\n      "name": "Ibercaja Renta Fija 2026",\n      "bank": "Ibercaja",\n      "category": "Renta Fija Corto Plazo",\n      "shares": 125.5,\n      "purchase_price": 10.20,\n      "current_price": 11.45,\n      "total_invested": 1280.10,\n      "current_value": 1436.98,\n      "profit_loss": 156.88,\n      "profit_loss_pct": 12.25,\n      "dataSource": "quefondos",\n      "dataDate": "14/08/2026"\n    }\n  ],\n  "status": {\n    "total_initial": 1280.10,\n    "total_current": 1436.98,\n    "total_profit_loss": 156.88,\n    "total_profit_loss_pct": 12.25,\n    "fund_count": 1\n  }\n}` 
-        },
-        { 
-          method: "GET", 
-          path: "/api/funds", 
-          desc: "Lista todas las inversiones activas del usuario con cálculos individuales de rentabilidad y precios NAV.", 
-          auth: true, 
-          res: `{\n  "funds": [ ... ],\n  "status": { ... }\n}` 
-        },
-        { 
-          method: "POST", 
-          path: "/api/funds", 
-          desc: "Añade un nuevo activo a la cartera. Auto-descubre el nombre, banco y cotización inicial si están en el catálogo.", 
-          auth: true, 
-          body: `{\n  "isin": "IE00BK5BQT80",\n  "shares": 15.0,\n  "purchase_price": 105.40,\n  "purchase_date": "2026-03-10",\n  "notes": "Vanguard FTSE All-World UCITS ETF"\n}`, 
-          res: `{\n  "id": 11,\n  "isin": "IE00BK5BQT80",\n  "shares": 15.0,\n  "purchase_price": 105.40,\n  "purchase_date": "2026-03-10"\n}` 
-        },
-        { 
-          method: "GET", 
-          path: "/api/funds/:id", 
-          desc: "Obtiene los detalles enriquecidos de una posición específica con historial y metadatos del fondo.", 
-          auth: true, 
-          res: `{\n  "id": 11,\n  "isin": "IE00BK5BQT80",\n  "shares": 15.0,\n  "purchase_price": 105.40\n}` 
-        },
-        { 
-          method: "PUT", 
-          path: "/api/funds/:id", 
-          desc: "Edita las participaciones, precio medio de compra, fecha de suscripción o notas de una posición existente.", 
-          auth: true, 
-          body: `{\n  "shares": 20.0,\n  "purchase_price": 104.80,\n  "purchase_date": "2026-03-10",\n  "notes": "Ampliación de cartera"\n}`, 
-          res: `{\n  "id": 11,\n  "shares": 20.0,\n  "purchase_price": 104.80\n}` 
-        },
-        { 
-          method: "DELETE", 
-          path: "/api/funds/:id", 
-          desc: "Elimina de forma lógica (soft delete) una posición de inversión de la cartera del usuario.", 
-          auth: true, 
-          res: `{\n  "ok": true\n}` 
-        },
-        { 
-          method: "GET", 
-          path: "/api/funds/chart/:ticker?range=1M|3M|6M|1Y|3Y|5Y|MAX", 
-          desc: "Obtiene el histórico de cotizaciones de Yahoo Finance o QueFondos para gráficas interactivas con cálculo de rentabilidad.", 
-          res: `{\n  "quotes": [\n    { "date": "2026-01-02", "close": 10.12 },\n    { "date": "2026-02-01", "close": 10.28 },\n    { "date": "2026-03-01", "close": 10.45 }\n  ],\n  "returnPct": 3.26\n}` 
-        }
-      ]
-    },
-    {
-      group: "3. Catálogo CNMV, Entidades & Buscador",
-      items: [
-        { 
-          method: "GET", 
-          path: "/api/funds/catalog?q=santander", 
-          desc: "Búsqueda predictiva ultrarrápida en el catálogo maestro de más de 490 fondos por ISIN, nombre o entidad bancaria.", 
-          res: `{\n  "results": [\n    {\n      "isin": "ES0175080003",\n      "name": "Santander Acciones Españolas",\n      "bank": "Santander",\n      "category": "Renta Variable España",\n      "riskLevel": 6\n    }\n  ]\n}` 
-        },
-        { 
-          method: "GET", 
-          path: "/api/banks", 
-          desc: "Devuelve el listado de bancos y gestoras registrados con logotipos, portales web oficiales y prefijos CNMV.", 
-          res: `{\n  "banks": [\n    { "name": "Santander", "portalUrl": "https://www.bancosantander.es", "domain": "santander.es" },\n    { "name": "BBVA", "portalUrl": "https://www.bbva.es", "domain": "bbva.es" },\n    { "name": "CaixaBank", "portalUrl": "https://www.caixabank.es", "domain": "caixabank.es" },\n    { "name": "Ibercaja", "portalUrl": "https://www.ibercaja.es", "domain": "ibercaja.es" }\n  ]\n}` 
-        }
-      ]
-    },
-    {
-      group: "4. Canal de Notificaciones WhatsApp (CallMeBot)",
-      items: [
-        { 
-          method: "GET", 
-          path: "/api/whatsapp/config", 
-          desc: "Recupera los parámetros de WhatsApp del usuario: teléfono verificado, clave API CallMeBot, slots horarios y estado de entrega.", 
-          auth: true, 
-          res: `{\n  "enabled": true,\n  "configured": true,\n  "phone": "+34600000000",\n  "timezone": "Europe/Madrid",\n  "hours": [8, 14, 20],\n  "lastSent": "2026-08-16T14:00:00Z",\n  "nextRunAt": "2026-08-16T20:00:00Z",\n  "lastStatus": "ok"\n}` 
-        },
-        { 
-          method: "PUT", 
-          path: "/api/whatsapp/config", 
-          desc: "Guarda la clave API de CallMeBot, horario diario de notificaciones (0 a 23h) y estado activo.", 
-          auth: true, 
-          body: `{\n  "api_key": "987654",\n  "phone": "+34600000000",\n  "hours": [9, 18],\n  "timezone": "Europe/Madrid",\n  "enabled": true\n}`, 
-          res: `{\n  "ok": true\n}` 
-        },
-        { 
-          method: "POST", 
-          path: "/api/whatsapp/test", 
-          desc: "Envía un mensaje de prueba inmediato a través de CallMeBot para verificar la recepción correcta.", 
-          auth: true, 
-          res: `{\n  "ok": true\n}` 
-        },
-        { 
-          method: "GET", 
-          path: "/api/notify/preview", 
-          desc: "Genera una vista previa idéntica al texto que se enviará por WhatsApp con formato Markdown, emojis y balances reales.", 
-          auth: true, 
-          res: `{\n  "message": "╔══ *FONDTRACKER* ═══════╗\\n║ 📊 *Resumen Diario*\\n║ 17/08/2026 · 14:00\\n╚════════════════════════╝\\n\\n💼 *Cartera Total:* €142.580,20\\n📈 *Ganancia Total:* +€8.450,12 (+6,30%)\\n\\n⚡ Actualizado por FondTracker.",\n  "messages": [ "..." ]\n}` 
-        },
-        { 
-          method: "POST", 
-          path: "/api/digest/trigger", 
-          desc: "Endpoint disparador para servicios cron externos (UptimeRobot, Render Cron). Autenticado por cabecera x-cron-secret.", 
-          auth: "Header x-cron-secret", 
-          res: `{\n  "ok": true,\n  "elapsed_ms": 284\n}` 
-        }
-      ]
-    },
-    {
-      group: "5. Administración & Supervisión Global (Super Admin)",
-      items: [
-        { 
-          method: "GET", 
-          path: "/api/admin/overview", 
-          desc: "Obtiene el resumen ejecutivo global: AUM total nominal, usuarios activos/baneados, distribución Auth, catálogo y ranking bancario.", 
-          auth: "Admin", 
-          res: `{\n  "total_users": 152,\n  "active_users": 134,\n  "aum_total": 2845000,\n  "catalog_size": 492,\n  "cached_prices": 340,\n  "whatsapp_active": 24\n}` 
-        },
-        { 
-          method: "GET", 
-          path: "/api/admin/users?search=&status=&limit=50&offset=0", 
-          desc: "Lista de usuarios con estadísticas de cartera, fondos monitorizados, total invertido y estado de WhatsApp.", 
-          auth: "Admin", 
-          res: `{\n  "users": [\n    {\n      "id": 1,\n      "username": "ruben",\n      "email": "ruben@ejemplo.com",\n      "phone": "+34600000000",\n      "is_admin": 1,\n      "investment_count": 8,\n      "total_invested": 54200,\n      "whatsapp_enabled": "1"\n    }\n  ],\n  "total": 1\n}` 
-        },
-        { 
-          method: "GET", 
-          path: "/api/admin/users/:id", 
-          desc: "Inspección detallada de la cartera de un usuario, cálculo de rentabilidad y estado del canal WhatsApp.", 
-          auth: "Admin", 
-          res: `{\n  "user": { "id": 1, "username": "ruben" },\n  "summary": { "totalInvested": 54200, "totalCurrent": 61400, "totalProfitLoss": 7200 },\n  "investments": [ ... ]\n}` 
-        },
-        { 
-          method: "POST", 
-          path: "/api/admin/users/:id/test-whatsapp", 
-          desc: "Envía un mensaje de prueba administrativo directo al número de teléfono del usuario especificado.", 
-          auth: "Admin", 
-          res: `{\n  "ok": true,\n  "sent_to": "+34600000000"\n}` 
-        },
-        { 
-          method: "POST", 
-          path: "/api/admin/users/:id/promote", 
-          desc: "Promociona a un usuario a Administrador o revoca sus privilegios administrativos.", 
-          auth: "Admin", 
-          body: `{\n  "is_admin": true\n}`, 
-          res: `{\n  "ok": true\n}` 
-        },
-        { 
-          method: "POST", 
-          path: "/api/admin/users/:id/delete", 
-          desc: "Suspende a un usuario aplicando soft-delete reversible.", 
-          auth: "Admin", 
-          res: `{\n  "ok": true\n}` 
-        },
-        { 
-          method: "POST", 
-          path: "/api/admin/users/:id/restore", 
-          desc: "Reactiva la cuenta de un usuario previamente suspendido.", 
-          auth: "Admin", 
-          res: `{\n  "ok": true\n}` 
-        },
-        { 
-          method: "GET", 
-          path: "/api/admin/catalog?q=&bank=&page=1&limit=50", 
-          desc: "Búsqueda y gestión completa del catálogo maestro CNMV con paginación y estado de tickers.", 
-          auth: "Admin", 
-          res: `{\n  "funds": [ ... ],\n  "total": 492\n}` 
-        },
-        { 
-          method: "POST", 
-          path: "/api/admin/catalog", 
-          desc: "Añade un nuevo activo al catálogo maestro CNMV.", 
-          auth: "Admin", 
-          body: `{\n  "isin": "ES0109360000",\n  "name": "Fondo Ejemplo",\n  "bank": "Santander",\n  "category": "Renta Variable",\n  "currency": "EUR"\n}`, 
-          res: `{\n  "ok": true\n}` 
-        },
-        { 
-          method: "POST", 
-          path: "/api/admin/catalog-refresh-all", 
-          desc: "Lanza la sincronización asíncrona de precios en segundo plano para todos los fondos con ticker.", 
-          auth: "Admin", 
-          res: `{\n  "ok": true,\n  "total": 492\n}` 
-        },
-        { 
-          method: "POST", 
-          path: "/api/admin/catalog/:isin/refresh-price", 
-          desc: "Fuerza la actualización inmediata de cotización para un fondo específico desde Yahoo Finance o QueFondos.", 
-          auth: "Admin", 
-          res: `{\n  "ok": true,\n  "price": 14.82,\n  "date": "2026-08-17"\n}` 
-        },
-        { 
-          method: "GET", 
-          path: "/api/admin/notifications", 
-          desc: "Estadísticas y monitorización en vivo del pipeline de notificaciones WhatsApp.", 
-          auth: "Admin", 
-          res: `{\n  "configured": 24,\n  "enabled": 24,\n  "total_users": 152,\n  "user_statuses": [ ... ]\n}` 
-        },
-        { 
-          method: "GET", 
-          path: "/api/admin/system", 
-          desc: "Diagnóstico en tiempo real del runtime: consumo de memoria RAM (RSS, Heap), caché activa y versiones del servidor.", 
-          auth: "Admin", 
-          res: `{\n  "memory": { "rss_mb": 142.5, "heap_used_mb": 48.2 },\n  "catalog_cache_size": 492,\n  "bun_version": "1.3.14"\n}` 
-        },
-        { 
-          method: "POST", 
-          path: "/api/admin/system/clear-cache", 
-          desc: "Purga la memoria caché en RAM del servidor para forzar relecturas frescas en las siguientes peticiones.", 
-          auth: "Admin", 
-          res: `{\n  "ok": true\n}` 
-        }
-      ]
-    }
-  ];
-
-  const filteredEndpoints = API_ENDPOINTS.map(grp => ({
-    ...grp,
-    items: grp.items.filter(item => 
-      !searchQuery || 
-      item.path.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.desc.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.method.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  })).filter(grp => grp.items.length > 0);
-
-  // Generate code snippet
-  const generateSnippet = (method: string, path: string, body?: string) => {
-    const origin = window.location.origin;
-    if (selectedLang === "curl") {
-      let cmd = `curl -X ${method} "${origin}${path}" \\\n  -H "Authorization: Bearer YOUR_JWT_TOKEN"`;
-      if (body) {
-        cmd += ` \\\n  -H "Content-Type: application/json" \\\n  -d '${body.replace(/\n\s*/g, " ")}'`;
-      }
-      return cmd;
-    }
-    if (selectedLang === "fetch") {
-      let code = `const res = await fetch("${origin}${path}", {\n  method: "${method}",\n  headers: {\n    "Authorization": "Bearer " + token,\n    "Content-Type": "application/json"\n  }`;
-      if (body) {
-        code += `,\n  body: JSON.stringify(${body})`;
-      }
-      code += `\n});\nconst data = await res.json();\nconsole.log(data);`;
-      return code;
-    }
-    if (selectedLang === "python") {
-      let py = `import requests\n\nurl = "${origin}${path}"\nheaders = {\n    "Authorization": "Bearer YOUR_JWT_TOKEN",\n    "Content-Type": "application/json"\n}\n`;
-      if (body) {
-        py += `payload = ${body}\nres = requests.${method.toLowerCase()}(url, json=payload, headers=headers)\n`;
-      } else {
-        py += `res = requests.${method.toLowerCase()}(url, headers=headers)\n`;
-      }
-      py += `print(res.json())`;
-      return py;
-    }
-    return "";
-  };
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
 
   return (
-    <div ref={sectionRef} className="space-y-6">
-      
-      {/* ── Top Header Banner ── */}
-      <div className="bg-gradient-to-r from-[var(--color-ink-1)] to-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-xl">
-        <div className="absolute right-0 top-0 w-96 h-96 bg-[var(--color-accent)]/5 rounded-full blur-[100px] pointer-events-none" />
-        
-        <div className="max-w-3xl relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 text-[var(--color-accent)] rounded-full text-xs font-semibold mb-3">
-            <BookOpen size={13} />
-            <span>Documentación Técnica &amp; Arquitectura</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--color-fg-1)] tracking-tight mb-2">
-            Manual Completo y Referencia del Sistema
-          </h1>
-          <p className="text-sm text-[var(--color-fg-4)] leading-relaxed">
-            Consola interactiva de APIs, especificaciones de arquitectura, motores de scraping híbridos, esquemas DDL de MySQL y flujos de ejecución.
-          </p>
-        </div>
-
-        {/* Category Navigation Pills */}
-        <div className="flex overflow-x-auto no-scrollbar touch-scroll gap-2 mt-6 pt-6 border-t border-[var(--color-ink-3)] pb-1">
-          {[
-            { key: "overview", label: "Arquitectura", icon: <Layers size={14} /> },
-            { key: "apis", label: "Consola & APIs REST", icon: <Code2 size={14} /> },
-            { key: "scraper", label: "Motor de Scraping", icon: <Zap size={14} /> },
-            { key: "database", label: "Esquema MySQL DDL", icon: <Database size={14} /> },
-            { key: "whatsapp", label: "WhatsApp & Scheduler", icon: <Smartphone size={14} /> },
-            { key: "security", label: "Seguridad & Zero-Trust", icon: <Shield size={14} /> },
-            { key: "deployment", label: "Entorno & Despliegue", icon: <Server size={14} /> },
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveCategory(tab.key as any)}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all shrink-0 ${
-                activeCategory === tab.key
-                  ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_12px_rgba(192,132,252,0.25)]"
-                  : "bg-[var(--color-ink-2)] text-[var(--color-fg-2)] hover:bg-[var(--color-ink-2)] hover:text-[var(--color-fg-1)]"
-              }`}
-            >
-              {tab.icon}
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </div>
+    <div className="space-y-5 fade-in">
+      <div className="flex flex-wrap gap-2">
+        {SECTIONS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => setSection(id)}
+            className={`flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-medium transition-colors ${
+              section === id ? "bg-[var(--color-fg-1)] text-[var(--color-ink-0)]" : "border border-[var(--color-border)] text-[var(--color-fg-3)] hover:text-[var(--color-fg-1)]"
+            }`}
+          >
+            <Icon size={15} /> {label}
+          </button>
+        ))}
       </div>
 
-      {/* ── SECTION 1: ARCHITECTURE OVERVIEW ── */}
-      {activeCategory === "overview" && (
-        <div className="space-y-6">
-          
-          {/* Tech Stack Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            
-            <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-5 hover:border-[var(--color-accent)]/30 transition-all">
-              <div className="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center mb-4">
-                <Cpu size={20} />
+      {section === "endpoints" && (
+        <>
+          <Card>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-[var(--color-fg-1)]">Probar con tu sesión</h2>
+                <p className="text-xs text-[var(--color-fg-4)]">Lanza una petición GET con tu token actual y mira la respuesta real.</p>
               </div>
-              <h3 className="text-base font-bold text-[var(--color-fg-1)] mb-1">Runtime Bun 1.3+</h3>
-              <p className="text-xs text-[var(--color-fg-4)] leading-relaxed mb-3">
-                Motor nativo en Zig/C++. Compila y ejecuta TypeScript instantáneamente sin transpilación. Servidor HTTP de bajísima latencia con <code className="text-[var(--color-fg-1)] font-mono">Bun.serve</code>.
-              </p>
-              <div className="text-[11px] font-mono text-[var(--color-fg-5)]">
-                Punto de entrada: <span className="text-[var(--color-accent)]">src/server/index.ts</span>
-              </div>
-            </div>
-
-            <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-5 hover:border-[var(--color-accent)]/30 transition-all">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center mb-4">
-                <Code2 size={20} />
-              </div>
-              <h3 className="text-base font-bold text-[var(--color-fg-1)] mb-1">React 19 &amp; Tailwind v4</h3>
-              <p className="text-xs text-[var(--color-fg-4)] leading-relaxed mb-3">
-                Interfaz reactiva fluida. Gráficas con Recharts y Canvas nativo. Sincronización entre pestañas en tiempo real vía <code className="text-[var(--color-fg-1)] font-mono">BroadcastChannel</code>.
-              </p>
-              <div className="text-[11px] font-mono text-[var(--color-fg-5)]">
-                Entrada SPA: <span className="text-[var(--color-accent)]">src/client/App.tsx</span>
+              <div className="flex w-full gap-2 sm:w-auto">
+                <select
+                  value={consolePath}
+                  onChange={(e) => setConsolePath(e.target.value)}
+                  className="min-w-0 flex-1 rounded-full border border-[var(--color-border)] bg-[var(--color-ink-2)] px-4 py-2 font-mono text-xs text-[var(--color-fg-1)] outline-none sm:w-72"
+                >
+                  {testable.map((e) => (
+                    <option key={e.path} value={e.path}>
+                      GET {e.path}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={runConsole}
+                  disabled={consoleState.loading}
+                  className="flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--color-btn-bg)] px-4 py-2 text-[13px] font-semibold text-[var(--color-btn-fg)] hover:opacity-85 disabled:opacity-50"
+                >
+                  <Play size={14} /> {consoleState.loading ? "Enviando…" : "Enviar"}
+                </button>
               </div>
             </div>
-
-            <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-5 hover:border-[var(--color-accent)]/30 transition-all">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-4">
-                <Database size={20} />
-              </div>
-              <h3 className="text-base font-bold text-[var(--color-fg-1)] mb-1">MySQL 8 &amp; Connection Pool</h3>
-              <p className="text-xs text-[var(--color-fg-4)] leading-relaxed mb-3">
-                Almacenamiento relacional con <code className="text-[var(--color-fg-1)] font-mono">mysql2/promise</code>, transacciones ACID, auto-migración de esquema y caché en memoria multinivel.
-              </p>
-              <div className="text-[11px] font-mono text-[var(--color-fg-5)]">
-                Gestor de DB: <span className="text-[var(--color-accent)]">src/server/db.ts</span>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Visual Architecture Diagrams */}
-          <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-6 space-y-6">
-            <h3 className="text-sm font-bold text-[var(--color-fg-1)] uppercase tracking-wider flex items-center gap-2">
-              <Layers size={16} className="text-[var(--color-accent)]" />
-              Diagramas de Flujo del Sistema
-            </h3>
-
-            {/* Flow 1 */}
-            <div className="bg-[var(--color-ink-2)] p-4 sm:p-5 rounded-xl border border-[var(--color-ink-3)] space-y-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-[var(--color-accent)] uppercase font-mono">
-                <span>Flujo 1</span> · Ingestión &amp; Cotización de Inversiones
-              </div>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 text-xs font-mono text-center">
-                <div className="bg-[var(--color-ink-2)] p-3 rounded-lg border border-[var(--color-ink-3)] flex-1 flex flex-col justify-center">
-                  <span className="text-[var(--color-fg-1)] font-bold">1. Cliente</span>
-                  <span className="text-[var(--color-fg-4)] text-[10px]">Añade ISIN + títulos</span>
-                </div>
-                <div className="flex sm:hidden items-center justify-center text-[var(--color-accent)] text-xs font-bold py-0.5">↓</div>
-                <div className="hidden sm:flex items-center justify-center text-[var(--color-fg-5)]">➔</div>
-                <div className="bg-[var(--color-ink-2)] p-3 rounded-lg border border-[var(--color-ink-3)] flex-1 flex flex-col justify-center">
-                  <span className="text-blue-400 font-bold">2. Sentinel Engine</span>
-                  <span className="text-[var(--color-fg-4)] text-[10px]">Mapea Yahoo / QueFondos</span>
-                </div>
-                <div className="flex sm:hidden items-center justify-center text-[var(--color-accent)] text-xs font-bold py-0.5">↓</div>
-                <div className="hidden sm:flex items-center justify-center text-[var(--color-fg-5)]">➔</div>
-                <div className="bg-[var(--color-ink-2)] p-3 rounded-lg border border-[var(--color-ink-3)] flex-1 flex flex-col justify-center">
-                  <span className="text-emerald-400 font-bold">3. Base de Datos</span>
-                  <span className="text-[var(--color-fg-4)] text-[10px]">Caché + Cálculo PnL</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Flow 2 */}
-            <div className="bg-[var(--color-ink-2)] p-4 sm:p-5 rounded-xl border border-[var(--color-ink-3)] space-y-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase font-mono">
-                <span>Flujo 2</span> · Pipeline de Notificaciones WhatsApp Diarias
-              </div>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 text-xs font-mono text-center">
-                <div className="bg-[var(--color-ink-2)] p-3 rounded-lg border border-[var(--color-ink-3)] flex-1 flex flex-col justify-center">
-                  <span className="text-[var(--color-fg-1)] font-bold">1. Cron / Timer</span>
-                  <span className="text-[var(--color-fg-4)] text-[10px]">Trigger horario (0-23h)</span>
-                </div>
-                <div className="flex sm:hidden items-center justify-center text-amber-400 text-xs font-bold py-0.5">↓</div>
-                <div className="hidden sm:flex items-center justify-center text-[var(--color-fg-5)]">➔</div>
-                <div className="bg-[var(--color-ink-2)] p-3 rounded-lg border border-[var(--color-ink-3)] flex-1 flex flex-col justify-center">
-                  <span className="text-amber-400 font-bold">2. Digest Generator</span>
-                  <span className="text-[var(--color-fg-4)] text-[10px]">Calcula deltas y totales</span>
-                </div>
-                <div className="flex sm:hidden items-center justify-center text-amber-400 text-xs font-bold py-0.5">↓</div>
-                <div className="hidden sm:flex items-center justify-center text-[var(--color-fg-5)]">➔</div>
-                <div className="bg-[var(--color-ink-2)] p-3 rounded-lg border border-[var(--color-ink-3)] flex-1 flex flex-col justify-center">
-                  <span className="text-emerald-400 font-bold">3. CallMeBot API</span>
-                  <span className="text-[var(--color-fg-4)] text-[10px]">Entrega en WhatsApp</span>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Directory Map */}
-          <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-6">
-            <h3 className="text-sm font-bold text-[var(--color-fg-1)] uppercase tracking-wider mb-4 flex items-center gap-2">
-              <FolderTree size={16} className="text-[var(--color-accent)]" />
-              Estructura de Ficheros y Responsabilidades
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-xs">
-              <div className="bg-[var(--color-ink-2)] p-4 rounded-xl border border-[var(--color-ink-3)] space-y-2 text-[var(--color-fg-2)] overflow-x-auto touch-scroll">
-                <div className="text-[var(--color-accent)] font-bold">// Backend (src/server/)</div>
-                <div>📁 <span className="text-[var(--color-fg-1)] font-semibold">src/server/</span></div>
-                <div className="pl-4 whitespace-nowrap">├── <span className="text-amber-300">index.ts</span> (Servidor HTTP, enrutador REST, rate limit)</div>
-                <div className="pl-4 whitespace-nowrap">├── <span className="text-amber-300">db.ts</span> (Conexión MySQL, queries y schema)</div>
-                <div className="pl-4 whitespace-nowrap">├── <span className="text-amber-300">auth.ts</span> (JWT HMAC-SHA256, Bcrypt, OAuth)</div>
-                <div className="pl-4 whitespace-nowrap">├── <span className="text-amber-300">sentinel.ts</span> (Cálculo de cartera y valoración)</div>
-                <div className="pl-4 whitespace-nowrap">├── <span className="text-amber-300">yahoo.ts</span> (Integración Yahoo Finance v8)</div>
-                <div className="pl-4 whitespace-nowrap">├── <span className="text-amber-300">quefondos.ts</span> (Scraper DOM de fondos españoles)</div>
-                <div className="pl-4 whitespace-nowrap">├── <span className="text-amber-300">metadata.ts</span> (Enriquecimiento TER y sectores)</div>
-                <div className="pl-4 whitespace-nowrap">├── <span className="text-amber-300">whatsapp.ts</span> (Llamadas HTTPS a CallMeBot)</div>
-                <div className="pl-4 whitespace-nowrap">├── <span className="text-amber-300">digest.ts</span> (Formateador de resúmenes WhatsApp)</div>
-                <div className="pl-4 whitespace-nowrap">└── <span className="text-amber-300">admin.ts</span> (Métricas ejecutivas y catálogo)</div>
-              </div>
-
-              <div className="bg-[var(--color-ink-2)] p-4 rounded-xl border border-[var(--color-ink-3)] space-y-2 text-[var(--color-fg-2)] overflow-x-auto touch-scroll">
-                <div className="text-[var(--color-accent)] font-bold">// Frontend (src/client/)</div>
-                <div>📁 <span className="text-client font-semibold">src/client/</span></div>
-                <div className="pl-4 whitespace-nowrap">├── <span className="text-sky-300">main.tsx</span> (Montaje React 19 en DOM)</div>
-                <div className="pl-4 whitespace-nowrap">├── <span className="text-sky-300">App.tsx</span> (Control de rutas y sesión cliente)</div>
-                <div className="pl-4 whitespace-nowrap">├── <span className="text-sky-300">api.ts</span> (Cliente SDK HTTP con tipos TypeScript)</div>
-                <div className="pl-4 whitespace-nowrap">├── <span className="text-sky-300">theme.ts</span> (Gestor de tema Blanco / Oscuro)</div>
-                <div className="pl-4 whitespace-nowrap">└── 📁 <span className="text-sky-300">components/</span></div>
-                <div className="pl-8 whitespace-nowrap">├── <span className="text-[var(--color-fg-4)]">UserDashboard.tsx</span> (Panel de cartera e inversiones)</div>
-                <div className="pl-8 whitespace-nowrap">├── <span className="text-[var(--color-fg-4)]">AdminPanel.tsx</span> (Consola de administración global)</div>
-                <div className="pl-8 whitespace-nowrap">├── <span className="text-[var(--color-fg-4)]">DocsTab.tsx</span> (Este módulo de documentación)</div>
-                <div className="pl-8 whitespace-nowrap">├── <span className="text-[var(--color-fg-4)]">FundCard.tsx</span> (Ficha interactiva de activo)</div>
-                <div className="pl-8 whitespace-nowrap">├── <span className="text-[var(--color-fg-4)]">LoginPage.tsx</span> (Formulario de login)</div>
-                <div className="pl-8 whitespace-nowrap">└── <span className="text-[var(--color-fg-4)]">RegisterPage.tsx</span> (Formulario de registro)</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── SECTION 2: INTERACTIVE LIVE API CONSOLE & REFERENCE ── */}
-      {activeCategory === "apis" && (
-        <div className="space-y-6">
-          
-          {/* Interactive Live Sandbox */}
-          <div className="bg-[var(--color-ink-1)] border border-[var(--color-accent)]/30 rounded-2xl p-4 sm:p-6 shadow-xl">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-              <div className="flex items-center gap-2 text-sm font-bold text-[var(--color-fg-1)]">
-                <Play size={16} className="text-[var(--color-accent)] shrink-0" />
-                <span>Consola Interactiva de Pruebas en Vivo</span>
-              </div>
-              <span className="text-[11px] font-mono text-[var(--color-accent)] bg-[var(--color-accent)]/10 px-2.5 py-1 rounded-full font-bold">
-                Sesión Activa
-              </span>
-            </div>
-            
-            <p className="text-xs text-[var(--color-fg-4)] mb-4">
-              Selecciona cualquier endpoint para ejecutarlo directamente contra el servidor con tus credenciales actuales:
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-3 mb-4">
-              <select
-                value={selectedEndpoint}
-                onChange={(e) => setSelectedEndpoint(e.target.value)}
-                className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] text-[var(--color-fg-1)] text-xs px-3 py-2.5 rounded-xl outline-none focus:border-[var(--color-accent)] font-mono w-full sm:flex-1"
-              >
-                <option value="/api/portfolio">GET /api/portfolio (Cartera del usuario)</option>
-                <option value="/api/auth/me">GET /api/auth/me (Perfil actual)</option>
-                <option value="/api/whatsapp/config">GET /api/whatsapp/config (Config WhatsApp)</option>
-                <option value="/api/notify/preview">GET /api/notify/preview (Preview del informe)</option>
-                <option value="/api/admin/overview">GET /api/admin/overview (Métricas de Admin)</option>
-                <option value="/api/search?q=Ibercaja">GET /api/search?q=Ibercaja (Búsqueda en catálogo)</option>
-                <option value="/api/banks">GET /api/banks (Entidades bancarias)</option>
-                <option value="/api/health">GET /api/health (Estado del servidor)</option>
-              </select>
-
-              <button
-                onClick={() => runLiveTest(selectedEndpoint)}
-                disabled={consoleLoading}
-                className="w-full sm:w-auto px-5 py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold text-xs rounded-xl hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-[0_0_12px_rgba(192,132,252,0.3)] disabled:opacity-50 shrink-0"
-              >
-                {consoleLoading ? <RefreshCw size={14} className="animate-spin" /> : <Play size={14} />}
-                <span>{consoleLoading ? "Ejecutando..." : "Ejecutar Petición"}</span>
-              </button>
-            </div>
-
-            {/* Console Output */}
-            {consoleStatus && (
-              <div className="space-y-2 pt-2 border-t border-[var(--color-ink-3)]">
-                <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2 py-0.5 rounded font-bold ${
-                      consoleStatus.code >= 200 && consoleStatus.code < 300 
-                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" 
-                        : "bg-red-500/20 text-red-400 border border-red-500/30"
-                    }`}>
-                      {consoleStatus.code} {consoleStatus.text}
-                    </span>
-                    <span className="text-[var(--color-fg-4)]">{consoleStatus.ms} ms</span>
-                  </div>
-                  <button 
-                    onClick={() => copyToClipboard(JSON.stringify(consoleResponse, null, 2), "live-res")}
-                    className="text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] transition-colors flex items-center gap-1 text-[11px]"
-                  >
-                    {copiedCode === "live-res" ? <Check size={12} className="text-[var(--color-accent)]" /> : <Copy size={12} />}
-                    <span>{copiedCode === "live-res" ? "Copiado" : "Copiar Resultado"}</span>
-                  </button>
-                </div>
-
-                <pre className="bg-black/80 p-3 sm:p-4 rounded-xl text-xs font-mono text-emerald-400/90 overflow-x-auto touch-scroll border border-[var(--color-ink-3)] max-h-60 scrollbar-thin">
-                  {JSON.stringify(consoleResponse, null, 2)}
-                </pre>
+            {consoleState.body !== undefined && (
+              <div className="mt-4">
+                <p className="mb-2 font-mono text-[11px] text-[var(--color-fg-4)]">
+                  <span className={consoleState.status && consoleState.status < 400 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"}>{consoleState.status || "ERR"}</span> · {consoleState.ms} ms
+                </p>
+                <pre className="max-h-80 overflow-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-ink-0)] p-4 font-mono text-[11px] leading-relaxed text-[var(--color-fg-2)]">{consoleState.body}</pre>
               </div>
             )}
+          </Card>
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-[var(--color-fg-3)]">
+              {total} rutas. Las de <b className="text-[var(--color-fg-1)]">usuario</b> y <b className="text-[var(--color-fg-1)]">admin</b> piden la cabecera <Code>Authorization: Bearer &lt;token&gt;</Code>.
+            </p>
+            <label className="relative w-full sm:w-72">
+              <Search size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-fg-4)]" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar ruta o descripción…"
+                aria-label="Buscar endpoint"
+                className="w-full rounded-full border border-[var(--color-border)] bg-[var(--color-ink-2)] py-2 pl-9 pr-4 text-sm text-[var(--color-fg-1)] outline-none focus:border-[var(--color-accent)]"
+              />
+            </label>
           </div>
 
-          {/* Search bar */}
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-fg-4)]" size={16} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Filtrar por endpoint, método o descripción (ej: portfolio, login, ISIN)..."
-              className="w-full bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] text-[var(--color-fg-1)] text-xs pl-11 pr-4 py-3 rounded-xl outline-none transition-all placeholder:text-[var(--color-fg-5)]"
-            />
-          </div>
+          {filtered.map((group) => (
+            <Card key={group.title} padded={false}>
+              <h2 className="px-5 pb-3 pt-5 text-base font-semibold text-[var(--color-fg-1)]">{group.title}</h2>
+              <ul className="divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
+                {group.endpoints.map((e) => {
+                  const id = `${e.method} ${e.path}`;
+                  const curl = `curl -X ${e.method} "${origin}${e.path}"${e.access === "usuario" || e.access === "admin" ? ' -H "Authorization: Bearer $TOKEN"' : ""}${e.body ? ` -H "Content-Type: application/json" -d '{…}'` : ""}`;
+                  return (
+                    <li key={id} className="px-5 py-3.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`w-16 shrink-0 rounded-md py-0.5 text-center font-mono text-[11px] font-bold ${METHOD_TONE[e.method]}`}>{e.method}</span>
+                        <code className="min-w-0 break-all font-mono text-[13px] text-[var(--color-fg-1)]">{e.path}</code>
+                        <span className="ml-auto flex items-center gap-1.5">
+                          {e.limit && <Tag tone="neutral">{e.limit}/min</Tag>}
+                          {e.csrf && <Tag tone="neutral">CSRF</Tag>}
+                          <Tag tone={ACCESS_TONE[e.access]}>{e.access}</Tag>
+                          <button onClick={() => copy(curl, id)} title="Copiar como curl" className="rounded-lg p-1.5 text-[var(--color-fg-4)] hover:bg-[var(--color-surface)] hover:text-[var(--color-fg-1)]">
+                            {copied === id ? <Check size={14} className="text-[var(--color-profit)]" /> : <Copy size={14} />}
+                          </button>
+                        </span>
+                      </div>
+                      <p className="mt-1.5 text-sm text-[var(--color-fg-3)] sm:pl-[4.5rem]">{e.description}</p>
+                      {(e.params || e.body || e.returns) && (
+                        <dl className="mt-2 grid gap-1 text-xs sm:pl-[4.5rem]">
+                          {e.params && (
+                            <div className="flex gap-2">
+                              <dt className="w-20 shrink-0 text-[var(--color-fg-4)]">Parámetros</dt>
+                              <dd className="font-mono text-[var(--color-fg-2)]">{e.params}</dd>
+                            </div>
+                          )}
+                          {e.body && (
+                            <div className="flex gap-2">
+                              <dt className="w-20 shrink-0 text-[var(--color-fg-4)]">Cuerpo</dt>
+                              <dd className="break-all font-mono text-[var(--color-fg-2)]">{e.body}</dd>
+                            </div>
+                          )}
+                          {e.returns && (
+                            <div className="flex gap-2">
+                              <dt className="w-20 shrink-0 text-[var(--color-fg-4)]">Devuelve</dt>
+                              <dd className="break-all font-mono text-[var(--color-fg-2)]">{e.returns}</dd>
+                            </div>
+                          )}
+                        </dl>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </Card>
+          ))}
+          {filtered.length === 0 && <p className="text-sm text-[var(--color-fg-4)]">Ninguna ruta coincide con «{query}».</p>}
+        </>
+      )}
 
-          {/* Snippet Language Selector */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <h3 className="text-sm font-bold text-[var(--color-fg-1)]">Referencia Completa de Endpoints</h3>
-            <div className="flex items-center gap-1 bg-[var(--color-ink-2)] p-1 rounded-xl border border-[var(--color-ink-3)] self-start sm:self-auto">
-              {(["curl", "fetch", "python"] as const).map((lang) => (
-                <button
-                  key={lang}
-                  onClick={() => setSelectedLang(lang)}
-                  className={`px-3 py-1 rounded-lg text-xs font-mono font-medium transition-all ${
-                    selectedLang === lang 
-                      ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-bold" 
-                      : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
-                  }`}
-                >
-                  {lang.toUpperCase()}
-                </button>
+      {section === "how" && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <Label>Autenticación</Label>
+            <ul className="mt-3 space-y-2.5 text-sm leading-relaxed text-[var(--color-fg-2)]">
+              <li>Al entrar o registrarte, la API devuelve un <b>token JWT</b>. El panel lo guarda en la pestaña y en la cookie <Code>ft_session</Code>.</li>
+              <li>Las rutas protegidas leen la cabecera <Code>Authorization: Bearer &lt;token&gt;</Code>.</li>
+              <li>En cada petición se vuelve a mirar en la base de datos si la cuenta existe y si es administradora, así que quitar permisos surte efecto al momento.</li>
+              <li>También se puede entrar con Google o GitHub (OAuth).</li>
+            </ul>
+          </Card>
+          <Card>
+            <Label>Protección</Label>
+            <ul className="mt-3 space-y-2.5 text-sm leading-relaxed text-[var(--color-fg-2)]">
+              <li><b>CSRF:</b> las rutas que cambian datos comprueban que <Code>Origin</Code> o <Code>Referer</Code> coincidan con <Code>ALLOWED_ORIGIN</Code>.</li>
+              <li><b>Límites:</b> ventanas de 60 s por IP (o por usuario al escribir fondos). Al pasarse, responde <Code>429</Code>.</li>
+              <li><b>Cabeceras:</b> CSP con nonce por petición, <Code>X-Frame-Options: DENY</Code>, <Code>nosniff</Code> y HSTS en producción.</li>
+              <li><b>Cuentas:</b> al desactivar un usuario se marca con <Code>deleted_at</Code>; un administrador puede restaurarlo.</li>
+            </ul>
+          </Card>
+          <Card className="lg:col-span-2">
+            <Label>De dónde salen los precios</Label>
+            <div className="mt-3 grid gap-4 md:grid-cols-3">
+              {[
+                { name: "QueFondos", what: "Fondos españoles (por ISIN)", detail: "Valor liquidativo vigente con 6 decimales y su fecha oficial, rentabilidades a 1, 3 y 5 años y serie mensual de 10 años. Caché de 5 minutos." },
+                { name: "Financial Times", what: "Histórico diario (2 años)", detail: "Valor de cada día hábil, con 2 decimales. Se une a la serie mensual y el último día conserva el valor exacto de QueFondos. Caché de 6 horas; si falla, queda la serie mensual." },
+                { name: "Yahoo Finance", what: "ETFs y fondos con ticker", detail: "Cotización y serie histórica cuando el ISIN no está en QueFondos. Caché de 5 minutos." },
+              ].map((s) => (
+                <div key={s.name} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+                  <p className="font-semibold text-[var(--color-fg-1)]">{s.name}</p>
+                  <p className="text-xs text-[var(--color-accent)]">{s.what}</p>
+                  <p className="mt-2 text-[13px] leading-relaxed text-[var(--color-fg-3)]">{s.detail}</p>
+                </div>
               ))}
             </div>
+            <p className="mt-4 text-[13px] leading-relaxed text-[var(--color-fg-3)]">
+              Con la serie diaria, cada compra se compara con el valor publicado entre el día anterior y los 4 siguientes (margen del 0,15 %). Si no coincide, la tarjeta del fondo avisa para revisarla con el extracto.
+            </p>
+          </Card>
+        </div>
+      )}
+
+      {section === "database" && (
+        <Card padded={false}>
+          <div className="px-5 pb-3 pt-5">
+            <h2 className="text-lg font-semibold text-[var(--color-fg-1)]">Tablas</h2>
+            <p className="text-xs text-[var(--color-fg-4)]">
+              MySQL 8 o TiDB Cloud (TLS opcional con <Code>MYSQL_SSL=true</Code>). Las tablas y columnas se crean o migran solas al arrancar (<Code>src/server/db.ts</Code>). <Code>?</Code> = puede ser nulo.
+            </p>
           </div>
-
-          {/* Endpoints List */}
-          <div className="space-y-6">
-            {filteredEndpoints.map((group, gIdx) => (
-              <div key={gIdx} className="space-y-3">
-                <h4 className="text-xs font-mono font-bold text-[var(--color-accent)] uppercase tracking-wider border-b border-[var(--color-ink-3)] pb-2">
-                  {group.group}
-                </h4>
-
-                <div className="space-y-3">
-                  {group.items.map((ep, epIdx) => {
-                    const snippetId = `ep-${gIdx}-${epIdx}`;
-                    const codeSnippet = generateSnippet(ep.method, ep.path, ep.body);
-
-                    return (
-                      <div key={epIdx} className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-xl p-4 sm:p-5 space-y-3 hover:border-[var(--color-ink-3)] transition-all">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className={`px-2.5 py-0.5 rounded font-mono text-[11px] font-bold shrink-0 ${
-                              ep.method === "GET" ? "bg-blue-500/15 text-blue-400 border border-blue-500/30" :
-                              ep.method === "POST" ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30" :
-                              ep.method === "PUT" ? "bg-amber-500/15 text-amber-400 border border-amber-500/30" :
-                              "bg-red-500/15 text-red-400 border border-red-500/30"
-                            }`}>
-                              {ep.method}
-                            </span>
-                            <code className="text-xs sm:text-sm font-mono font-bold text-[var(--color-fg-1)] break-all">{ep.path}</code>
-                          </div>
-
-                          {ep.auth && (
-                            <span className="text-[10px] sm:text-[11px] font-mono px-2 py-0.5 rounded bg-[var(--color-ink-2)] text-[var(--color-fg-2)] border border-[var(--color-ink-3)] flex items-center gap-1.5 shrink-0">
-                              <Lock size={11} className="text-amber-400" />
-                              {typeof ep.auth === "string" ? ep.auth : "JWT Bearer"}
-                            </span>
-                          )}
-                        </div>
-
-                        <p className="text-xs text-[var(--color-fg-2)] leading-relaxed">{ep.desc}</p>
-
-                        {/* Code Snippet Box */}
-                        <div className="space-y-1.5 pt-1">
-                          <div className="flex items-center justify-between text-[10px] font-mono text-[var(--color-fg-5)] uppercase tracking-wider">
-                            <span>Código ({selectedLang.toUpperCase()})</span>
-                            <button 
-                              onClick={() => copyToClipboard(codeSnippet, snippetId)}
-                              className="text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] transition-colors flex items-center gap-1"
-                            >
-                              {copiedCode === snippetId ? <Check size={11} className="text-[var(--color-accent)]" /> : <Copy size={11} />}
-                              <span>{copiedCode === snippetId ? "Copiado" : "Copiar"}</span>
-                            </button>
-                          </div>
-                          <pre className="bg-[var(--color-ink-2)] p-3 rounded-xl text-[11px] font-mono text-[var(--color-fg-2)] overflow-x-auto touch-scroll border border-[var(--color-ink-3)] scrollbar-thin">
-                            {codeSnippet}
-                          </pre>
-                        </div>
-                      </div>
-                    );
-                  })}
+          <ul className="divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
+            {TABLES.map((t) => (
+              <li key={t.name} className="grid gap-1 px-5 py-3.5 md:grid-cols-[14rem_1fr] md:gap-4">
+                <div>
+                  <p className="font-mono text-sm font-semibold text-[var(--color-fg-1)]">{t.name}</p>
+                  <p className="text-xs text-[var(--color-fg-4)]">{t.purpose}</p>
                 </div>
-              </div>
+                <p className="font-mono text-xs leading-relaxed text-[var(--color-fg-2)]">{t.columns}</p>
+              </li>
             ))}
-          </div>
-        </div>
+          </ul>
+        </Card>
       )}
 
-      {/* ── SECTION 3: QUOTES & SCRAPING ENGINE ── */}
-      {activeCategory === "scraper" && (
-        <div className="space-y-6">
-          <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-6 space-y-6">
-            <div>
-              <h3 className="text-base font-bold text-[var(--color-fg-1)] mb-2 flex items-center gap-2">
-                <Zap size={18} className="text-[var(--color-accent)]" />
-                Motor de Cotizaciones &amp; Scraping Híbrido
-              </h3>
-              <p className="text-xs text-[var(--color-fg-4)] leading-relaxed">
-                FondTracker implementa una arquitectura dual de extracción de datos financieros que garantiza sincronización en tiempo real sin coste de APIs de pago.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              
-              {/* Yahoo */}
-              <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-5 space-y-3">
-                <div className="flex items-center gap-2 text-sm font-bold text-blue-400">
-                  <Globe size={16} />
-                  <span>Motor 1: Yahoo Finance v8 API (<code className="text-xs font-mono text-[var(--color-fg-1)]">src/server/yahoo.ts</code>)</span>
-                </div>
-                <p className="text-xs text-[var(--color-fg-4)] leading-relaxed">
-                  Orientado a ETFs y fondos internacionales indexados.
-                </p>
-                <div className="bg-[var(--color-ink-2)] p-3 rounded-lg text-[11px] font-mono text-blue-300 border border-[var(--color-ink-3)]">
-                  GET https://query1.finance.yahoo.com/v8/finance/chart/{'{ticker}'}?range={'{range}'}&amp;interval=1d
-                </div>
-                <ul className="text-xs text-[var(--color-fg-2)] space-y-1.5 list-disc list-inside">
-                  <li>Resolución inteligente de ticker a partir del código ISIN en base de datos.</li>
-                  <li>Soporte de sufijos bursátiles: <code className="text-[var(--color-fg-1)]">.MC</code> (BME), <code className="text-[var(--color-fg-1)]">.DE</code> (Xetra), <code className="text-[var(--color-fg-1)]">.AS</code> (Amsterdam), <code className="text-[var(--color-fg-1)]">.F</code> (Frankfurt).</li>
-                  <li>Generación de series temporales de velas con OHLCV para gráficas de 1M hasta MAX.</li>
-                </ul>
-              </div>
-
-              {/* QueFondos */}
-              <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-5 space-y-3">
-                <div className="flex items-center gap-2 text-sm font-bold text-amber-400">
-                  <Search size={16} />
-                  <span>Motor 2: QueFondos DOM Scraper (<code className="text-xs font-mono text-[var(--color-fg-1)]">src/server/quefondos.ts</code>)</span>
-                </div>
-                <p className="text-xs text-[var(--color-fg-4)] leading-relaxed">
-                  Orientado a fondos mutuos de banca española (Santander, BBVA, Caixabank, Ibercaja, Kutxabank, etc.).
-                </p>
-                <div className="bg-[var(--color-ink-2)] p-3 rounded-lg text-[11px] font-mono text-amber-300 border border-[var(--color-ink-3)]">
-                  GET https://www.quefondos.com/es/fondos/ficha/index.html?isin={'{ISIN}'}
-                </div>
-                <ul className="text-xs text-[var(--color-fg-2)] space-y-1.5 list-disc list-inside">
-                  <li>Protección anti-SSRF y validación estricta de IPs de destino.</li>
-                  <li>Extracción robusta del Valor Liquidativo (NAV) y fecha oficial mediante expresiones regulares DoS-safe.</li>
-                  <li>Detección de datos desactualizados (&gt;3 días hábiles) con alerta visual en la UI.</li>
-                </ul>
-              </div>
-
-            </div>
-
-            {/* Cache Strategy */}
-            <div className="bg-[var(--color-ink-2)] p-5 rounded-xl border border-[var(--color-ink-3)] space-y-3">
-              <h4 className="text-xs font-bold text-[var(--color-fg-1)] uppercase tracking-wider font-mono flex items-center gap-2">
-                <RefreshCw size={14} className="text-[var(--color-accent)]" />
-                Política de Caché &amp; Resiliencia Offline
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-[var(--color-fg-2)]">
-                <div className="bg-[var(--color-ink-2)] p-3 rounded-lg border border-[var(--color-ink-3)]">
-                  <div className="font-bold text-[var(--color-fg-1)] mb-1">1. Caché RAM (5 min)</div>
-                  <p className="text-[var(--color-fg-4)] text-[11px]">Evita llamadas redundantes a Yahoo/QueFondos en peticiones sucesivas.</p>
-                </div>
-                <div className="bg-[var(--color-ink-2)] p-3 rounded-lg border border-[var(--color-ink-3)]">
-                  <div className="font-bold text-[var(--color-fg-1)] mb-1">2. Caché DB MySQL</div>
-                  <p className="text-[var(--color-fg-4)] text-[11px]">Guarda el último valor conocido. Si los proveedores fallan, la app sigue operativa.</p>
-                </div>
-                <div className="bg-[var(--color-ink-2)] p-3 rounded-lg border border-[var(--color-ink-3)]">
-                  <div className="font-bold text-[var(--color-fg-1)] mb-1">3. Invalidación Admin</div>
-                  <p className="text-[var(--color-fg-4)] text-[11px]">Los administradores pueden vaciar la caché de cualquier activo con 1 clic.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      {section === "whatsapp" && (
+        <Card>
+          <Label>Resumen diario por WhatsApp</Label>
+          <ul className="mt-3 space-y-2.5 text-sm leading-relaxed text-[var(--color-fg-2)]">
+            <li>Se envía con <b>CallMeBot</b>: cada usuario pone su teléfono y su clave gratuita en la sección WhatsApp.</li>
+            <li>El servidor revisa cada <b>15 minutos</b> qué usuarios tienen esa hora elegida (en su zona horaria) y les manda el resumen: valor de la cartera, cambio del día y detalle por fondo.</li>
+            <li>En servidores que se duermen (como Render gratis), un cron externo puede llamar a <Code>GET /api/digest/trigger?secret=…</Code> con el valor de <Code>CRON_SECRET</Code>.</li>
+            <li>El saludo usa el nombre de Ajustes → Perfil, o el usuario si no lo hay.</li>
+          </ul>
+        </Card>
       )}
-
-      {/* ── SECTION 4: DATABASE DDL SCHEMA ── */}
-      {activeCategory === "database" && (
-        <div className="space-y-6">
-          <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-6 space-y-6">
-            <div>
-              <h3 className="text-base font-bold text-[var(--color-fg-1)] mb-2 flex items-center gap-2">
-                <Database size={18} className="text-[var(--color-accent)]" />
-                Esquema de Base de Datos MySQL &amp; DDL
-              </h3>
-              <p className="text-xs text-[var(--color-fg-4)] leading-relaxed">
-                Estructura de tablas relacionales con soporte para soft-deletes, índices de rendimiento y tipos numéricos de alta precisión (<code className="text-[var(--color-fg-1)] font-mono">DECIMAL(14,4)</code>).
-              </p>
-            </div>
-
-            {/* DDL SQL Box */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs font-mono text-[var(--color-fg-4)]">
-                <span>schema.sql (Sentencias DDL Idempotentes)</span>
-                <button 
-                  onClick={() => copyToClipboard(SQL_SCHEMA_CODE, "sql-schema")}
-                  className="text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] transition-colors flex items-center gap-1"
-                >
-                  {copiedCode === "sql-schema" ? <Check size={12} className="text-[var(--color-accent)]" /> : <Copy size={12} />}
-                  <span>{copiedCode === "sql-schema" ? "Copiado" : "Copiar SQL"}</span>
-                </button>
-              </div>
-
-              <pre className="bg-black/70 p-4 rounded-xl text-xs font-mono text-sky-300 overflow-x-auto border border-[var(--color-ink-3)] max-h-96 scrollbar-thin">
-                {SQL_SCHEMA_CODE}
-              </pre>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── SECTION 5: WHATSAPP NOTIFICATION SYSTEM ── */}
-      {activeCategory === "whatsapp" && (
-        <div className="space-y-6">
-          <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-6 space-y-6">
-            <div>
-              <h3 className="text-base font-bold text-[var(--color-fg-1)] mb-2 flex items-center gap-2">
-                <Smartphone size={18} className="text-[var(--color-accent)]" />
-                Arquitectura de Notificaciones WhatsApp &amp; Cron
-              </h3>
-              <p className="text-xs text-[var(--color-fg-4)] leading-relaxed">
-                Permite a los usuarios recibir automáticamente su patrimonio neto, ganancias acumuladas y deltas diarios directamente en WhatsApp.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              
-              <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-5 space-y-3">
-                <h4 className="text-sm font-bold text-[var(--color-fg-1)]">CallMeBot Integration Flow</h4>
-                <p className="text-xs text-[var(--color-fg-4)] leading-relaxed">
-                  Las notificaciones se transmiten mediante peticiones HTTP seguras hacia la pasarela CallMeBot:
-                </p>
-                <div className="bg-[var(--color-ink-2)] p-3 rounded-lg text-[11px] font-mono text-emerald-400 border border-[var(--color-ink-3)]">
-                  https://api.callmebot.com/whatsapp.php?phone=+34...&amp;text=...&amp;apikey=...
-                </div>
-                <ul className="text-xs text-[var(--color-fg-2)] space-y-1.5 list-disc list-inside">
-                  <li>Escapado seguro de caracteres especiales (espacios, saltos de línea, asteriscos).</li>
-                  <li>División inteligente de mensajes (chunking) si la cartera supera el límite de longitud de WhatsApp.</li>
-                  <li>Reintentos automáticos en caso de fallo temporal de red.</li>
-                </ul>
-              </div>
-
-              <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-5 space-y-3">
-                <h4 className="text-sm font-bold text-[var(--color-fg-1)]">Scheduler Interno &amp; Disparador Externo</h4>
-                <p className="text-xs text-[var(--color-fg-4)] leading-relaxed">
-                  El servidor incluye un planificador en memoria que evalúa cada hora si algún usuario tiene programada una notificación para ese tramo. Para servidores serverless o plataformas con sleep (Render, Railway), se expone el endpoint:
-                </p>
-                <div className="bg-[var(--color-ink-2)] p-3 rounded-lg text-[11px] font-mono text-amber-300 border border-[var(--color-ink-3)]">
-                  POST /api/digest/trigger (Header: x-cron-secret: $CRON_SECRET)
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── SECTION 6: SECURITY & ZERO-TRUST ── */}
-      {activeCategory === "security" && (
-        <div className="space-y-6">
-          <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-6 space-y-6">
-            <div>
-              <h3 className="text-base font-bold text-[var(--color-fg-1)] mb-2 flex items-center gap-2">
-                <Shield size={18} className="text-[var(--color-accent)]" />
-                Medidas de Seguridad &amp; Aislamiento Multi-Inquilino
-              </h3>
-              <p className="text-xs text-[var(--color-fg-4)] leading-relaxed">
-                Diseño defensivo en profundidad para garantizar que los datos financieros de cada usuario estén 100% aislados y protegidos.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              
-              <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-5 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
-                  <Key size={15} />
-                  <span>Aislamiento SQL Estricto</span>
-                </div>
-                <p className="text-xs text-[var(--color-fg-4)] leading-relaxed">
-                  Todas las consultas de cartera, fondos y configuración inyectan forzosamente <code className="text-[var(--color-fg-1)] font-mono">WHERE user_id = ?</code>. Es matemáticamente imposible acceder a inversiones de otro usuario.
-                </p>
-              </div>
-
-              <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-5 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-blue-400">
-                  <Lock size={15} />
-                  <span>CSP con Nonces Criptográficos</span>
-                </div>
-                <p className="text-xs text-[var(--color-fg-4)] leading-relaxed">
-                  Headers <code className="text-[var(--color-fg-1)] font-mono">Content-Security-Policy</code> estrictos generados dinámicamente con nonces criptográficos por petición, mitigando ataques de Cross-Site Scripting (XSS).
-                </p>
-              </div>
-
-              <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-5 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-amber-400">
-                  <Sliders size={15} />
-                  <span>Rate Limiting &amp; SSRF Guard</span>
-                </div>
-                <p className="text-xs text-[var(--color-fg-4)] leading-relaxed">
-                  Limitador de peticiones por IP en memoria (<code className="text-[var(--color-fg-1)] font-mono">rateLimitMap</code>) contra ataques de fuerza bruta y validación de DNS para prevenir conexiones a redes internas privadas.
-                </p>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── SECTION 7: DEPLOYMENT & ENVIRONMENT ── */}
-      {activeCategory === "deployment" && (
-        <div className="space-y-6">
-          <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-6 space-y-6">
-            <div>
-              <h3 className="text-base font-bold text-[var(--color-fg-1)] mb-2 flex items-center gap-2">
-                <Server size={18} className="text-[var(--color-accent)]" />
-                Variables de Entorno &amp; Guía de Despliegue
-              </h3>
-              <p className="text-xs text-[var(--color-fg-4)] leading-relaxed">
-                Configuración completa requerida para desplegar FondTracker en cualquier servidor local, VPS o plataforma cloud (Render, Railway, Fly.io).
-              </p>
-            </div>
-
-            {/* Env Table */}
-            <div className="overflow-x-auto touch-scroll">
-              <table className="w-full text-left font-mono text-xs min-w-[480px]">
-                <thead>
-                  <tr className="border-b border-[var(--color-ink-3)] text-[var(--color-fg-4)]">
-                    <th className="pb-2 font-medium">Variable</th>
-                    <th className="pb-2 font-medium">Obligatoria</th>
-                    <th className="pb-2 font-medium">Descripción</th>
-                  </tr>
-                </thead>
-                <tbody className="text-[var(--color-fg-2)] divide-y divide-[var(--color-ink-3)]">
-                  <tr><td className="py-2 text-[var(--color-accent)]">PORT</td><td>No (Default 3741)</td><td>Puerto TCP en el que escucha el servidor</td></tr>
-                  <tr><td className="py-2 text-[var(--color-accent)]">MYSQL_HOST</td><td>Sí</td><td>Host de la base de datos (ej: 127.0.0.1 o host remoto)</td></tr>
-                  <tr><td className="py-2 text-[var(--color-accent)]">MYSQL_PORT</td><td>No (Default 3306)</td><td>Puerto de MySQL</td></tr>
-                  <tr><td className="py-2 text-[var(--color-accent)]">MYSQL_USER</td><td>Sí</td><td>Usuario de base de datos con permisos CRUD</td></tr>
-                  <tr><td className="py-2 text-[var(--color-accent)]">MYSQL_PASSWORD</td><td>Sí</td><td>Contraseña del usuario MySQL</td></tr>
-                  <tr><td className="py-2 text-[var(--color-accent)]">MYSQL_DATABASE</td><td>Sí</td><td>Nombre de la base de datos (ej: fondtracker)</td></tr>
-                  <tr><td className="py-2 text-[var(--color-accent)]">JWT_SECRET</td><td>Sí</td><td>Clave secreta criptográfica para firmar tokens JWT</td></tr>
-                  <tr><td className="py-2 text-[var(--color-accent)]">CRON_SECRET</td><td>Sí</td><td>Clave compartida para ejecutar /api/digest/trigger desde crons externos</td></tr>
-                  <tr><td className="py-2 text-[var(--color-accent)]">GOOGLE_CLIENT_ID</td><td>Opcional</td><td>ID de cliente OAuth de Google Console</td></tr>
-                  <tr><td className="py-2 text-[var(--color-accent)]">GOOGLE_CLIENT_SECRET</td><td>Opcional</td><td>Secret OAuth de Google Console</td></tr>
-                  <tr><td className="py-2 text-[var(--color-accent)]">GITHUB_CLIENT_ID</td><td>Opcional</td><td>ID de cliente OAuth de GitHub Developers</td></tr>
-                  <tr><td className="py-2 text-[var(--color-accent)]">GITHUB_CLIENT_SECRET</td><td>Opcional</td><td>Secret OAuth de GitHub Developers</td></tr>
-                </tbody>
-              </table>
-            </div>
-
-            {/* CLI Commands */}
-            <div className="space-y-2 pt-4 border-t border-[var(--color-ink-3)]">
-              <h4 className="text-xs font-bold text-[var(--color-fg-1)] uppercase tracking-wider font-mono">Comandos CLI Habituales (Bun)</h4>
-              <div className="bg-[var(--color-ink-2)] p-4 rounded-xl text-xs font-mono text-[var(--color-fg-2)] space-y-2 border border-[var(--color-ink-3)]">
-                <div><span className="text-[var(--color-fg-5)]"># Iniciar en desarrollo:</span> <span className="text-[var(--color-accent)]">bun run src/server/index.ts</span></div>
-                <div><span className="text-[var(--color-fg-5)]"># Construir bundle de producción:</span> <span className="text-[var(--color-accent)]">bun run build</span></div>
-                <div><span className="text-[var(--color-fg-5)]"># Ejecutar suite de pruebas:</span> <span className="text-[var(--color-accent)]">bun test</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }
-
-const SQL_SCHEMA_CODE = `-- ─── FondTracker MySQL Relational Schema ───────────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS users (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  username VARCHAR(50) NOT NULL UNIQUE,
-  email VARCHAR(255) NOT NULL UNIQUE,
-  password_hash VARCHAR(255) NOT NULL,
-  phone VARCHAR(30) NULL,
-  is_admin BOOLEAN NOT NULL DEFAULT 0,
-  auth_provider VARCHAR(20) NOT NULL DEFAULT 'local',
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  deleted_at DATETIME NULL,
-  INDEX idx_users_email (email),
-  INDEX idx_users_username (username)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS investments (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
-  isin VARCHAR(12) NOT NULL,
-  shares DECIMAL(14,4) NOT NULL,
-  purchase_price DECIMAL(14,4) NOT NULL,
-  purchase_date DATE NOT NULL,
-  notes TEXT NULL,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  deleted_at DATETIME NULL,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  INDEX idx_investments_user (user_id),
-  INDEX idx_investments_isin (isin)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS fund_catalog (
-  isin VARCHAR(12) PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  bank VARCHAR(100) NULL,
-  category VARCHAR(100) NULL,
-  risk_level INT NULL,
-  yahoo_ticker VARCHAR(50) NULL,
-  ter DECIMAL(5,2) NULL,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_catalog_bank (bank),
-  INDEX idx_catalog_category (category)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS price_cache (
-  isin VARCHAR(12) PRIMARY KEY,
-  price DECIMAL(14,4) NOT NULL,
-  change_pct DECIMAL(8,4) NULL,
-  currency VARCHAR(10) NOT NULL DEFAULT 'EUR',
-  market_date VARCHAR(20) NULL,
-  data_source VARCHAR(20) NOT NULL DEFAULT 'quefondos',
-  cached_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_price_cached_at (cached_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS settings (
-  \`key\` VARCHAR(100) PRIMARY KEY,
-  \`value\` TEXT NOT NULL,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`;
