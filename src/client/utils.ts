@@ -2,9 +2,25 @@ export function formatCurrency(value: number, currency: string = "EUR"): string 
   return `${value.toFixed(2)}${currency === "EUR" ? "€" : " " + currency}`;
 }
 
+// es-ES con punto de miles siempre (Intl no agrupa números de 4 cifras en español).
+function formatEsNumber(value: number, decimals = 2): string {
+  const rounded = Math.round(Math.abs(value) * 10 ** decimals) / 10 ** decimals;
+  const [int, dec] = rounded.toFixed(decimals).split(".");
+  const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  const sign = value < 0 && rounded !== 0 ? "-" : "";
+  return `${sign}${grouped}${dec ? "," + dec : ""}`;
+}
+
+export function formatEur(value: number): string {
+  if (!Number.isFinite(value)) return "—";
+  return `${formatEsNumber(value)} €`;
+}
+
 export function formatPct(value: number): string {
-  const sign = value >= 0 ? "+" : "";
-  return `${sign}${value.toFixed(2)}%`;
+  if (!Number.isFinite(value)) return "—";
+  const text = formatEsNumber(value);
+  const sign = value > 0 && text !== "0,00" ? "+" : "";
+  return `${sign}${text} %`;
 }
 
 export function profitColor(value: number): string {
