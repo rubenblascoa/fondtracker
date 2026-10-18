@@ -5,6 +5,8 @@ const DB_PORT = Number(process.env.MYSQL_PORT ?? 3306);
 const DB_USER = process.env.MYSQL_USER ?? "root";
 const DB_PASSWORD = process.env.MYSQL_PASSWORD ?? "";
 const DB_NAME = process.env.MYSQL_DATABASE ?? "fondtracker";
+// TiDB Cloud (and most hosted MySQL) require TLS
+const DB_SSL = process.env.MYSQL_SSL === "true";
 
 export const pool = await mysql.createPool({
   host: DB_HOST,
@@ -12,6 +14,7 @@ export const pool = await mysql.createPool({
   user: DB_USER,
   password: DB_PASSWORD,
   database: DB_NAME,
+  ...(DB_SSL ? { ssl: { minVersion: "TLSv1.2", rejectUnauthorized: true } } : {}),
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 50,
@@ -50,7 +53,7 @@ export async function ensureSchema() {
       UNIQUE KEY unique_username (username),
       UNIQUE KEY unique_google (google_id),
       UNIQUE KEY unique_github (github_id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
   `);
   
   // Safe migrations for existing tables
@@ -100,7 +103,7 @@ export async function ensureSchema() {
       notes TEXT,
       created_at DATETIME NOT NULL,
       updated_at DATETIME NOT NULL
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
   `);
   await createIndexIfNotExists("idx_investments_isin", "investments", "isin");
   await pool.query(`
@@ -110,7 +113,7 @@ export async function ensureSchema() {
       value DECIMAL(15,2) NOT NULL,
       recorded_at DATETIME NOT NULL,
       FOREIGN KEY (fund_id) REFERENCES investments(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
   `);
   await createIndexIfNotExists("idx_fund_history_fund", "fund_history", "fund_id");
   await createIndexIfNotExists("idx_fund_history_date", "fund_history", "recorded_at DESC");
@@ -118,7 +121,7 @@ export async function ensureSchema() {
     CREATE TABLE IF NOT EXISTS settings (
       setting_key VARCHAR(255) PRIMARY KEY,
       setting_value TEXT NOT NULL
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
   `);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS fund_catalog (
@@ -132,10 +135,13 @@ export async function ensureSchema() {
       yahoo_ticker VARCHAR(30) DEFAULT NULL,
       base_price DECIMAL(15,6) DEFAULT NULL,
       last_updated DATETIME DEFAULT NULL,
-      UNIQUE KEY unique_isin (isin),
-      FULLTEXT KEY ft_fund_search (name, isin, bank, category)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+      UNIQUE KEY unique_isin (isin)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
   `);
+  // FULLTEXT is not supported everywhere (e.g. TiDB); search falls back to LIKE
+  try {
+    await pool.query(`ALTER TABLE fund_catalog ADD FULLTEXT KEY ft_fund_search (name, isin, bank, category)`);
+  } catch {} // Ignore if already exists or unsupported
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS fund_prices (
@@ -145,7 +151,7 @@ export async function ensureSchema() {
       updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (isin),
       FOREIGN KEY (isin) REFERENCES fund_catalog(isin) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
   `);
 
 
@@ -381,9 +387,14 @@ export const queries = {
     sql += ` ORDER BY name ASC LIMIT ?`;
     params.push(limit);
 
-    let [rows] = await pool.query(sql, params);
+    let rows: any;
+    try {
+      [rows] = await pool.query(sql, params);
+    } catch {
+      rows = []; // MATCH ... AGAINST unsupported (e.g. TiDB) → use LIKE below
+    }
 
-    // Fallback to LIKE if fulltext returned nothing
+    // Fallback to LIKE if fulltext returned nothing or failed
     if ((rows as any[]).length === 0 && query && query.trim()) {
       let fallbackSql = `SELECT * FROM fund_catalog WHERE (name LIKE ? OR isin LIKE ? OR bank LIKE ? OR category LIKE ?)`;
       const likeParam = `%${query.trim()}%`;
