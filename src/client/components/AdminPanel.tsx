@@ -1,17 +1,17 @@
 import { investedOverTime } from "../adminStats";
-import { formatCompactEur } from "../utils";
+import { formatCompactEur, formatEur, formatPct } from "../utils";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { api, type User, getSpecificFundUrl, getFundDataSourceInfo, getBankPortalInfo } from "../api";
 import { useTheme } from "../theme";
-import { 
+import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Area, AreaChart, BarChart, Bar
 } from 'recharts';
-import { 
+import {
   LayoutDashboard, Users, Database, Smartphone, Server, Shield, Activity, Search,
   ArrowUpRight, ArrowDownRight, Edit2, Trash2, CheckCircle2, XCircle,
-  RefreshCw, Power, Eye, EyeOff, Download, Sparkles, Plus, Send,
-  FileText, Check, Copy, AlertTriangle, TrendingUp, Clock, Building2,
+  RefreshCw, Power, Download, Sparkles, Plus, Send,
+  FileText, Check, AlertTriangle, TrendingUp, Clock, Building2,
   X, ExternalLink, UserCheck, UserX, ChevronRight, Filter, Globe, Sun, Moon
 } from 'lucide-react';
 import { AdminReportTemplate } from "./AdminReportTemplate";
@@ -23,14 +23,13 @@ export type AdminSubSection = "overview" | "users" | "catalog" | "notifications"
 
 // ─── Utils ─────────────────────────────────────────────────────────────────────
 function fmtNum(n: number) {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return String(n);
+  return new Intl.NumberFormat("es-ES").format(Number(n) || 0);
 }
+/** Euros a la española: céntimos hasta 1.000 €, sin céntimos hasta 100.000 € y abreviado a partir de ahí. */
 function fmtEur(n: number) {
-  if (n >= 1_000_000) return `€${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `€${(n / 1_000).toFixed(1)}K`;
-  return `€${Number(n || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const v = Number(n) || 0;
+  if (Math.abs(v) >= 100_000) return formatCompactEur(v);
+  return formatEur(v, Math.abs(v) >= 1_000 ? 0 : 2);
 }
 
 function timeAgo(iso: string | null) {
@@ -89,8 +88,8 @@ export function UsersTab({ onToast }: { onToast?: (msg: string, type: "success" 
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { 
-      setData(await api.admin.users(search, statusFilter === "all" ? undefined : statusFilter)); 
+    try {
+      setData(await api.admin.users(search, statusFilter === "all" ? undefined : statusFilter));
     } catch {}
     setLoading(false);
   }, [search, statusFilter]);
@@ -140,14 +139,14 @@ export function UsersTab({ onToast }: { onToast?: (msg: string, type: "success" 
               { key: "active", label: "Activos" },
               { key: "admin", label: "Admins" },
               { key: "whatsapp", label: "WhatsApp" },
-              { key: "deleted", label: "Baneados" },
+              { key: "deleted", label: "Desactivados" },
             ].map(f => (
               <button
                 key={f.key}
                 onClick={() => setStatusFilter(f.key)}
                 className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-                  statusFilter === f.key 
-                    ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)]" 
+                  statusFilter === f.key
+                    ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)]"
                     : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
                 }`}
               >
@@ -158,8 +157,8 @@ export function UsersTab({ onToast }: { onToast?: (msg: string, type: "success" 
 
           <div className="relative w-full sm:w-64">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-fg-4)]" />
-            <input 
-              type="text" placeholder="Buscar email, usuario o tel..." 
+            <input
+              type="text" placeholder="Buscar email, usuario o tel..."
               value={search} onChange={e => setSearch(e.target.value)}
               className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl pl-9 pr-4 py-2 text-xs text-[var(--color-fg-1)] focus:outline-none focus:border-[var(--color-accent)]/50 w-full transition-all" />
           </div>
@@ -192,7 +191,7 @@ export function UsersTab({ onToast }: { onToast?: (msg: string, type: "success" 
                       </div>
                     </div>
                     {u.deleted_at ? (
-                      <span className="px-2 py-0.5 bg-[var(--color-danger)]/10 text-[var(--color-danger)] rounded text-[10px] font-bold uppercase shrink-0">Baneado</span>
+                      <span className="px-2 py-0.5 bg-[var(--color-danger)]/10 text-[var(--color-danger)] rounded text-[10px] font-bold uppercase shrink-0">Desactivado</span>
                     ) : (
                       <span className="px-2 py-0.5 bg-[var(--color-accent)]/10 text-[var(--color-accent)] rounded text-[10px] font-bold uppercase shrink-0">Activo</span>
                     )}
@@ -206,31 +205,31 @@ export function UsersTab({ onToast }: { onToast?: (msg: string, type: "success" 
                     </div>
 
                     <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
-                      <button 
-                        onClick={async () => { await api.admin.promoteUser(u.id, !u.is_admin); load(); onToast?.("Rol actualizado", "info"); }} 
+                      <button
+                        onClick={async () => { await api.admin.promoteUser(u.id, !u.is_admin); load(); onToast?.("Rol actualizado", "info"); }}
                         className="p-1.5 text-[var(--color-fg-2)] hover:text-[var(--color-warn)] bg-[var(--color-ink-2)] rounded-lg transition-colors"
                         title={u.is_admin ? "Quitar admin" : "Hacer admin"}
                       >
                         <Shield size={13}/>
                       </button>
                       {u.deleted_at ? (
-                        <button 
-                          onClick={async () => { await api.admin.restoreUser(u.id); load(); onToast?.("Usuario reactivado", "success"); }} 
+                        <button
+                          onClick={async () => { await api.admin.restoreUser(u.id); load(); onToast?.("Usuario reactivado", "success"); }}
                           className="p-1.5 text-[var(--color-accent)] bg-[var(--color-accent)]/10 rounded-lg transition-colors"
                           title="Restaurar usuario"
                         >
                           <UserCheck size={13}/>
                         </button>
                       ) : (
-                        <button 
-                          onClick={async () => { await api.admin.deleteUser(u.id); load(); onToast?.("Usuario suspendido", "error"); }} 
+                        <button
+                          onClick={async () => { await api.admin.deleteUser(u.id); load(); onToast?.("Usuario suspendido", "error"); }}
                           className="p-1.5 text-[var(--color-danger)] bg-[var(--color-danger)]/10 rounded-lg transition-colors"
                           title="Suspender usuario"
                         >
                           <UserX size={13}/>
                         </button>
                       )}
-                      <button 
+                      <button
                         onClick={() => loadUserDetail(u.id)}
                         className="p-1.5 text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] bg-[var(--color-ink-2)] rounded-lg transition-colors"
                         title="Ver detalle del usuario"
@@ -251,7 +250,7 @@ export function UsersTab({ onToast }: { onToast?: (msg: string, type: "success" 
                     <th className="py-3.5 px-5 font-medium">Usuario / Email</th>
                     <th className="py-3.5 px-5 font-medium">Auth</th>
                     <th className="py-3.5 px-5 font-medium">Inversiones</th>
-                    <th className="py-3.5 px-5 font-medium">Patrimonio Nominal</th>
+                    <th className="py-3.5 px-5 font-medium">Invertido</th>
                     <th className="py-3.5 px-5 font-medium">WhatsApp</th>
                     <th className="py-3.5 px-5 font-medium">Estado</th>
                     <th className="py-3.5 px-5 font-medium text-right">Acciones</th>
@@ -259,8 +258,8 @@ export function UsersTab({ onToast }: { onToast?: (msg: string, type: "success" 
                 </thead>
                 <tbody>
                   {data.users.map((u) => (
-                    <tr 
-                      key={u.id} 
+                    <tr
+                      key={u.id}
                       onClick={() => loadUserDetail(u.id)}
                       className="border-b border-[var(--color-ink-3)] hover:bg-[var(--color-ink-2)] transition-colors cursor-pointer group"
                     >
@@ -293,44 +292,44 @@ export function UsersTab({ onToast }: { onToast?: (msg: string, type: "success" 
                             <Smartphone size={10} /> Activo
                           </span>
                         ) : u.phone ? (
-                          <span className="text-[10px] font-mono text-[var(--color-fg-4)]">Configurado</span>
+                          <span className="text-[10px] font-mono text-[var(--color-fg-4)]" title="Tiene teléfono pero el resumen está desactivado">Desactivado</span>
                         ) : (
                           <span className="text-[10px] font-mono text-[var(--color-fg-5)]">—</span>
                         )}
                       </td>
                       <td className="py-3 px-5">
                         {u.deleted_at ? (
-                          <span className="px-2 py-0.5 bg-[var(--color-danger)]/10 text-[var(--color-danger)] rounded text-[10px] font-bold uppercase">Baneado</span>
+                          <span className="px-2 py-0.5 bg-[var(--color-danger)]/10 text-[var(--color-danger)] rounded text-[10px] font-bold uppercase">Desactivado</span>
                         ) : (
                           <span className="px-2 py-0.5 bg-[var(--color-accent)]/10 text-[var(--color-accent)] rounded text-[10px] font-bold uppercase">Activo</span>
                         )}
                       </td>
                       <td className="py-3 px-5 text-right space-x-1.5" onClick={e => e.stopPropagation()}>
-                        <button 
-                          onClick={async () => { await api.admin.promoteUser(u.id, !u.is_admin); load(); onToast?.("Rol actualizado", "info"); }} 
+                        <button
+                          onClick={async () => { await api.admin.promoteUser(u.id, !u.is_admin); load(); onToast?.("Rol actualizado", "info"); }}
                           title={u.is_admin ? "Quitar admin" : "Hacer admin"}
                           className="p-1.5 text-[var(--color-fg-4)] hover:text-[var(--color-warn)] bg-[var(--color-ink-2)] rounded-lg transition-colors"
                         >
                           <Shield size={13}/>
                         </button>
                         {u.deleted_at ? (
-                          <button 
-                            onClick={async () => { await api.admin.restoreUser(u.id); load(); onToast?.("Usuario reactivado", "success"); }} 
+                          <button
+                            onClick={async () => { await api.admin.restoreUser(u.id); load(); onToast?.("Usuario reactivado", "success"); }}
                             title="Restaurar usuario"
                             className="p-1.5 text-[var(--color-fg-4)] hover:text-[var(--color-accent)] bg-[var(--color-ink-2)] rounded-lg transition-colors"
                           >
                             <UserCheck size={13}/>
                           </button>
                         ) : (
-                          <button 
-                            onClick={async () => { await api.admin.deleteUser(u.id); load(); onToast?.("Usuario suspendido", "error"); }} 
+                          <button
+                            onClick={async () => { await api.admin.deleteUser(u.id); load(); onToast?.("Usuario suspendido", "error"); }}
                             title="Suspender usuario"
                             className="p-1.5 text-[var(--color-fg-4)] hover:text-[var(--color-danger)] bg-[var(--color-ink-2)] rounded-lg transition-colors"
                           >
                             <UserX size={13}/>
                           </button>
                         )}
-                        <button 
+                        <button
                           onClick={() => loadUserDetail(u.id)}
                           title="Inspeccionar cartera y detalles"
                           className="p-1.5 text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] bg-[var(--color-ink-2)] rounded-lg transition-colors"
@@ -376,7 +375,7 @@ export function UsersTab({ onToast }: { onToast?: (msg: string, type: "success" 
                 {/* Financial Summary Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-3">
-                    <span className="text-[10px] text-[var(--color-fg-4)] uppercase tracking-wider block">Inversión Nominal</span>
+                    <span className="text-[10px] text-[var(--color-fg-4)] uppercase tracking-wider block">Invertido</span>
                     <span className="text-sm font-mono font-bold text-[var(--color-fg-1)] mt-1 block">{fmtEur(userDetail.summary.totalInvested)}</span>
                   </div>
                   <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-3">
@@ -392,7 +391,7 @@ export function UsersTab({ onToast }: { onToast?: (msg: string, type: "success" 
                   <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-3">
                     <span className="text-[10px] text-[var(--color-fg-4)] uppercase tracking-wider block">Rentabilidad</span>
                     <span className={`text-sm font-mono font-bold mt-1 block ${userDetail.summary.totalProfitLossPct >= 0 ? 'text-[var(--color-profit)]' : 'text-[var(--color-loss)]'}`}>
-                      {userDetail.summary.totalProfitLossPct >= 0 ? '+' : ''}{userDetail.summary.totalProfitLossPct.toFixed(2)}%
+                      {formatPct(userDetail.summary.totalProfitLossPct)}
                     </span>
                   </div>
                 </div>
@@ -401,10 +400,10 @@ export function UsersTab({ onToast }: { onToast?: (msg: string, type: "success" 
                 <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                   <div>
                     <h4 className="text-xs font-bold text-[var(--color-fg-1)] flex items-center gap-1.5">
-                      <Smartphone size={14} className="text-[var(--color-accent)]" /> Canal WhatsApp & Notificaciones
+                      <Smartphone size={14} className="text-[var(--color-accent)]" /> Resumen por WhatsApp
                     </h4>
                     <p className="text-[11px] text-[var(--color-fg-4)] mt-0.5">
-                      Teléfono: <strong className="text-[var(--color-fg-1)] font-mono">{userDetail.whatsapp.phone || 'No configurado'}</strong> • 
+                      Teléfono: <strong className="text-[var(--color-fg-1)] font-mono">{userDetail.whatsapp.phone || 'No configurado'}</strong> •
                       Estado: <strong className={userDetail.whatsapp.enabled ? 'text-[var(--color-accent)]' : 'text-[var(--color-fg-5)]'}>{userDetail.whatsapp.enabled ? 'Activo' : 'Desactivado'}</strong> •
                       Último envío: {timeAgo(userDetail.whatsapp.lastSent)}
                     </p>
@@ -416,7 +415,7 @@ export function UsersTab({ onToast }: { onToast?: (msg: string, type: "success" 
                       className="px-3 py-1.5 bg-[var(--color-accent)]/15 border border-[var(--color-accent)]/30 text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-accent-fg)] rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 disabled:opacity-50"
                     >
                       <Send size={12} />
-                      {testingWhatsApp ? "Enviando..." : "Test WhatsApp"}
+                      {testingWhatsApp ? "Enviando..." : "Probar WhatsApp"}
                     </button>
                   )}
                 </div>
@@ -460,7 +459,7 @@ export function UsersTab({ onToast }: { onToast?: (msg: string, type: "success" 
                                   <td className="p-2.5 font-mono text-[var(--color-fg-2)]">€{Number(inv.purchase_price).toFixed(2)}</td>
                                   <td className="p-2.5 font-mono text-[var(--color-fg-1)] font-bold">€{curPrice.toFixed(2)}</td>
                                   <td className={`p-2.5 font-mono text-right font-bold ${pl >= 0 ? 'text-[var(--color-profit)]' : 'text-[var(--color-loss)]'}`}>
-                                    {pl >= 0 ? '+' : ''}{fmtEur(pl)} ({plPct.toFixed(1)}%)
+                                    {pl >= 0 ? '+' : ''}{fmtEur(pl)} ({formatPct(plPct)})
                                   </td>
                                 </tr>
                               );
@@ -620,8 +619,8 @@ export function CatalogTab({ onToast }: { onToast?: (msg: string, type: "success
         </div>
         <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 flex flex-col justify-between">
           <p className="text-[10px] text-[var(--color-fg-4)] uppercase tracking-wider">Sincronización</p>
-          <button 
-            onClick={handleRefreshAll} 
+          <button
+            onClick={handleRefreshAll}
             disabled={isRefreshingAll}
             className="w-full py-1.5 mt-2 bg-[var(--color-accent)]/15 border border-[var(--color-accent)]/30 text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-[var(--color-accent-fg)] rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
@@ -639,12 +638,12 @@ export function CatalogTab({ onToast }: { onToast?: (msg: string, type: "success
           </h2>
           <p className="text-xs text-[var(--color-fg-4)] mt-0.5">Control de ISINs, tickers, cotizaciones en directo y metadatos</p>
         </div>
-        
+
         <div className="flex items-center gap-2.5">
           <div className="relative w-full sm:w-64">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-fg-4)]" />
-            <input 
-              type="text" placeholder="Buscar ISIN, nombre o banco..." 
+            <input
+              type="text" placeholder="Buscar ISIN, nombre o banco..."
               value={search} onChange={e => setSearch(e.target.value)}
               className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl pl-9 pr-4 py-2 text-xs text-[var(--color-fg-1)] focus:outline-none focus:border-[var(--color-accent)]/50 w-full transition-all" />
           </div>
@@ -699,7 +698,7 @@ export function CatalogTab({ onToast }: { onToast?: (msg: string, type: "success
                     <td className="py-3.5 px-5 text-[var(--color-fg-2)]">{f.bank || '—'}</td>
                     <td className="py-3.5 px-5 text-[var(--color-fg-4)] text-[11px]">{f.category || 'Renta Variable'}</td>
                     <td className="py-3.5 px-5">
-                      <input 
+                      <input
                         defaultValue={f.yahoo_ticker ?? ""}
                         placeholder="Sin ticker"
                         onBlur={async (e) => {
@@ -733,7 +732,7 @@ export function CatalogTab({ onToast }: { onToast?: (msg: string, type: "success
                       )}
                     </td>
                     <td className="py-3.5 px-5 text-right space-x-1">
-                      <button 
+                      <button
                         onClick={() => handleRefreshPrice(f.isin)}
                         disabled={refreshingIsin === f.isin}
                         title="Actualizar precio en directo (Scraper / Yahoo)"
@@ -741,14 +740,14 @@ export function CatalogTab({ onToast }: { onToast?: (msg: string, type: "success
                       >
                         <RefreshCw size={13} className={refreshingIsin === f.isin ? "animate-spin text-[var(--color-accent)]" : ""} />
                       </button>
-                      <button 
+                      <button
                         onClick={() => openEditModal(f)}
                         title="Editar metadatos"
                         className="p-1.5 text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] bg-[var(--color-ink-2)] rounded-lg transition-colors"
                       >
                         <Edit2 size={13} />
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDeleteFund(f.isin)}
                         title="Eliminar del catálogo"
                         className="p-1.5 text-[var(--color-fg-4)] hover:text-[var(--color-danger)] bg-[var(--color-ink-2)] rounded-lg transition-colors"
@@ -778,7 +777,7 @@ export function CatalogTab({ onToast }: { onToast?: (msg: string, type: "success
             <form onSubmit={handleSaveNewFund} className="space-y-3">
               <div>
                 <label className="text-[11px] font-mono text-[var(--color-fg-4)] uppercase tracking-wider block mb-1">Código ISIN *</label>
-                <input 
+                <input
                   type="text" required placeholder="Ej: ES0152769039 o LU1681045370"
                   value={formIsin} onChange={e => setFormIsin(e.target.value.toUpperCase())}
                   className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl px-3 py-2 text-xs text-[var(--color-fg-1)] focus:outline-none focus:border-[var(--color-accent)]/50 w-full font-mono uppercase" />
@@ -786,7 +785,7 @@ export function CatalogTab({ onToast }: { onToast?: (msg: string, type: "success
 
               <div>
                 <label className="text-[11px] font-mono text-[var(--color-fg-4)] uppercase tracking-wider block mb-1">Nombre Completo del Fondo *</label>
-                <input 
+                <input
                   type="text" required placeholder="Ej: Santander Acciones Españolas FI"
                   value={formName} onChange={e => setFormName(e.target.value)}
                   className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl px-3 py-2 text-xs text-[var(--color-fg-1)] focus:outline-none focus:border-[var(--color-accent)]/50 w-full" />
@@ -795,14 +794,14 @@ export function CatalogTab({ onToast }: { onToast?: (msg: string, type: "success
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] font-mono text-[var(--color-fg-4)] uppercase tracking-wider block mb-1">Banco / Gestora</label>
-                  <input 
+                  <input
                     type="text" placeholder="Ej: Santander, BBVA, Vanguard"
                     value={formBank} onChange={e => setFormBank(e.target.value)}
                     className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl px-3 py-2 text-xs text-[var(--color-fg-1)] focus:outline-none focus:border-[var(--color-accent)]/50 w-full" />
                 </div>
                 <div>
                   <label className="text-[11px] font-mono text-[var(--color-fg-4)] uppercase tracking-wider block mb-1">Categoría</label>
-                  <select 
+                  <select
                     value={formCategory} onChange={e => setFormCategory(e.target.value)}
                     className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl px-3 py-2 text-xs text-[var(--color-fg-1)] focus:outline-none focus:border-[var(--color-accent)]/50 w-full"
                   >
@@ -818,20 +817,20 @@ export function CatalogTab({ onToast }: { onToast?: (msg: string, type: "success
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="text-[11px] font-mono text-[var(--color-fg-4)] uppercase tracking-wider block mb-1">Riesgo (1-7)</label>
-                  <input 
+                  <input
                     type="number" min="1" max="7" value={formRisk} onChange={e => setFormRisk(Number(e.target.value))}
                     className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl px-3 py-2 text-xs text-[var(--color-fg-1)] focus:outline-none focus:border-[var(--color-accent)]/50 w-full font-mono" />
                 </div>
                 <div>
                   <label className="text-[11px] font-mono text-[var(--color-fg-4)] uppercase tracking-wider block mb-1">Yahoo Ticker</label>
-                  <input 
+                  <input
                     type="text" placeholder="Ej: 0P0000X.F"
                     value={formTicker} onChange={e => setFormTicker(e.target.value)}
                     className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl px-3 py-2 text-xs text-[var(--color-fg-1)] focus:outline-none focus:border-[var(--color-accent)]/50 w-full font-mono" />
                 </div>
                 <div>
                   <label className="text-[11px] font-mono text-[var(--color-fg-4)] uppercase tracking-wider block mb-1">NAV Inicial (€)</label>
-                  <input 
+                  <input
                     type="number" step="0.0001" placeholder="Ej: 145.20"
                     value={formPrice} onChange={e => setFormPrice(e.target.value)}
                     className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl px-3 py-2 text-xs text-[var(--color-fg-1)] focus:outline-none focus:border-[var(--color-accent)]/50 w-full font-mono" />
@@ -865,7 +864,7 @@ export function CatalogTab({ onToast }: { onToast?: (msg: string, type: "success
             <form onSubmit={handleUpdateFund} className="space-y-3">
               <div>
                 <label className="text-[11px] font-mono text-[var(--color-fg-4)] uppercase tracking-wider block mb-1">Nombre Completo *</label>
-                <input 
+                <input
                   type="text" required value={formName} onChange={e => setFormName(e.target.value)}
                   className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl px-3 py-2 text-xs text-[var(--color-fg-1)] focus:outline-none focus:border-[var(--color-accent)]/50 w-full" />
               </div>
@@ -873,13 +872,13 @@ export function CatalogTab({ onToast }: { onToast?: (msg: string, type: "success
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] font-mono text-[var(--color-fg-4)] uppercase tracking-wider block mb-1">Banco / Gestora</label>
-                  <input 
+                  <input
                     type="text" value={formBank} onChange={e => setFormBank(e.target.value)}
                     className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl px-3 py-2 text-xs text-[var(--color-fg-1)] focus:outline-none focus:border-[var(--color-accent)]/50 w-full" />
                 </div>
                 <div>
                   <label className="text-[11px] font-mono text-[var(--color-fg-4)] uppercase tracking-wider block mb-1">Categoría</label>
-                  <select 
+                  <select
                     value={formCategory} onChange={e => setFormCategory(e.target.value)}
                     className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl px-3 py-2 text-xs text-[var(--color-fg-1)] focus:outline-none focus:border-[var(--color-accent)]/50 w-full"
                   >
@@ -895,13 +894,13 @@ export function CatalogTab({ onToast }: { onToast?: (msg: string, type: "success
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] font-mono text-[var(--color-fg-4)] uppercase tracking-wider block mb-1">Riesgo (1-7)</label>
-                  <input 
+                  <input
                     type="number" min="1" max="7" value={formRisk} onChange={e => setFormRisk(Number(e.target.value))}
                     className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl px-3 py-2 text-xs text-[var(--color-fg-1)] focus:outline-none focus:border-[var(--color-accent)]/50 w-full font-mono" />
                 </div>
                 <div>
                   <label className="text-[11px] font-mono text-[var(--color-fg-4)] uppercase tracking-wider block mb-1">Yahoo Ticker</label>
-                  <input 
+                  <input
                     type="text" placeholder="Ej: 0P0000X.F"
                     value={formTicker} onChange={e => setFormTicker(e.target.value)}
                     className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl px-3 py-2 text-xs text-[var(--color-fg-1)] focus:outline-none focus:border-[var(--color-accent)]/50 w-full font-mono" />
@@ -935,7 +934,7 @@ export function NotificationsTab({ onToast }: { onToast?: (msg: string, type: "s
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { 
+    try {
       const [stats, preview] = await Promise.all([
         api.admin.notifications(),
         api.admin.previewNotification().catch(() => null)
@@ -991,18 +990,18 @@ export function NotificationsTab({ onToast }: { onToast?: (msg: string, type: "s
         <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-5">
           <p className="text-[10px] text-[var(--color-fg-4)] uppercase tracking-wider mb-2">Último Envío Global</p>
           <p className="text-xl font-bold font-mono text-[var(--color-fg-1)]">{timeAgo(data?.last_global_digest)}</p>
-          <p className="text-xs text-[var(--color-fg-4)] mt-2">Próxima ventana automática según cron scheduler: 08:00 / 14:00 / 20:00 CET.</p>
+          <p className="text-xs text-[var(--color-fg-4)] mt-2">Cada usuario elige sus horas (por defecto 9:00 y 18:00); el servidor revisa cada 15 minutos.</p>
         </div>
 
         <div className="bg-gradient-to-br from-[var(--color-accent)]/15 to-[var(--color-ink-1)] border border-[var(--color-accent)]/20 rounded-2xl p-5 flex flex-col justify-between">
           <div>
             <h2 className="text-sm font-semibold text-[var(--color-fg-1)] flex items-center gap-2">
-              <Smartphone size={16} className="text-[var(--color-accent)]" /> Disparador Global
+              <Smartphone size={16} className="text-[var(--color-accent)]" /> Enviar a todos ahora
             </h2>
             <p className="text-xs text-[var(--color-fg-4)] mt-1">Fuerza la ejecución inmediata de los resúmenes diarios de WhatsApp.</p>
           </div>
-          <button 
-            onClick={triggerDigest} 
+          <button
+            onClick={triggerDigest}
             disabled={isTriggering}
             className="w-full py-2.5 mt-3 bg-[var(--color-accent)] text-[#0a0a0c] hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold rounded-xl shadow-[0_0_12px_rgba(192,132,252,0.2)] transition-all flex items-center justify-center gap-2"
           >
@@ -1017,13 +1016,13 @@ export function NotificationsTab({ onToast }: { onToast?: (msg: string, type: "s
 
       {/* Grid: Smartphone Message Simulator + Delivery History */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        
+
         {/* Smartphone Simulator */}
         <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-5 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-[var(--color-fg-1)] flex items-center gap-2">
-                <Smartphone size={15} className="text-[var(--color-accent)]" /> Simulador de Plantilla
+                <Smartphone size={15} className="text-[var(--color-accent)]" /> Vista previa del mensaje
               </h3>
               <span className="text-[10px] font-mono text-[var(--color-accent)] bg-[var(--color-accent)]/10 px-2 py-0.5 rounded">Live WhatsApp</span>
             </div>
@@ -1044,11 +1043,11 @@ export function NotificationsTab({ onToast }: { onToast?: (msg: string, type: "s
 
             <div className="bg-[#005c4b] p-3 rounded-xl text-[11px] text-[var(--color-fg-1)] leading-relaxed font-sans whitespace-pre-line shadow">
               {previewData?.message || `📊 *FondTracker — Resumen Diario*\n\n💼 *Cartera Total:* €142.580,20\n📈 *Ganancia Total:* +€8.450,12 (+6,30%)\n\n🏆 *Mejor Activo:* Santander Acciones (+1,2%)\n📉 *Menor Activo:* Vanguard Global (-0,1%)\n\n⚡ Actualizado automáticamente por FondTracker.`}
-              <div className="text-right text-[9px] text-white/70 mt-1">14:00 ✓✓</div>
+              <div className="text-right text-[9px] text-white/70 mt-1">{new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}</div>
             </div>
           </div>
 
-          <p className="text-[10px] text-[var(--color-fg-5)] mt-2 text-center">Formato Markdown de Callmebot con negritas, emojis y NAVs en directo</p>
+          <p className="text-[10px] text-[var(--color-fg-5)] mt-2 text-center">Mensaje real que se enviaría ahora a este usuario</p>
         </div>
 
         {/* Deliveries History Table */}
@@ -1061,7 +1060,7 @@ export function NotificationsTab({ onToast }: { onToast?: (msg: string, type: "s
               </div>
               <span className="text-xs font-mono text-[var(--color-fg-4)]">{data?.user_statuses?.length || 0} registros</span>
             </div>
-            
+
             {loading && !data ? (
               <div className="p-8 text-center"><div className="w-5 h-5 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin mx-auto" /></div>
             ) : paginatedData.length === 0 ? (
@@ -1105,7 +1104,7 @@ export function NotificationsTab({ onToast }: { onToast?: (msg: string, type: "s
           {/* Pagination Controls */}
           {totalPages > 1 && (
             <div className="p-3 border-t border-[var(--color-ink-3)] flex items-center justify-between text-xs">
-              <button 
+              <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
                 className="px-2.5 py-1 text-xs font-medium text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] disabled:opacity-40 transition-colors"
@@ -1123,7 +1122,7 @@ export function NotificationsTab({ onToast }: { onToast?: (msg: string, type: "s
                   </button>
                 ))}
               </div>
-              <button 
+              <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
                 className="px-2.5 py-1 text-xs font-medium text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] disabled:opacity-40 transition-colors"
@@ -1140,11 +1139,21 @@ export function NotificationsTab({ onToast }: { onToast?: (msg: string, type: "s
 }
 
 // ─── Tab 4: SystemTab ─────────────────────────────────────────────────────────
-export function SystemTab({ data, onToast }: { data: any; onToast?: (msg: string, type: "success" | "error" | "info") => void }) {
-  const [visibleEnv, setVisibleEnv] = useState<Record<string, boolean>>({});
+export function SystemTab({ onToast }: { onToast?: (msg: string, type: "success" | "error" | "info") => void }) {
+  const [sys, setSys] = useState<any>(null);
+  const [sysError, setSysError] = useState(false);
   const [logs, setLogs] = useState<any[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [isClearingCache, setIsClearingCache] = useState(false);
+
+  const loadSystem = useCallback(async () => {
+    setSysError(false);
+    try {
+      setSys(await api.admin.system());
+    } catch {
+      setSysError(true);
+    }
+  }, []);
 
   const loadLogs = useCallback(async () => {
     setLoadingLogs(true);
@@ -1155,113 +1164,134 @@ export function SystemTab({ data, onToast }: { data: any; onToast?: (msg: string
     setLoadingLogs(false);
   }, []);
 
-  useEffect(() => { loadLogs(); }, [loadLogs]);
-
-  const toggleEnv = (key: string) => {
-    setVisibleEnv(prev => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  const copyEnv = (val: string) => {
-    navigator.clipboard.writeText(val);
-    onToast?.("Copiado al portapapeles", "info");
-  };
+  useEffect(() => {
+    loadSystem();
+    loadLogs();
+  }, [loadSystem, loadLogs]);
 
   const handleClearCache = async () => {
     setIsClearingCache(true);
     try {
       await api.admin.clearCache();
-      onToast?.("Caché en memoria purgada correctamente", "success");
+      onToast?.("Caché de precios vaciada", "success");
+      loadSystem();
       loadLogs();
     } catch (e: any) {
-      onToast?.(e.message || "Error al purgar caché", "error");
+      onToast?.(e.message || "No se pudo vaciar la caché", "error");
     }
     setIsClearingCache(false);
   };
 
-  if (!data) return <div className="p-12 flex justify-center"><div className="w-6 h-6 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin" /></div>;
+  if (sysError) {
+    return (
+      <div className="rounded-2xl border border-[var(--color-ink-3)] bg-[var(--color-ink-1)] p-8 text-center text-sm text-[var(--color-fg-3)]">
+        No se pudo leer el estado del servidor.{" "}
+        <button onClick={loadSystem} className="font-semibold text-[var(--color-accent)] hover:underline">
+          Reintentar
+        </button>
+      </div>
+    );
+  }
+  if (!sys) return <div className="p-12 flex justify-center"><div className="w-6 h-6 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin" /></div>;
+
+  const uptime = Number(sys.uptime) || 0;
+  const tile = "bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-3.5 flex flex-col justify-between";
+  const tileLabel = "text-[10px] text-[var(--color-fg-4)] uppercase tracking-wider";
+  const env: { key: string; set: boolean; value: string | null }[] = Array.isArray(sys.env) ? sys.env : [];
 
   return (
     <div className="space-y-4 animate-fade-in">
-      {/* Server Health Overview */}
-      <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-5 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/5 blur-2xl rounded-full" />
-        <div className="flex items-center justify-between mb-4">
+      {/* Estado del servidor */}
+      <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
           <div>
             <h2 className="text-base font-bold text-[var(--color-fg-1)] flex items-center gap-2">
-              <Server size={18} className="text-[var(--color-accent)]" /> Estado del Servidor & Motor Runtime
+              <Server size={18} className="text-[var(--color-accent)]" /> Estado del servidor
             </h2>
-            <p className="text-xs text-[var(--color-fg-4)] mt-0.5">Diagnóstico en tiempo real del proceso Node/Bun y pool de base de datos</p>
+            <p className="text-xs text-[var(--color-fg-4)] mt-0.5">Datos del proceso y de la base de datos en este momento.</p>
           </div>
-
-          <button
-            onClick={handleClearCache}
-            disabled={isClearingCache}
-            className="px-3 py-1.5 bg-[var(--color-warn)]/15 border border-[var(--color-warn)]/30 text-[var(--color-warn)] hover:bg-[var(--color-warn)] hover:text-[var(--color-accent-fg)] rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-50"
-          >
-            <RefreshCw size={13} className={isClearingCache ? "animate-spin" : ""} />
-            <span>{isClearingCache ? "Purgando..." : "Purgar Caché"}</span>
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-3.5 flex flex-col justify-between">
-            <span className="text-[10px] text-[var(--color-fg-4)] uppercase tracking-wider">Uptime</span>
-            <span className="text-sm text-[var(--color-fg-1)] font-mono font-bold mt-1">{Math.floor(data.uptime / 3600)}h {Math.floor((data.uptime % 3600) / 60)}m</span>
-          </div>
-          <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-3.5 flex flex-col justify-between">
-            <span className="text-[10px] text-[var(--color-fg-4)] uppercase tracking-wider">Entorno</span>
-            <span className="text-sm text-[var(--color-warn)] font-mono uppercase font-bold mt-1">{data.node_env}</span>
-          </div>
-          <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-3.5 flex flex-col justify-between">
-            <span className="text-[10px] text-[var(--color-fg-4)] uppercase tracking-wider">Bun / Runtime</span>
-            <span className="text-sm text-[var(--color-accent)] font-mono font-bold mt-1">{data.bun_version}</span>
-          </div>
-          <div className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-3.5 flex flex-col justify-between">
-            <span className="text-[10px] text-[var(--color-fg-4)] uppercase tracking-wider">Caché Precios</span>
-            <span className="text-sm text-[var(--color-fg-1)] font-mono font-bold mt-1">{data.price_cache_size} fondos</span>
+          <div className="flex gap-2">
+            <button onClick={loadSystem} className="px-3 py-1.5 border border-[var(--color-ink-3)] text-[var(--color-fg-3)] hover:text-[var(--color-fg-1)] rounded-xl text-xs font-semibold flex items-center gap-1.5">
+              <RefreshCw size={13} /> Actualizar
+            </button>
+            <button
+              onClick={handleClearCache}
+              disabled={isClearingCache}
+              title="Borra los precios guardados en memoria; se vuelven a pedir al consultarlos"
+              className="px-3 py-1.5 bg-[var(--color-warn)]/15 border border-[var(--color-warn)]/30 text-[var(--color-warn)] hover:bg-[var(--color-warn)]/25 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 disabled:opacity-50"
+            >
+              <RefreshCw size={13} className={isClearingCache ? "animate-spin" : ""} />
+              {isClearingCache ? "Vaciando…" : "Vaciar caché de precios"}
+            </button>
           </div>
         </div>
 
-        {/* Memory & Process Diagnostic */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
-          <div className="bg-[var(--color-ink-2)]/60 border border-[var(--color-ink-3)] rounded-xl p-3 flex items-center justify-between">
-            <span className="text-xs text-[var(--color-fg-4)]">Memoria RSS / Heap</span>
-            <span className="text-xs font-mono font-bold text-[var(--color-fg-1)]">{data.memory_rss_mb || 68} MB / {data.memory_heap_mb || 32} MB</span>
+        {sys.jwt_default && (
+          <div className="mb-3 flex items-start gap-2 rounded-xl border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/10 p-3 text-xs text-[var(--color-fg-2)]">
+            <AlertTriangle size={14} className="mt-0.5 shrink-0 text-[var(--color-danger)]" />
+            JWT_SECRET usa el valor por defecto: cualquiera podría firmar sesiones. Cámbialo en el entorno del servidor.
           </div>
-          <div className="bg-[var(--color-ink-2)]/60 border border-[var(--color-ink-3)] rounded-xl p-3 flex items-center justify-between">
-            <span className="text-xs text-[var(--color-fg-4)]">CRON Secret Config</span>
-            <span className="text-xs font-mono font-bold text-[var(--color-accent)]">Configurado</span>
+        )}
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className={tile}>
+            <span className={tileLabel}>Encendido desde hace</span>
+            <span className="text-sm text-[var(--color-fg-1)] font-mono font-bold mt-1">{Math.floor(uptime / 86400) > 0 ? `${Math.floor(uptime / 86400)} d ` : ""}{Math.floor((uptime % 86400) / 3600)} h {Math.floor((uptime % 3600) / 60)} min</span>
           </div>
-          <div className="bg-[var(--color-ink-2)]/60 border border-[var(--color-ink-3)] rounded-xl p-3 flex items-center justify-between">
-            <span className="text-xs text-[var(--color-fg-4)]">Database Pool</span>
-            <span className="text-xs font-mono font-bold text-[var(--color-accent)]">MySQL Conectado</span>
+          <div className={tile}>
+            <span className={tileLabel}>Entorno</span>
+            <span className={`text-sm font-mono font-bold mt-1 ${sys.node_env === "production" ? "text-[var(--color-profit)]" : "text-[var(--color-warn)]"}`}>{sys.node_env}</span>
+          </div>
+          <div className={tile}>
+            <span className={tileLabel}>Bun · plataforma</span>
+            <span className="text-sm text-[var(--color-fg-1)] font-mono font-bold mt-1">{sys.bun_version} · {sys.platform}</span>
+          </div>
+          <div className={tile}>
+            <span className={tileLabel}>Base de datos</span>
+            {sys.db?.ok ? (
+              <span className="text-sm text-[var(--color-profit)] font-mono font-bold mt-1">Responde en {sys.db.ms} ms</span>
+            ) : (
+              <span className="text-sm text-[var(--color-danger)] font-mono font-bold mt-1" title={sys.db?.error}>Sin conexión</span>
+            )}
+          </div>
+          <div className={tile}>
+            <span className={tileLabel}>Memoria (RSS · heap)</span>
+            <span className="text-sm text-[var(--color-fg-1)] font-mono font-bold mt-1">{sys.memory_rss_mb} MB · {sys.memory_heap_mb} MB</span>
+          </div>
+          <div className={tile}>
+            <span className={tileLabel}>Precios en memoria</span>
+            <span className="text-sm text-[var(--color-fg-1)] font-mono font-bold mt-1">{fmtNum(sys.price_cache_size)} fondos</span>
+          </div>
+          <div className={tile}>
+            <span className={tileLabel}>CRON_SECRET</span>
+            <span className={`text-sm font-mono font-bold mt-1 ${sys.cron_secret_set ? "text-[var(--color-profit)]" : "text-[var(--color-warn)]"}`}>{sys.cron_secret_set ? "Configurado" : "Sin configurar"}</span>
+          </div>
+          <div className={tile}>
+            <span className={tileLabel}>Proceso</span>
+            <span className="text-sm text-[var(--color-fg-1)] font-mono font-bold mt-1">PID {sys.pid}</span>
           </div>
         </div>
       </div>
 
-      {/* Grid: Audit Logs & Environment Variables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        
-        {/* Live Audit Activity Log */}
-        <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-5 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-[var(--color-fg-1)] flex items-center gap-2">
-                <Activity size={16} className="text-[var(--color-accent)]" /> Registro de Actividad & Auditoría
-              </h3>
-              <button onClick={loadLogs} className="p-1 text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] rounded transition-colors" title="Refrescar logs">
-                <RefreshCw size={13} className={loadingLogs ? "animate-spin" : ""} />
-              </button>
-            </div>
-            <p className="text-xs text-[var(--color-fg-4)] mb-3">Últimas acciones administrativas y eventos del sistema:</p>
+        {/* Registro de actividad */}
+        <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="text-sm font-bold text-[var(--color-fg-1)] flex items-center gap-2">
+              <Activity size={16} className="text-[var(--color-accent)]" /> Registro de actividad
+            </h3>
+            <button onClick={loadLogs} className="p-1 text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] rounded transition-colors" title="Actualizar">
+              <RefreshCw size={13} className={loadingLogs ? "animate-spin" : ""} />
+            </button>
           </div>
+          <p className="text-xs text-[var(--color-fg-4)] mb-3">Acciones de administración desde el último arranque (se guardan en memoria).</p>
 
           <div className="space-y-2 max-h-[380px] overflow-y-auto scrollbar-thin pr-1">
             {logs.length === 0 ? (
-              <div className="text-xs text-[var(--color-fg-5)] py-6 text-center">Sin eventos registrados aún.</div>
+              <div className="text-xs text-[var(--color-fg-4)] py-6 text-center">Sin actividad todavía.</div>
             ) : (
               logs.map((log) => {
-                const badgeColor = 
+                const badgeColor =
                   log.type.includes("BAN") ? "bg-red-500/15 text-red-400 border-red-500/30" :
                   log.type.includes("ADMIN") ? "bg-amber-500/15 text-amber-400 border-amber-500/30" :
                   log.type.includes("PRICE") || log.type.includes("CATALOG") ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" :
@@ -1269,11 +1299,11 @@ export function SystemTab({ data, onToast }: { data: any; onToast?: (msg: string
                 return (
                   <div key={log.id} className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-2.5 flex items-start gap-2.5">
                     <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border uppercase shrink-0 mt-0.5 ${badgeColor}`}>
-                      {log.type.replace("_", " ")}
+                      {LOG_LABEL[log.type] ?? log.type}
                     </span>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-[var(--color-fg-2)] leading-snug">{log.message}</p>
-                      <span className="text-[9px] font-mono text-[var(--color-fg-5)] mt-0.5 block">{timeAgo(log.timestamp)}</span>
+                      <span className="text-[10px] font-mono text-[var(--color-fg-4)] mt-0.5 block">{timeAgo(log.timestamp)}</span>
                     </div>
                   </div>
                 );
@@ -1282,37 +1312,45 @@ export function SystemTab({ data, onToast }: { data: any; onToast?: (msg: string
           </div>
         </div>
 
-        {/* Environment Variables */}
+        {/* Variables de entorno: solo si están puestas; el valor, únicamente en las que no son secretas */}
         <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-5">
-          <h3 className="text-sm font-bold text-[var(--color-fg-1)] mb-2 flex items-center gap-2">
-            <Shield size={16} className="text-[var(--color-warn)]" /> Variables de Entorno del Sistema
+          <h3 className="text-sm font-bold text-[var(--color-fg-1)] mb-1 flex items-center gap-2">
+            <Shield size={16} className="text-[var(--color-warn)]" /> Variables de entorno
           </h3>
-          <p className="text-xs text-[var(--color-fg-4)] mb-3">Valores de configuración detectados en el servidor:</p>
+          <p className="text-xs text-[var(--color-fg-4)] mb-3">Qué está configurado en el servidor. Los valores secretos nunca salen de él.</p>
 
-          <div className="space-y-2 max-h-[380px] overflow-y-auto scrollbar-thin pr-1">
-            {data.env && Object.keys(data.env).map(key => (
-              <div key={key} className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <span className="text-xs text-[var(--color-fg-4)] font-bold font-mono truncate">{key}</span>
-                <div className="flex items-center gap-2 justify-end">
-                  <span className="text-xs text-[var(--color-fg-1)] font-mono break-all text-right">
-                    {visibleEnv[key] ? data.env[key] : "••••••••••••••••"}
+          <div className="space-y-1.5 max-h-[380px] overflow-y-auto scrollbar-thin pr-1">
+            {env.map((v) => (
+              <div key={v.key} className="bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] rounded-xl px-3 py-2 flex items-center justify-between gap-3">
+                <span className="text-xs text-[var(--color-fg-2)] font-mono truncate">{v.key}</span>
+                {v.value ? (
+                  <span className="text-xs text-[var(--color-fg-1)] font-mono truncate text-right" title={v.value}>{v.value}</span>
+                ) : (
+                  <span className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full ${v.set ? "bg-emerald-500/12 text-emerald-400" : "bg-[var(--color-ink-3)] text-[var(--color-fg-4)]"}`}>
+                    {v.set ? "Configurada" : "Sin configurar"}
                   </span>
-                  <button onClick={() => toggleEnv(key)} className="text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] transition-colors p-1" title="Mostrar/Ocultar">
-                    {visibleEnv[key] ? <EyeOff size={13} /> : <Eye size={13} />}
-                  </button>
-                  <button onClick={() => copyEnv(data.env[key])} className="text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] transition-colors p-1" title="Copiar valor">
-                    <Copy size={13} />
-                  </button>
-                </div>
+                )}
               </div>
             ))}
           </div>
         </div>
-
       </div>
     </div>
   );
 }
+
+const LOG_LABEL: Record<string, string> = {
+  USER_BAN: "Usuario desactivado",
+  USER_RESTORE: "Usuario restaurado",
+  USER_ADMIN: "Permisos",
+  CATALOG_ADD: "Catálogo",
+  CATALOG_UPDATE: "Catálogo",
+  CATALOG_DELETE: "Catálogo",
+  PRICE_REFRESH: "Precio",
+  SYSTEM_REFRESH: "Sistema",
+  DIGEST_TRIGGER: "WhatsApp",
+  CACHE_CLEAR: "Caché",
+};
 
 // ─── Exported Admin Section Content ───────────────────────────────────────────
 export function AdminSectionContent({ user, initialSubSection }: { user: User; initialSubSection?: AdminSubSection }) {
@@ -1333,12 +1371,12 @@ export function AdminSectionContent({ user, initialSubSection }: { user: User; i
     if (initialSubSection) setSubSection(initialSubSection);
   }, [initialSubSection]);
 
-  const load = useCallback(async () => { 
-    setLoading(true); 
-    try { setData(await api.admin.overview()); } catch {} 
-    setLoading(false); 
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { setData(await api.admin.overview()); } catch {}
+    setLoading(false);
   }, []);
-  
+
   useEffect(() => { load(); }, [load]);
 
   const exportPdf = async () => {
@@ -1348,18 +1386,18 @@ export function AdminSectionContent({ user, initialSubSection }: { user: User; i
       await new Promise(r => setTimeout(r, 600));
       const { toJpeg } = await import('html-to-image');
       const pageEl = reportRef.current;
-      const imgData = await toJpeg(pageEl, { 
-        quality: 0.95, 
-        pixelRatio: 2, 
+      const imgData = await toJpeg(pageEl, {
+        quality: 0.95,
+        pixelRatio: 2,
         backgroundColor: '#0a0a0c',
         width: 794,
         height: 1123,
       });
-      
+
       const pdf = new jsPDF('portrait', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      
+
       pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`FondTracker_Auditoria_Admin_${new Date().toISOString().split('T')[0]}.pdf`);
       showToast("Informe PDF de auditoría descargado", "success");
@@ -1388,11 +1426,11 @@ export function AdminSectionContent({ user, initialSubSection }: { user: User; i
   }, [subSection]);
 
   const SUB_NAV: { key: AdminSubSection; label: string; icon: React.ReactElement }[] = [
-    { key: "overview", label: "Dashboard Admin", icon: <LayoutDashboard size={14} /> },
+    { key: "overview", label: "Resumen", icon: <LayoutDashboard size={14} /> },
     { key: "users", label: "Usuarios", icon: <Users size={14} /> },
-    { key: "catalog", label: "Catálogo de Fondos", icon: <Database size={14} /> },
-    { key: "notifications", label: "WhatsApp & Alertas", icon: <Smartphone size={14} /> },
-    { key: "system", label: "Servidor & Auditoría", icon: <Server size={14} /> },
+    { key: "catalog", label: "Catálogo", icon: <Database size={14} /> },
+    { key: "notifications", label: "WhatsApp", icon: <Smartphone size={14} /> },
+    { key: "system", label: "Servidor", icon: <Server size={14} /> },
   ];
 
   return (
@@ -1419,8 +1457,8 @@ export function AdminSectionContent({ user, initialSubSection }: { user: User; i
                 key={item.key}
                 onClick={() => setSubSection(item.key)}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                  active 
-                    ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_10px_rgba(192,132,252,0.25)]" 
+                  active
+                    ? "bg-[var(--color-accent)] text-[var(--color-accent-fg)] shadow-[0_0_10px_rgba(192,132,252,0.25)]"
                     : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] hover:bg-[var(--color-ink-2)]"
                 }`}
               >
@@ -1449,51 +1487,51 @@ export function AdminSectionContent({ user, initialSubSection }: { user: User; i
         </div>
       ) : subSection === "overview" ? (
         <div className="space-y-4 animate-fade-in">
-          
+
           {/* Top Row: 4 Main KPI Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-5 relative overflow-hidden">
               <div className="flex items-center justify-between text-[10px] text-[var(--color-fg-4)] uppercase tracking-wider mb-2">
-                <span>Invertido total</span>
-                <span className="text-[var(--color-accent)] font-bold font-mono">Nominal</span>
+                <span>Valor de las carteras</span>
+                <span className="text-[var(--color-fg-4)] font-mono normal-case">{data?.total_investments ?? 0} fondos</span>
               </div>
-              <p className="text-2xl sm:text-3xl font-bold font-mono text-[var(--color-fg-1)] tracking-tight">{fmtEur(data?.aum_total ?? 0)}</p>
-              <p className="text-[11px] text-[var(--color-accent)] mt-2 flex items-center gap-1 font-mono">
-                <ArrowUpRight size={13} /> {data?.total_investments ?? 0} posiciones
+              <p className="text-2xl sm:text-3xl font-bold font-mono text-[var(--color-fg-1)] tracking-tight">{fmtEur(data?.value_total ?? 0)}</p>
+              <p className="text-[11px] text-[var(--color-fg-4)] mt-2 flex items-center gap-1 font-mono">
+                <ArrowUpRight size={13} className="text-[var(--color-accent)]" /> {fmtEur(data?.invested_total ?? 0)} invertidos
               </p>
             </div>
 
             <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-5">
               <div className="flex items-center justify-between text-[10px] text-[var(--color-fg-4)] uppercase tracking-wider mb-2">
-                <span>Usuarios Activos</span>
-                <span className="text-blue-400 font-bold font-mono">+{data?.new_this_week ?? 0} sem.</span>
+                <span>Usuarios activos</span>
+                <span className="text-blue-400 font-bold font-mono normal-case">+{data?.new_this_week ?? 0} esta semana</span>
               </div>
               <p className="text-2xl sm:text-3xl font-bold font-mono text-[var(--color-fg-1)] tracking-tight">{data?.active_users ?? 0}</p>
-              <p className="text-[11px] text-[var(--color-fg-4)] mt-2 font-mono">{data?.total_users ?? 0} registrados totales</p>
+              <p className="text-[11px] text-[var(--color-fg-4)] mt-2 font-mono">{data?.total_users ?? 0} registrados en total</p>
             </div>
 
             <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-5">
               <div className="flex items-center justify-between text-[10px] text-[var(--color-fg-4)] uppercase tracking-wider mb-2">
-                <span>Catálogo Fondos</span>
+                <span>Catálogo</span>
                 <span className="text-[var(--color-accent)] font-bold font-mono">QueFondos / Yahoo</span>
               </div>
               <p className="text-2xl sm:text-3xl font-bold font-mono text-[var(--color-fg-1)] tracking-tight">{fmtNum(data?.catalog_size ?? 0)}</p>
-              <p className="text-[11px] text-[var(--color-fg-4)] mt-2 font-mono">{data?.cached_prices ?? 0} cotizaciones al día</p>
+              <p className="text-[11px] text-[var(--color-fg-4)] mt-2 font-mono">{data?.cached_prices ?? 0} con precio guardado</p>
             </div>
 
             <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-4 sm:p-5">
               <div className="flex items-center justify-between text-[10px] text-[var(--color-fg-4)] uppercase tracking-wider mb-2">
-                <span>WhatsApp Bot</span>
-                <span className="text-[var(--color-accent)] font-bold font-mono">Callmebot</span>
+                <span>Resumen por WhatsApp</span>
+                <span className="text-[var(--color-fg-4)] font-mono normal-case">CallMeBot</span>
               </div>
               <p className="text-2xl sm:text-3xl font-bold font-mono text-[var(--color-fg-1)] tracking-tight">{data?.whatsapp_active ?? 0}</p>
-              <p className="text-[11px] text-[var(--color-fg-4)] mt-2 font-mono">Último: {timeAgo(data?.last_digest)}</p>
+              <p className="text-[11px] text-[var(--color-fg-4)] mt-2 font-mono">usuarios activos · último envío {timeAgo(data?.last_digest)}</p>
             </div>
           </div>
 
           {/* Chart Row: AUM Time Series + Donut Auth */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            
+
             {/* AUM Chart */}
             <div className="lg:col-span-2 bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-5 relative overflow-hidden">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
@@ -1544,10 +1582,10 @@ export function AdminSectionContent({ user, initialSubSection }: { user: User; i
             {/* Donut Chart: Auth Methods */}
             <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-5 flex flex-col justify-between">
               <div>
-                <h2 className="text-sm sm:text-base font-semibold text-[var(--color-fg-1)]">Métodos de Acceso</h2>
-                <p className="text-xs text-[var(--color-fg-4)] mb-2">Distribución de usuarios por autenticación</p>
+                <h2 className="text-sm sm:text-base font-semibold text-[var(--color-fg-1)]">Cómo entran</h2>
+                <p className="text-xs text-[var(--color-fg-4)] mb-2">Usuarios activos según su forma de acceso</p>
               </div>
-              
+
               <div className="h-[140px] relative flex items-center justify-center">
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
                   <p className="text-xl font-bold font-mono text-[var(--color-fg-1)]">{data?.active_users ?? 0}</p>
@@ -1590,13 +1628,13 @@ export function AdminSectionContent({ user, initialSubSection }: { user: User; i
 
           {/* Third Row: Bank Distribution Breakdown & Category Distribution */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            
+
             {/* Top Banks */}
             <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-5">
               <h3 className="text-sm font-bold text-[var(--color-fg-1)] mb-1 flex items-center gap-2">
-                <Building2 size={16} className="text-[var(--color-accent)]" /> Distribución por Bancos y Gestoras
+                <Building2 size={16} className="text-[var(--color-accent)]" /> Por entidad
               </h3>
-              <p className="text-xs text-[var(--color-fg-4)] mb-4">Entidades con mayor volumen nominal en FondTracker</p>
+              <p className="text-xs text-[var(--color-fg-4)] mb-4">Entidades con más dinero invertido</p>
 
               <div className="space-y-2.5">
                 {(data?.top_banks || []).map((b: any, idx: number) => {
@@ -1612,9 +1650,9 @@ export function AdminSectionContent({ user, initialSubSection }: { user: User; i
                         </div>
                       </div>
                       <div className="w-full h-1.5 bg-[var(--color-ink-2)] rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-[var(--color-accent)] to-emerald-400 rounded-full" 
-                          style={{ width: `${Math.max(pct, 5)}%` }} 
+                        <div
+                          className="h-full bg-gradient-to-r from-[var(--color-accent)] to-emerald-400 rounded-full"
+                          style={{ width: `${Math.max(pct, 5)}%` }}
                         />
                       </div>
                     </div>
@@ -1629,9 +1667,9 @@ export function AdminSectionContent({ user, initialSubSection }: { user: User; i
             {/* Top Categories */}
             <div className="bg-[var(--color-ink-1)] border border-[var(--color-ink-3)] rounded-2xl p-5">
               <h3 className="text-sm font-bold text-[var(--color-fg-1)] mb-1 flex items-center gap-2">
-                <TrendingUp size={16} className="text-blue-400" /> Distribución por Tipología de Activo
+                <TrendingUp size={16} className="text-blue-400" /> Por tipo de fondo
               </h3>
-              <p className="text-xs text-[var(--color-fg-4)] mb-4">Clases de activos favoritas en las carteras de usuarios</p>
+              <p className="text-xs text-[var(--color-fg-4)] mb-4">Tipos de fondo con más dinero invertido</p>
 
               <div className="space-y-2.5">
                 {(data?.top_categories || []).map((c: any, idx: number) => {
@@ -1647,9 +1685,9 @@ export function AdminSectionContent({ user, initialSubSection }: { user: User; i
                         </div>
                       </div>
                       <div className="w-full h-1.5 bg-[var(--color-ink-2)] rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-blue-500 to-indigo-400 rounded-full" 
-                          style={{ width: `${Math.max(pct, 5)}%` }} 
+                        <div
+                          className="h-full bg-gradient-to-r from-blue-500 to-indigo-400 rounded-full"
+                          style={{ width: `${Math.max(pct, 5)}%` }}
                         />
                       </div>
                     </div>
@@ -1671,7 +1709,7 @@ export function AdminSectionContent({ user, initialSubSection }: { user: User; i
       ) : subSection === "notifications" ? (
         <NotificationsTab onToast={showToast} />
       ) : subSection === "system" ? (
-        <SystemTab data={data} onToast={showToast} />
+        <SystemTab onToast={showToast} />
       ) : null}
 
       {/* Hidden PDF Template for Export */}
@@ -1687,7 +1725,7 @@ export function AdminPanel({ user, onLogout }: { user: User; onLogout: () => voi
   const { isDark, toggleTheme } = useTheme();
   return (
     <div className="flex h-screen bg-[var(--color-ink-0)] text-[var(--color-fg-1)] font-sans overflow-hidden">
-      
+
       {/* Sidebar */}
       <aside className="w-60 bg-[var(--color-ink-1)] backdrop-blur-md border-r border-[var(--color-ink-3)] flex flex-col relative z-20">
         <div className="h-16 flex items-center px-5 border-b border-[var(--color-ink-3)]">
@@ -1700,7 +1738,7 @@ export function AdminPanel({ user, onLogout }: { user: User; onLogout: () => voi
         </div>
 
         <div className="p-4 border-b border-[var(--color-ink-3)]">
-          <a 
+          <a
             href="/dashboard"
             className="w-full flex items-center gap-2 px-3 py-2 bg-[var(--color-ink-2)] hover:bg-[var(--color-ink-2)] text-[var(--color-fg-1)] rounded-xl text-xs font-semibold transition-colors"
           >
@@ -1729,7 +1767,7 @@ export function AdminPanel({ user, onLogout }: { user: User; onLogout: () => voi
               <p className="text-[9px] text-[var(--color-fg-4)] truncate">Super Admin</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={onLogout}
             className="p-1 text-[var(--color-fg-4)] hover:text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 rounded-lg transition-colors"
             title="Cerrar sesión"

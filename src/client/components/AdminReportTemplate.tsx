@@ -1,59 +1,22 @@
 import { forwardRef } from 'react';
-import { 
+import { investedOverTime } from '../adminStats';
+import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
-  PieChart, Pie, Cell 
+  PieChart, Pie, Cell
 } from 'recharts';
 import { Users, Database, ArrowUpRight, Activity, CheckCircle2, ShieldCheck, Banknote, Building2, Smartphone } from 'lucide-react';
 
 const fmtNum = (n: number) => new Intl.NumberFormat('es-ES').format(n);
 const fmtEur = (n: number) => `€${new Intl.NumberFormat('es-ES', { maximumFractionDigits: 0 }).format(n)}`;
 
+/** Capital invertido acumulado (últimos 30 días) con las altas reales de fondos. Sin datos → vacío. */
 function buildRealAumHistory(data: any) {
-  if (!data || !data.aum_history_raw || data.aum_history_raw.length === 0) {
-    // Generate standard 30-day baseline if raw history not available
-    const days = 30;
-    const history = [];
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
-    const base = Number(data?.aum_total) || 150000;
-    for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
-      const progress = (days - 1 - i) / (days - 1);
-      const val = Math.round(base * (0.85 + progress * 0.15));
-      history.push({
-        name: `${d.getDate()} ${d.toLocaleString('es-ES', { month: 'short' }).replace('.', '')}`,
-        value: val
-      });
-    }
-    return history;
-  }
-
-  const raw = data.aum_history_raw as { date: string | Date, amount: number }[];
-  raw.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  const days = 30;
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
-  
-  const history = [];
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    
-    let cumulative = 0;
-    for (const r of raw) {
-      if (new Date(r.date) <= d) {
-        cumulative += Number(r.amount);
-      }
-    }
-    
-    history.push({
-      name: `${d.getDate()} ${d.toLocaleString('es-ES', { month: 'short' }).replace('.', '')}`,
-      value: Math.round(cumulative)
-    });
-  }
-  return history;
+  const raw = Array.isArray(data?.aum_history_raw) ? data.aum_history_raw : [];
+  if (raw.length === 0) return [];
+  return investedOverTime(raw, 30).map((p) => {
+    const d = new Date(p.date + "T00:00:00");
+    return { name: `${d.getDate()} ${d.toLocaleString("es-ES", { month: "short" }).replace(".", "")}`, value: Math.round(p.value) };
+  });
 }
 
 // A4 Standard: 794px x 1123px (at 96 DPI)
@@ -64,26 +27,19 @@ export const AdminReportTemplate = forwardRef<HTMLDivElement, { data: any }>(({ 
     { name: 'Email/Pass', value: Number(data?.auth_password) || 0, color: '#3b82f6' }
   ].filter(d => d.value > 0);
 
-  const topBanks = data?.top_banks && data.top_banks.length > 0 
-    ? data.top_banks.slice(0, 5) 
-    : [
-        { name: 'Santander', aum: 45000, count: 6 },
-        { name: 'BBVA', aum: 38000, count: 4 },
-        { name: 'CaixaBank', aum: 29000, count: 3 },
-        { name: 'MyInvestor / Vanguard', aum: 22000, count: 5 },
-      ];
+  const topBanks: { name: string; aum: number; count: number }[] = Array.isArray(data?.top_banks) ? data.top_banks.slice(0, 5) : [];
 
   const maxBankAum = topBanks[0]?.aum || 1;
   const aumChartData = buildRealAumHistory(data);
 
   return (
-    <div 
-      ref={ref} 
-      style={{ 
-        width: '794px', 
-        height: '1123px', 
+    <div
+      ref={ref}
+      style={{
+        width: '794px',
+        height: '1123px',
         maxHeight: '1123px',
-        backgroundColor: '#0a0a0c', 
+        backgroundColor: '#0a0a0c',
         color: '#f8fafc',
         fontFamily: 'system-ui, -apple-system, sans-serif',
         boxSizing: 'border-box',
@@ -104,7 +60,7 @@ export const AdminReportTemplate = forwardRef<HTMLDivElement, { data: any }>(({ 
                 <Activity size={16} color="#c084fc" />
               </div>
               <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.5px' }}>
-                FondTracker <span style={{ color: '#c084fc', fontSize: '13px', border: '1px solid rgba(192,132,252,0.4)', padding: '2px 6px', borderRadius: '6px', marginLeft: '4px', verticalAlign: 'middle' }}>ADMIN PRO</span>
+                FondTracker <span style={{ color: '#c084fc', fontSize: '13px', border: '1px solid rgba(192,132,252,0.4)', padding: '2px 6px', borderRadius: '6px', marginLeft: '4px', verticalAlign: 'middle' }}>ADMIN</span>
               </h1>
             </div>
             <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#94a3b8' }}>
@@ -125,14 +81,14 @@ export const AdminReportTemplate = forwardRef<HTMLDivElement, { data: any }>(({ 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '18px' }}>
           <div style={{ backgroundColor: '#121216', border: '1px solid #27272a', borderRadius: '12px', padding: '12px 14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-              <span style={{ fontSize: '9px', color: '#94a3b8', textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: 'bold' }}>Total AUM</span>
+              <span style={{ fontSize: '9px', color: '#94a3b8', textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: 'bold' }}>Valor de las carteras</span>
               <Banknote size={13} color="#c084fc" />
             </div>
             <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#ffffff', fontFamily: 'monospace' }}>
-              {fmtEur(data?.aum_total ?? 0)}
+              {fmtEur(data?.value_total ?? 0)}
             </div>
             <div style={{ fontSize: '9px', color: '#c084fc', marginTop: '4px' }}>
-              {data?.total_investments ?? 0} posiciones
+              {fmtEur(data?.invested_total ?? 0)} invertidos · {data?.total_investments ?? 0} fondos
             </div>
           </div>
 
@@ -151,7 +107,7 @@ export const AdminReportTemplate = forwardRef<HTMLDivElement, { data: any }>(({ 
 
           <div style={{ backgroundColor: '#121216', border: '1px solid #27272a', borderRadius: '12px', padding: '12px 14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-              <span style={{ fontSize: '9px', color: '#94a3b8', textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: 'bold' }}>Catálogo CNMV</span>
+              <span style={{ fontSize: '9px', color: '#94a3b8', textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: 'bold' }}>Catálogo</span>
               <Database size={13} color="#ffb547" />
             </div>
             <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#ffffff', fontFamily: 'monospace' }}>
@@ -181,14 +137,14 @@ export const AdminReportTemplate = forwardRef<HTMLDivElement, { data: any }>(({ 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <div>
               <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Evolución de Activos Bajo Gestión (AUM) — 30 Días
+                Capital invertido acumulado — 30 días
               </span>
               <p style={{ margin: '2px 0 0 0', fontSize: '9.5px', color: '#94a3b8' }}>
-                Valor nominal acumulado de las carteras de inversión activas en la plataforma
+                Suma de lo invertido por todos los usuarios según la fecha de alta de cada fondo
               </p>
             </div>
             <span style={{ fontSize: '10px', color: '#c084fc', fontFamily: 'monospace', fontWeight: 'bold', backgroundColor: 'rgba(192,132,252,0.1)', padding: '2px 8px', borderRadius: '6px' }}>
-              {fmtEur(data?.aum_total ?? 0)} Actual
+              {fmtEur(data?.invested_total ?? 0)} invertidos
             </span>
           </div>
 
@@ -210,7 +166,7 @@ export const AdminReportTemplate = forwardRef<HTMLDivElement, { data: any }>(({ 
 
         {/* Two-Column Analytics: Auth Distribution & Top Entities */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '18px' }}>
-          
+
           {/* Auth Donut Chart */}
           <div style={{ backgroundColor: '#121216', border: '1px solid #27272a', borderRadius: '14px', padding: '14px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>
@@ -286,19 +242,19 @@ export const AdminReportTemplate = forwardRef<HTMLDivElement, { data: any }>(({ 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', fontSize: '9px', fontFamily: 'monospace' }}>
             <div style={{ backgroundColor: '#0a0a0c', padding: '8px 10px', borderRadius: '8px', border: '1px solid #1e293b' }}>
               <span style={{ color: '#64748b', display: 'block' }}>MOTOR RUNTIME</span>
-              <span style={{ color: '#ffffff', fontWeight: 'bold' }}>Bun {data?.bun_version || '1.3.9'}</span>
+              <span style={{ color: '#ffffff', fontWeight: 'bold' }}>{data?.bun_version ? `Bun ${data.bun_version}` : '—'}</span>
             </div>
             <div style={{ backgroundColor: '#0a0a0c', padding: '8px 10px', borderRadius: '8px', border: '1px solid #1e293b' }}>
-              <span style={{ color: '#64748b', display: 'block' }}>MEMORIA RSS / HEAP</span>
-              <span style={{ color: '#ffffff', fontWeight: 'bold' }}>{data?.memory_rss_mb || 48} MB / {data?.memory_heap_mb || 22} MB</span>
+              <span style={{ color: '#64748b', display: 'block' }}>ENTORNO</span>
+              <span style={{ color: '#ffffff', fontWeight: 'bold' }}>{data?.node_env || '—'}</span>
             </div>
             <div style={{ backgroundColor: '#0a0a0c', padding: '8px 10px', borderRadius: '8px', border: '1px solid #1e293b' }}>
               <span style={{ color: '#64748b', display: 'block' }}>CACHÉ EN MEMORIA</span>
-              <span style={{ color: '#c084fc', fontWeight: 'bold' }}>{data?.price_cache_size || 0} Cotizaciones</span>
+              <span style={{ color: '#c084fc', fontWeight: 'bold' }}>{data?.price_cache_size || 0} fondos con precio</span>
             </div>
             <div style={{ backgroundColor: '#0a0a0c', padding: '8px 10px', borderRadius: '8px', border: '1px solid #1e293b' }}>
-              <span style={{ color: '#64748b', display: 'block' }}>SCHEDULER CRON</span>
-              <span style={{ color: '#c084fc', fontWeight: 'bold' }}>Operativo 24/7</span>
+              <span style={{ color: '#64748b', display: 'block' }}>ÚLTIMO ENVÍO WHATSAPP</span>
+              <span style={{ color: '#c084fc', fontWeight: 'bold' }}>{data?.last_digest ? new Date(data.last_digest).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : 'Ninguno'}</span>
             </div>
           </div>
         </div>
