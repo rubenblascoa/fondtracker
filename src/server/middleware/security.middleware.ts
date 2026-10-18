@@ -1,5 +1,6 @@
 const IS_PROD = process.env.NODE_ENV === "production";
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? (IS_PROD ? "" : "http://localhost:3741");
+// Igual que en index.ts: sin ALLOWED_ORIGIN, en Render (RENDER=true) se usa su URL pública
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || (process.env.RENDER ? process.env.RENDER_EXTERNAL_URL : undefined) || (IS_PROD ? "" : "http://localhost:3741");
 const MAX_BODY_BYTES = 65_536; // 64 KB
 
 let serverInstance: any = null;

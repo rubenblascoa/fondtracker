@@ -67,7 +67,10 @@ const IDLE_TIMEOUT_SECONDS = positiveInt(
 );
 const IS_PROD = process.env.NODE_ENV === "production";
 // Allowed origin for CORS. In production set to your real domain, e.g. https://fondtracker.example.com
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? (IS_PROD ? "" : "http://localhost:3741");
+// Origen permitido para las acciones que cambian datos. En Render, si no se define, se usa la URL
+// pública que Render pone en RENDER_EXTERNAL_URL (RENDER=true solo existe allí; antes quedaba vacío y
+// la comprobación se saltaba). En local sigue siendo localhost.
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || (process.env.RENDER ? process.env.RENDER_EXTERNAL_URL : undefined) || (IS_PROD ? "" : "http://localhost:3741");
 
 const PROJECT_ROOT = process.cwd();
 const PUBLIC_DIR = resolve(PROJECT_ROOT, "public");
@@ -157,6 +160,29 @@ function describeEnv(): { key: string; set: boolean; value: string | null }[] {
   return [...keys].sort().map((key) => {
     const raw = process.env[key];
     return { key, set: Boolean(raw), value: PUBLIC_ENV.has(key) && raw ? raw : null };
+  });
+}
+
+/**
+ * OAuth (Google/GitHub): el «state» viaja también en una cookie y a la vuelta debe coincidir.
+ * Así el retorno solo vale en el navegador que empezó el acceso (evita el «login CSRF»: que alguien
+ * te haga abrir su enlace de vuelta y acabes dentro de su cuenta).
+ */
+function oauthStart(authUrl: string): Response {
+  const state = new URL(authUrl).searchParams.get("state") ?? "";
+  return new Response(null, {
+    status: 302,
+    headers: { Location: authUrl, "Set-Cookie": `ft_oauth=${state}; Path=/api/auth; Max-Age=600; HttpOnly; SameSite=Lax${IS_PROD ? "; Secure" : ""}` },
+  });
+}
+function oauthStateMatches(req: Request, state: string): boolean {
+  const cookie = req.headers.get("cookie")?.match(/(?:^|;s*)ft_oauth=([^;]+)/)?.[1];
+  return Boolean(state && cookie && cookie === state);
+}
+function oauthFinish(token: string): Response {
+  return new Response(null, {
+    status: 302,
+    headers: { Location: `/dashboard#token=${token}`, "Set-Cookie": "ft_oauth=; Path=/api/auth; Max-Age=0; HttpOnly; SameSite=Lax" },
   });
 }
 
@@ -461,6 +487,12 @@ const server = serve({
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
+  <url>
+    <loc>${baseUrl}/legal/security</loc>
+    <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
 </urlset>`;
       return new Response(sitemapXml, {
         headers: {
@@ -591,7 +623,7 @@ const server = serve({
 
     "/api/auth/google": {
       async GET() {
-        return Response.redirect(getGoogleAuthUrl(), 302);
+        return oauthStart(getGoogleAuthUrl());
       }
     },
 
@@ -601,11 +633,12 @@ const server = serve({
         const code = url.searchParams.get("code");
         const state = url.searchParams.get("state") ?? "";
         if (!code) return badRequest("Missing code");
+        if (!oauthStateMatches(req, state)) return badRequest("El acceso ha caducado o no se empezó en este navegador. Vuelve a intentarlo.");
         try {
           const token = await handleGoogleCallback(code, state);
           // VULN-02 fix: pass token via URL fragment (#) so it never appears in server logs,
           // Referer headers, or browser history as a query parameter.
-          return Response.redirect(`/dashboard#token=${token}`, 302);
+          return oauthFinish(token);
         } catch (err: any) {
           // VULN-06 fix: sanitize error message and use json() for security headers
           return json({ error: safeError(err) }, { status: 500 });
@@ -615,7 +648,7 @@ const server = serve({
 
     "/api/auth/github": {
       async GET() {
-        return Response.redirect(getGithubAuthUrl(), 302);
+        return oauthStart(getGithubAuthUrl());
       }
     },
 
@@ -625,11 +658,12 @@ const server = serve({
         const code = url.searchParams.get("code");
         const state = url.searchParams.get("state") ?? "";
         if (!code) return badRequest("Missing code");
+        if (!oauthStateMatches(req, state)) return badRequest("El acceso ha caducado o no se empezó en este navegador. Vuelve a intentarlo.");
         try {
           const token = await handleGithubCallback(code, state);
           // VULN-02 fix: pass token via URL fragment (#) so it never appears in server logs,
           // Referer headers, or browser history as a query parameter.
-          return Response.redirect(`/dashboard#token=${token}`, 302);
+          return oauthFinish(token);
         } catch (err: any) {
           // VULN-06 fix: sanitize error message and use json() for security headers
           return json({ error: safeError(err) }, { status: 500 });
