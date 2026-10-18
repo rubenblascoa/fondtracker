@@ -1,0 +1,546 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Geist Mono";
+  src: url("./fonts/geist-mono/GeistMono-Variable.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Geist Pixel";
+  src: url("./fonts/geist-pixel/GeistPixel-Square.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Geist Pixel Grid";
+  src: url("./fonts/geist-pixel/GeistPixel-Grid.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-heading: "Outfit", "Inter", sans-serif;
+  --font-primary: "Inter", system-ui, sans-serif;
+  --font-pixel: "Geist Pixel", monospace;
+  --font-pixel-grid: "Geist Pixel Grid", monospace;
+
+  --color-ink-0: #030303;
+  --color-ink-1: #0a0a0c;
+  --color-ink-2: #121215;
+  --color-ink-3: #1a1a1f;
+  --color-ink-4: #2a2a31;
+  --color-ink-5: #3a3a43;
+  --color-fg-1: #ffffff;
+  --color-fg-2: #e2e2e8;
+  --color-fg-3: #a1a1aa;
+  --color-fg-4: #71717a;
+  --color-accent: #39ff88;
+  --color-accent-dim: #1f7a44;
+  --color-danger: #ff5a4a;
+  --color-warn: #ffb547;
+  --color-profit: #39ff88;
+  --color-loss: #ff5a4a;
+
+  --color-brand-primary: #39ff88;
+  --color-brand-secondary: #ff5a4a;
+  --color-brand-accent: #ffb547;
+  --color-neutral-background: #050505;
+  --color-neutral-surface: #0d0d0f;
+  --color-text-primary: #f5f5f5;
+  --color-text-secondary: #9ca3af;
+  --color-text-light: #6b7280;
+  --color-border-terminal: #1f2937;
+
+  --shadow-neon: 0 0 15px rgba(57, 255, 136, 0.2);
+  --shadow-neon-hover: 0 0 25px rgba(57, 255, 136, 0.4);
+  --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    --grid-color: rgba(255, 255, 255, 0.02);
+    --color-accent-fg: #000000;
+  }
+
+  /* ── Light Mode Color Theme Overrides (High Contrast WCAG AAA) ── */
+  html[data-theme="light"],
+  body.theme-light {
+    color-scheme: light;
+    --color-ink-0: #f8fafc;
+    --color-ink-1: #ffffff;
+    --color-ink-2: #f1f5f9;
+    --color-ink-3: #e2e8f0;
+    --color-ink-4: #cbd5e1;
+    --color-ink-5: #94a3b8;
+    --color-fg-1: #09090b;
+    --color-fg-2: #18181b;
+    --color-fg-3: #334155;
+    --color-fg-4: #475569;
+    --color-fg-5: #64748b;
+    --color-accent: #047857;
+    --color-accent-dim: #065f46;
+    --color-accent-fg: #ffffff;
+    --color-danger: #dc2626;
+    --color-warn: #b45309;
+    --color-profit: #15803d;
+    --color-loss: #dc2626;
+
+    --color-brand-primary: #047857;
+    --color-brand-secondary: #dc2626;
+    --color-brand-accent: #b45309;
+    --color-neutral-background: #f8fafc;
+    --color-neutral-surface: #ffffff;
+    --color-text-primary: #09090b;
+    --color-text-secondary: #334155;
+    --color-text-light: #64748b;
+    --color-border-terminal: #e2e8f0;
+
+    --grid-color: rgba(0, 0, 0, 0.035);
+    --shadow-neon: 0 4px 14px rgba(4, 120, 87, 0.2);
+    --shadow-neon-hover: 0 6px 20px rgba(4, 120, 87, 0.3);
+    --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+
+  html,
+  body {
+    background: var(--color-ink-0);
+    color: var(--color-fg-1);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "ss03";
+    -webkit-font-smoothing: subpixel-antialiased;
+    -moz-osx-font-smoothing: auto;
+    overflow-x: clip;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  body {
+    min-height: 100vh;
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 0.75rem);
+  }
+
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+
+  ::selection {
+    background: var(--color-accent);
+    color: var(--color-ink-0);
+  }
+
+  *:focus-visible {
+    outline: 1px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px var(--color-ink-2) inset;
+    -webkit-text-fill-color: var(--color-fg-1);
+    caret-color: var(--color-fg-1);
+    transition: background-color 5000s ease-in-out 0s;
+  }
+}
+
+@layer utilities {
+  .font-pixel {
+    font-family: var(--font-pixel);
+    letter-spacing: 0.02em;
+  }
+  .font-pixel-grid {
+    font-family: var(--font-pixel-grid);
+    letter-spacing: 0.02em;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: var(--color-ink-4);
+    border-radius: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .touch-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+  }
+
+  .safe-bottom {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4.5rem);
+  }
+
+  .glow {
+    text-shadow: 0 0 12px rgba(57, 255, 136, 0.55);
+  }
+
+  .fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  .slide-down {
+    animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .slide-left {
+    animation: slideLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .pulse-dot {
+    animation: pulseDot 2s ease-in-out infinite;
+  }
+
+  .shimmer {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.07) 50%, rgba(255, 255, 255, 0.02) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite ease-in-out;
+  }
+
+  .dash-cascade {
+    animation: dashCascadeDown 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .animate-scanline {
+    animation: scanline 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+}
+
+@keyframes dashCascadeDown {
+  0% {
+    opacity: 0.15;
+    transform: translateY(-20px);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0px);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideLeft {
+  from { opacity: 0; transform: translateX(-100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+
+@keyframes scanline {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-ink-2) 25%,
+    var(--color-ink-3) 50%,
+    var(--color-ink-2) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.glass-card {
+  background: rgba(13, 13, 15, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transform: translateZ(0);
+  -webkit-transform: translate3d(0,0,0);
+  backface-visibility: hidden;
+}
+
+html[data-theme="light"] .glass-card,
+body.theme-light .glass-card {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.04);
+}
+
+.grid-overlay {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+html[data-theme="light"] .grid-overlay,
+body.theme-light .grid-overlay {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+}
+
+.animate-on-scroll-hidden {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+.animate-on-scroll-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.text-glow {
+  text-shadow: 0 0 10px rgba(57, 255, 136, 0.3);
+}
+
+html[data-theme="light"] .text-glow,
+body.theme-light .text-glow {
+  text-shadow: none;
+}
+
+@keyframes float1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+}
+
+@keyframes float2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-30px, 40px) scale(1.2); }
+  66% { transform: translate(20px, -20px) scale(0.8); }
+}
+
+@keyframes float3 {
+  0%, 100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+  50% { transform: translate(-50%, -50%) scale(1.5) rotate(180deg); }
+}
+
+@layer utilities {
+  .animate-float-1 { animation: float1 20s ease-in-out infinite; }
+  .animate-float-2 { animation: float2 25s ease-in-out infinite; }
+  .animate-float-3 { animation: float3 30s ease-in-out infinite; }
+  
+  .bg-grid-pattern {
+    background-image: linear-gradient(var(--grid-color) 1px, transparent 1px), linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+}
+
+/* ── Global Contrast Enhancement for Light Mode (WCAG AAA) ── */
+html[data-theme="light"],
+body.theme-light {
+  /* Crisp Border and Background Mapping */
+  .border-white\/5,
+  .border-white\/10,
+  .border-white\/20,
+  .border-white\/30 {
+    border-color: #e2e8f0 !important;
+  }
+  
+  .bg-black\/40,
+  .bg-black\/50,
+  .bg-black\/60,
+  .bg-black\/70,
+  .bg-black\/80 {
+    background-color: #ffffff !important;
+  }
+
+  .bg-black\/20,
+  .bg-black\/30,
+  .bg-white\/5 {
+    background-color: #f1f5f9 !important;
+  }
+
+  .bg-white\/10 {
+    background-color: #e2e8f0 !important;
+  }
+
+  /* High contrast text overrides */
+  .text-white:not([class*="bg-[var(--color-accent)]"], [class*="bg-[var(--color-danger)]"], [class*="bg-brand-primary"], .badge-dark) {
+    color: #09090b !important;
+  }
+
+  .text-gray-300 {
+    color: #1e293b !important;
+  }
+
+  .text-gray-400 {
+    color: #334155 !important;
+  }
+
+  .text-gray-500 {
+    color: #64748b !important;
+  }
+
+  .text-gray-600 {
+    color: #94a3b8 !important;
+  }
+
+  /* Stat cards, fund cards and general cards in light mode */
+  .bg-\[var\(--color-ink-1\)\] {
+    background-color: #ffffff !important;
+    border-color: #e2e8f0 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+  }
+
+  .bg-\[var\(--color-ink-2\)\] {
+    background-color: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+  }
+
+  /* Primary action buttons */
+  button[class*="bg-[var(--color-accent)]"],
+  a[class*="bg-[var(--color-accent)]"],
+  button.bg-brand-primary,
+  a.bg-brand-primary {
+    color: #ffffff !important;
+    background-color: #047857 !important;
+    box-shadow: 0 4px 14px rgba(4, 120, 87, 0.25) !important;
+  }
+
+  button[class*="bg-[var(--color-accent)]"]:hover,
+  a[class*="bg-[var(--color-accent)]"]:hover,
+  button.bg-brand-primary:hover,
+  a.bg-brand-primary:hover {
+    background-color: #065f46 !important;
+  }
+
+  /* Make sure text inside accent buttons is white */
+  button[class*="bg-[var(--color-accent)]"] span,
+  a[class*="bg-[var(--color-accent)]"] span,
+  button.bg-brand-primary span,
+  a.bg-brand-primary span {
+    color: #ffffff !important;
+  }
+
+  /* Neon glows should not blur text in light mode */
+  .glow {
+    text-shadow: none !important;
+  }
+
+  /* Tooltip box in charts */
+  .recharts-default-tooltip {
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #09090b !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08) !important;
+  }
+
+  /* Sidebar in light mode */
+  aside {
+    background-color: #ffffff !important;
+    border-color: #e2e8f0 !important;
+  }
+}
+
+/* ── Dynamic Design Utility Bridges ── */
+.bg-neutral-background {
+  background-color: var(--color-ink-0) !important;
+}
+.bg-neutral-surface {
+  background-color: var(--color-ink-1) !important;
+}
+.border-border-terminal {
+  border-color: var(--color-ink-3) !important;
+}
+.text-text-primary {
+  color: var(--color-fg-1) !important;
+}
+.text-text-secondary {
+  color: var(--color-fg-3) !important;
+}
+.text-text-light {
+  color: var(--color-fg-4) !important;
+}
+.text-brand-primary {
+  color: var(--color-accent) !important;
+}
+.bg-brand-primary {
+  background-color: var(--color-accent) !important;
+}
+
+/* ── Isolated Executive PDF Report Styles (Immune to theme switches) ── */
+.report-page,
+.report-page * {
+  color-scheme: dark !important;
+}
+
+.report-page {
+  background-color: #0a0a0c !important;
+  color: #f8fafc !important;
+  box-sizing: border-box !important;
+}
+
+html[data-theme="light"] .report-page,
+body.theme-light .report-page {
+  background-color: #0a0a0c !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="light"] .report-page h1,
+html[data-theme="light"] .report-page h2,
+html[data-theme="light"] .report-page h3,
+html[data-theme="light"] .report-page p,
+html[data-theme="light"] .report-page span,
+html[data-theme="light"] .report-page td,
+html[data-theme="light"] .report-page th,
+html[data-theme="light"] .report-page div {
+  --color-accent: #39ff88 !important;
+}
+

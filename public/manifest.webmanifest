@@ -1,0 +1,27 @@
+{
+  "name": "FondTracker | Professional Investment Fund Analytics",
+  "short_name": "FondTracker",
+  "description": "Seguimiento institucional de fondos de inversión y ETFs con alertas por WhatsApp y sincronización en tiempo real.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#39ff88",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "categories": ["finance", "productivity", "utilities"],
+  "developer": {
+    "name": "Rubén Blasco Armengod",
+    "url": "https://rubenblascoa.github.io"
+  }
+}

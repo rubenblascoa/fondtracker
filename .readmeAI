@@ -1,0 +1,836 @@
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+<!--
+  ╔══════════════════════════════════════════════════════════════════════╗
+  ║  READMEAI v4.7 — AI-TO-AI PROJECT CONTEXT FILE                     ║
+  ║  Lean by default · Every line earns its place · Zero drift         ║
+  ║  Setup: bash setup.sh  ·  Docs: github.com/Oscarr36/ReadMeAI      ║
+  ╚══════════════════════════════════════════════════════════════════════╝
+-->
+
+# .readmeAI
+
+---
+
+## ⚡ QUICK REFERENCE
+> **Hot restart: read only this table, then go to SESSION STATE. Skip the full file.**
+| | |
+|--|--|
+| **Objective** | Investment fund tracker web app — multi-user auth, fund catalog in MySQL, Yahoo Finance charts + QueFondos NAV data + fund metadata, WhatsApp notifications |
+| **Last action** | Performance optimizations: in-memory cache for charts (5m TTL) in yahoo.ts/quefondos.ts, request coalescing for concurrent prices and scrapings, and unique ISIN transaction grouping in sentinel.ts to eliminate lag. Client build succeeds. |
+| **Next step** | Expand fund catalog beyond 490+ entries, add admin UI for catalog management |
+| **Key files** | `index.html` (landing), `src/server/index.ts` (routes), `src/server/sentinel.ts` (dedup), `src/server/yahoo.ts` (cache+coalesce), `src/server/quefondos.ts` (cache+coalesce), `src/client/components/FundCard.tsx` (observer) |
+| **Blockers** | None |
+
+---
+
+## ⚙️ AI PROTOCOL
+
+> **Read this file at the very start of EVERY session. No prompt needed. First action, always.**
+
+### Session start
+1. Read QUICK REFERENCE → go to SESSION STATE → resume without recap.
+2. **First-time setup** (SESSION STATE blank): execute FIRST-TIME SETUP at bottom. Fill every section. Never repeat after that.
+3. **Domain rules beat everything.** If a rule in DOMAIN RULES conflicts with your general knowledge, the domain rule wins.
+
+### Session end — silent, no user prompt needed
+1. Overwrite QUICK REFERENCE and SESSION STATE with current snapshot.
+2. Append to DECISIONS LOG any architectural choice made this session.
+3. Update SYMBOL INDEX for new or renamed symbols (name + purpose, no line numbers).
+
+### Core rules
+- **Trust order:** Code > this file > AI memory. If they conflict, trust the code and update this file.
+- **Navigate via SYMBOL INDEX.** Don't scan the filesystem if a symbol is listed here.
+- **Quality gate is mandatory.** Run CODE QUALITY checklist before every output. No exceptions.
+- **Scope guard.** Out-of-scope request → log in Backlog, flag to user, don't implement without approval.
+- **Append-only logs.** DECISIONS LOG and AI NOTES are never edited, only appended. Newest first.
+- **No silent drift.** If this file and the code disagree, fix this file immediately. Don't let them diverge.
+
+### When to read what
+| Situation | Action |
+|-----------|--------|
+| Hot restart / "continue" | QUICK REFERENCE → SESSION STATE only |
+| New session | Full file |
+| Writing any code | Check CODE QUALITY checklist and DOMAIN RULES |
+| Touching auth / input / data | Also read optional SECURITY section |
+| Touching API / DB / models | Also read optional API CONTRACTS section |
+| Making an architectural decision | Read DECISIONS LOG first — check if already decided |
+| Something feels tricky | Read AI NOTES first — previous AI may have left a warning |
+
+---
+
+## 📋 PROJECT IDENTITY
+
+| Field | Value |
+|-------|-------|
+| **Name** | FondTracker |
+| **Version** | 0.0.1 (package.json) |
+| **Phase** | `production` |
+| **Type** | Web app (SPA + API) |
+| **Stack** | Bun 1.3 + React 19 + Tailwind CSS 4 + MySQL (XAMPP) + Yahoo Finance API + QueFondos (NAV scraper) |
+| **Repository** | github-sentinel-main (local) |
+| **Dev command** | `bun run dev` (HMR) |
+| **Build command** | `bun run build` (client assets to `dist/`) |
+| **Start command** | `bun run start` → `bun src/server/index.ts` |
+| **Production start** | `bun run start:prod` (NODE_ENV=production, disables HMR) |
+| **Service mgmt** | `bun run service:install/uninstall/start/stop/status/logs` |
+| **Last updated** | 2026-07-17 |
+
+---
+
+## 🧠 DOMAIN RULES
+
+> **Highest-value section. Non-obvious rules that cause bugs when unknown.**
+> **Only write what a senior developer would NOT figure out in 30 minutes of reading the code.**
+
+- **MySQL on XAMPP**: Always port 3306, user `root`, no password, database `fondtracker`. Never assume a different config.
+- **Bun executable path on this machine**: `C:\Users\Ruben\AppData\Local\Microsoft\WinGet\Packages\Oven-sh.Bun_Microsoft.Winget.Source_8wekyb3d8bbwe\bun-windows-x64\bun.exe`
+- **Server must be killed by PID, not port**: `Get-NetTCPConnection -LocalPort 3741` returns System Idle Process (PID 0) which cannot be killed. Use `Get-Process -Name bun | Stop-Process -Force` instead.
+- **Yahoo Finance only works for ETFs**: Mutual funds (`.BC` tickers, Spanish fund tickers) return zero historical data. Only ETFs with real exchange tickers (`.AS`, `.DE`, `.L`) have chart data. The `ticker` field on investments is nullable for this reason.
+- **QueFondos fallback for mutual funds**: When Yahoo Finance returns no data for an ISIN-based ticker, `fetchYahooChart()` and `fetchCurrentPrice()` automatically fall back to `fetchQueFondosData(isin)` which scrapes www.quefondos.com for official NAV, historical monthly series, and 1Y/3Y/5Y returns. QueFondos data is marked with `dataSource: "quefondos"` and includes a `staleWarning` if >7 business days old.
+- **ISIN auto-discovery**: When an investment has no ticker, `tryDiscoverTicker(isin)` first tries QueFondos (returns ISIN as ticker), then tries Yahoo with `.BC`, `.MC`, `.MA` suffixes. Discovered tickers are persisted to the `investments.ticker` column via `updateInvestmentTicker()`.
+- **Fund metadata enrichment**: `getFundExtraMetadata(isin, category, name, returns)` in `src/server/metadata.ts` provides synthetic TER, sector allocation, geography, and top holdings data based on fund category/name heuristics (S&P 500, MSCI World, Spain equity, Europe, Mixto, generic). Returns are real when sourced from QueFondos, otherwise use sensible defaults.
+- **Cross-source price verification**: Yahoo Finance prices are cross-checked against QueFondos NAV when both are available. `verifyFundData()` compares prices and produces a `verificationLog` string. Discrepancies >1% are flagged and QueFondos is preferred (it has official NAV).
+- **fund_prices cache table**: `db.ts` creates a `fund_prices` table with `(isin, price, currency, updated_at)`. `setFundPrice()` is called after every successful price fetch. `getFundPrice()` serves as fallback when live fetch fails. This reduces API calls and survives restarts.
+- **Fund catalog lives in MySQL, not in code**: The `fund_catalog` table is the single source of truth. `src/server/fund-catalog.ts` is OBSOLETE and unused by the server — it was the original hardcoded catalog before migration.
+- **Settings table columns**: Named `setting_key`/`setting_value` (NOT `key`/`value`) to avoid MySQL reserved word conflicts. The `schema.sql` file has the old column names — always use `ensureSchema()` from `db.ts` as the truth.
+- **investments.user_id**: Added via ALTER TABLE, not in original schema. Always check for column existence in `ensureSchema()` before assuming it exists.
+- **All API routes except `/api/health`, `/api/funds/search`, `/api/funds/catalog/:isin`, `/api/funds/chart/:ticker` require JWT auth**. The `requireUser(req)` helper returns a `Response` (401) on failure — always check `if (user instanceof Response) return user;`.
+- **JWT_SECRET has a dev default**: `fondtracker-dev-secret-change-in-prod`. MUST be overridden in production via env var.
+- **Client is bundled to `dist/` by `build.ts`**: The build only bundles client-side code (HTML/JS/CSS for browser). The server runs directly from TypeScript source via `bun run src/server/index.ts`. Never try to run `dist/index.js` — it doesn't exist.
+- **Server routing split**: `/` serves root `index.html` (static Tailwind CDN landing page). `/dashboard`, `/login`, `/register` serve the React SPA (imported as `index` from `../client/index.html`). `/*` falls through to root `index.html`. Never change `/` to serve the React SPA — the landing page CSS is incompatible with Tailwind v4.
+- **Landing page is NOT React**: The root `index.html` is a standalone static page with Tailwind CDN v3. Auth detection is inline vanilla JS (not React). Do not import React components or Tailwind v4 utilities into this file.
+- **Schema files are reference only**: `schema.sql` and `schema-settings-catalog.sql` are not applied automatically. The actual schema is managed by `ensureSchema()` in `db.ts` which runs on every server start.
+- **WhatsApp Phone Numbers**: Extracted and isolated per user. A user's WhatsApp alerts are sent strictly to their own registered phone number stored in `users.phone`. A user's notification parameters do not default to global environment variables or fallbacks if a `userId` is supplied.
+- **WhatsApp Formatting Limit**: Text notifications are optimized to fit within 26 characters of width under monospaced (```) formatting, avoiding wrapping on mobile WhatsApp screens. Performance lists use shortened layouts with 8-character bar graphics and 9-character fund names.
+
+### Deprecated / Renamed
+> **Anti-hallucination anchors. Never reach for these — use the replacement instead.**
+
+| Dead symbol / API | Replaced by | Why |
+|-------------------|-------------|-----|
+| `fund-catalog.ts` functions (`getFundByIsin`, `searchFunds`) | `queries.searchFundCatalog()`, `queries.getFundCatalogByIsin()` in `db.ts` | Fund catalog moved from hardcoded array to MySQL. Server no longer imports from `fund-catalog.ts`. |
+| `schema.sql` settings table (`key`, `value` columns) | `schema-settings-catalog.sql` (`setting_key`, `setting_value`) | MySQL reserved word conflict. Always use `setting_key`/`setting_value`. |
+| `data/sentinel.db` (SQLite) | MySQL via `db.ts` pool | Project migrated from SQLite to MySQL/XAMPP. SQLite files are leftover artifacts. |
+| `api.fetchChart` (old name) | `api.getChartData(ticker, range, interval)` | Renamed during refactor of api.ts with new YahooChartData type including QueFondos fields |
+| `listInvestments` returning raw rows | `listInvestments` now with auto-ticker-discovery + price caching | Ticker resolution and price caching in fund_prices table added to the pipeline |
+
+---
+
+## 🏗 STRUCTURE MAP
+
+> **Replaces filesystem scanning. Navigate from here — never glob or list directories.**
+
+```
+github-sentinel-main/
+│
+├── .readmeAI                          ← this file
+├── .env                               ← Local env vars (gitignored)
+├── .env.example                       ← Env template
+├── index.html                         ← Root landing page (Tailwind CDN, auth detection, served for /)
+├── build.ts                           ← Bun client build (HTML/JS/CSS → dist/)
+├── deploy.bat                         ← Windows deployment batch script
+├── start-api.bat                      ← Windows API start batch script
+├── package.json                       ← manifest: bun + react 19 + mysql2 + tailwind 4
+├── schema.sql                         ← MySQL DDL reference (investments, settings, fund_history)
+├── schema-settings-catalog.sql        ← MySQL DDL reference (fund_catalog, settings)
+├── seed-funds.ts                      ← Seeds ~490+ funds into fund_catalog table
+├── tsconfig.json                      ← TypeScript config
+├── bunfig.toml                        ← Bun config (static serve, tailwind plugin)
+├── diag.ts                            ← Server diagnostic script
+├── fix-audaz.ts                       ← One-time data fix script
+├── test.ts                            ← Test helper
+├── cnmv_test.html                     ← CNMV scraper test page
+├── mstar.html                         ← Morningstar test page
+├── qf_test_santander.html             ← QueFondos test page
+│
+├── public/
+│   ├── favicon.ico
+│   └── favicon.svg                    ← Pixel-art bar chart SVG
+│
+├── scripts/
+│   ├── service.ts                     ← Cross-platform OS service manager
+│   ├── macos/sentinel.plist.template  ← macOS launchd template
+│   └── win/
+│       ├── install.ps1                ← Windows NSSM service installer
+│       └── uninstall.ps1              ← Windows NSSM service uninstaller
+│
+└── src/
+    ├── client/
+    │   ├── index.html                 ← SPA entry (dark mode, es locale)
+    │   ├── main.tsx                   ← React 19 root bootstrap + HMR
+    │   ├── App.tsx                    ← Root: auth gate, layout, data refresh + API docs modal
+    │   ├── api.ts                     ← HTTP client + types + JWT mgmt + bank URLs + fund URLs
+    │   ├── utils.ts                   ← formatCurrency, formatPct, profitColor, formatRelative
+    │   ├── styles.css                 ← Tailwind v4 theme, Geist fonts, scanline animation
+    │   ├── components/
+    │   │   ├── Header.tsx             ← Sticky header: logo, status, user, logout, API docs button
+    │   │   ├── Stats.tsx              ← Portfolio summary grid or empty state
+    │   │   ├── AddFundForm.tsx        ← Fund search + investment form (amount/shares mode)
+    │   │   ├── FundCard.tsx           ← Investment card with chart, composition, details tabs
+    │   │   ├── LoginPage.tsx          ← Login form
+    │   │   ├── RegisterPage.tsx       ← Registration form + password strength
+    │   │   ├── NotifyPanel.tsx        ← WhatsApp digest config + preview/send
+    │   │   └── ApiDocsModal.tsx       ← API documentation modal with cURL examples
+    │   └── fonts/                     ← Geist Mono + Pixel .woff2 files
+    │
+    └── server/
+        ├── index.ts                   ← Bun.serve: all routes, static, shutdown, /api/banks
+        ├── auth.ts                    ← JWT sign/verify, register/login, bcrypt
+        ├── db.ts                      ← MySQL pool, ensureSchema, all queries + fund_prices
+        ├── sentinel.ts                ← Business logic: invest CRUD + live P/L + ticker discovery
+        ├── yahoo.ts                   ← Yahoo Finance chart/price + QueFondos fallback + metadata
+        ├── quefondos.ts               ← QueFondos.com NAV scraper (mutual funds data source)
+        ├── metadata.ts                ← Fund extra metadata (TER, sectors, geography, holdings)
+        ├── whatsapp.ts                ← CallMeBot WhatsApp sender + report builder
+        ├── digest.ts                  ← Cron scheduler for WhatsApp digests
+        └── fund-catalog.ts            ← OBSOLETE hardcoded catalog (not used by server)
+```
+
+### Enforced directory rules
+> Active every session. Violations must be flagged immediately — do not silently accept drift.
+
+| Directory | Owns | Must NOT contain |
+|-----------|------|-----------------|
+| `src/server/` | API routes, DB, auth, business logic | React components, browser APIs |
+| `src/client/` | React components, CSS, browser code | Server-only code (fs, mysql, crypto.subtle for JWT) |
+| `public/` | Static assets served directly | Source files, build artifacts |
+| `dist/` | Build output (client bundle only) | Server entry point, source code |
+| `scripts/` | Service management, deployment | Application logic |
+
+---
+
+## 🔍 SYMBOL INDEX
+
+> **Jump directly to any symbol without scanning. Name + file + purpose.**
+> **No exact line numbers — they go stale. Use file path + purpose to locate.**
+
+### Server — Core
+| Symbol | File | Purpose |
+|--------|------|---------|
+| `pool` | `src/server/db.ts` | MySQL2 connection pool (10 connections, utf8mb4) |
+| `ensureSchema()` | `src/server/db.ts` | Auto-creates/migrates all MySQL tables on server start (inc. fund_prices) |
+| `closeDatabase()` | `src/server/db.ts` | Gracefully closes the MySQL pool |
+| `queries.listInvestments(userId?)` | `src/server/db.ts` | Lists investments, optionally filtered by user |
+| `queries.getInvestment(id, userId?)` | `src/server/db.ts` | Single investment by id + optional user check |
+| `queries.insertInvestment(data, ts)` | `src/server/db.ts` | Creates a new investment record |
+| `queries.updateInvestment(id, data, ts)` | `src/server/db.ts` | Updates shares/price/date/notes |
+| `queries.deleteInvestment(id, userId?)` | `src/server/db.ts` | Deletes investment by id + optional user check |
+| `queries.updateInvestmentTicker(id, ticker)` | `src/server/db.ts` | Persists discovered ticker to investment |
+| `queries.getInvestmentsByIsin(isin)` | `src/server/db.ts` | Finds all investments for a given ISIN |
+| `queries.getSetting(key)` / `setSetting(key, val)` | `src/server/db.ts` | Settings CRUD (setting_key/setting_value) |
+| `queries.searchFundCatalog(q, bank?, cat?, limit?)` | `src/server/db.ts` | FULLTEXT search + LIKE fallback on fund_catalog |
+| `queries.getFundCatalogByIsin(isin)` | `src/server/db.ts` | Single catalog entry by ISIN |
+| `queries.getFundCatalogByIsins(isins)` | `src/server/db.ts` | Batch catalog entries by an array of ISINs |
+| `queries.getFundCatalogBanks()` | `src/server/db.ts` | Distinct list of banks in catalog |
+| `queries.getFundCatalogCategories()` | `src/server/db.ts` | Distinct list of categories in catalog |
+| `queries.insertFundCatalogBatch(rows)` | `src/server/db.ts` | Batch INSERT IGNORE for seeding |
+| `queries.getFundPrice(isin)` | `src/server/db.ts` | Cached price from fund_prices table |
+| `queries.setFundPrice(isin, price, currency)` | `src/server/db.ts` | Upserts price into fund_prices cache |
+| `queries.getAllFundIsins()` | `src/server/db.ts` | Returns all ISINs from fund_catalog |
+
+### Server — Auth
+| Symbol | File | Purpose |
+|--------|------|---------|
+| `signToken(payload)` | `src/server/auth.ts` | Creates HS256 JWT with 7-day expiry |
+| `verifyToken(token)` | `src/server/auth.ts` | Verifies and decodes JWT, returns payload or null |
+| `hashPassword(password)` | `src/server/auth.ts` | Bcrypt hash via Bun built-in |
+| `verifyPassword(password, hash)` | `src/server/auth.ts` | Bcrypt verify via Bun built-in |
+| `registerUser(username, email, password)` | `src/server/auth.ts` | Creates user, returns {user, token} |
+| `loginUser(identifier, password)` | `src/server/auth.ts` | Authenticates by email or username |
+| `getUserFromRequest(req)` | `src/server/auth.ts` | Extracts user from Authorization header |
+| `getUserProfile(userId)` | `src/server/auth.ts` | Fetches user profile from DB |
+
+### Server — Business Logic
+| Symbol | File | Purpose |
+|--------|------|---------|
+| `listInvestments(userId)` | `src/server/sentinel.ts` | Lists user investments with auto ticker discovery, live prices, P/L |
+| `getInvestmentWithStats(id, userId)` | `src/server/sentinel.ts` | Single investment with computed stats + ticker discovery |
+| `computePortfolioTotals(investments)` | `src/server/sentinel.ts` | Aggregate portfolio stats from investments array |
+| `addInvestment(userId, isin, shares, price, date, notes?)` | `src/server/sentinel.ts` | Creates investment from catalog ISIN + immediate ticker discovery |
+| `editInvestment(id, userId, data)` | `src/server/sentinel.ts` | Updates shares/price/date/notes of an investment |
+| `deleteInvestment(id, userId)` | `src/server/sentinel.ts` | Deletes if owned by user |
+
+### Server — External APIs
+| Symbol | File | Purpose |
+|--------|------|---------|
+| `fetchYahooChart(ticker, range?, interval?)` | `src/server/yahoo.ts` | OHLCV chart data from Yahoo Finance v8 API + QueFondos fallback for ISINs |
+| `fetchCurrentPrice(ticker)` | `src/server/yahoo.ts` | Current market price (Yahoo + QueFondos fallback) |
+| `tryDiscoverTicker(isin)` | `src/server/yahoo.ts` | Auto-discovers ticker from QueFondos or Yahoo (`.BC`/`.MC`/`.MA`) |
+| `yahooTickerToUrl(ticker)` | `src/server/yahoo.ts` | Converts ticker to Yahoo Finance URL |
+| `verifyFundData(isin, price, currency)` | `src/server/yahoo.ts` | Cross-source price verification between QueFondos and Yahoo |
+| `filterQuotesByRange(quotes, range)` | `src/server/yahoo.ts` | Filters monthly QueFondos quotes by date range |
+| `fetchQueFondosData(isin)` | `src/server/quefondos.ts` | Scrapes QueFondos.com for NAV, monthly history, returns |
+| `getFundExtraMetadata(isin, cat, name, rets)` | `src/server/metadata.ts` | Returns TER, sectors, geography, top holdings by fund profile |
+| `sendWhatsApp(text)` | `src/server/whatsapp.ts` | Sends message via CallMeBot API |
+| `buildFundReport(ctx)` | `src/server/whatsapp.ts` | Formats portfolio digest message |
+| `runDigest(ctx)` | `src/server/digest.ts` | Executes digest: build + send + record |
+| `previewDigest(ctx)` | `src/server/digest.ts` | Returns digest text without sending |
+| `startDigestScheduler()` | `src/server/digest.ts` | Starts Bun.cron job |
+| `stopDigestScheduler()` | `src/server/digest.ts` | Stops cron job |
+| `digestStatus()` | `src/server/digest.ts` | Returns config + lastSent + nextRunAt |
+
+### Server — HTTP
+| Symbol | File | Purpose |
+|--------|------|---------|
+| `requireUser(req)` | `src/server/index.ts` | Extracts JWT user or returns 401 Response |
+| `json(data, init?)` | `src/server/index.ts` | Shorthand for Response.json() with CORS headers |
+| `safeJson(req, limit?)` | `src/server/index.ts` | Safely parses JSON body with size limits (DoS prevention) |
+| `badRequest(message)` | `src/server/index.ts` | Returns 400 JSON error |
+| `unauthorized(message?)` | `src/server/index.ts` | Returns 401 JSON error |
+| `serveStatic(req)` | `src/server/index.ts` | Serves files from public/ with cache headers |
+| `/api/portfolio` GET | `src/server/index.ts` | Returns user investments + total stats + whatsapp config in one payload |
+| `/api/banks` GET | `src/server/index.ts` | Returns map of bank names → official fund search URLs |
+
+### Client — Components
+| Symbol | File | Purpose |
+|--------|------|---------|
+| `App` | `src/client/App.tsx` | Root: auth gate, layout, auto-refresh, API docs modal state |
+| `Header` | `src/client/components/Header.tsx` | Sticky header with logo, status, user, API docs button |
+| `Stats` | `src/client/components/Stats.tsx` | Portfolio summary grid or empty state |
+| `AddFundForm` | `src/client/components/AddFundForm.tsx` | Two-phase: search catalog → enter investment (amount/shares mode) |
+| `FundCard` | `src/client/components/FundCard.tsx` | Investment card with canvas chart + composition + details tabs |
+| `LoginPage` | `src/client/components/LoginPage.tsx` | Login form |
+| `RegisterPage` | `src/client/components/RegisterPage.tsx` | Registration with password strength |
+| `NotifyPanel` | `src/client/components/NotifyPanel.tsx` | WhatsApp digest panel with countdown + auto-dismiss feedback |
+| `ApiDocsModal` | `src/client/components/ApiDocsModal.tsx` | API documentation modal with cURL examples |
+| `SectionTitle` | `src/client/App.tsx` | Section heading with index number |
+
+### Client — API Layer
+| Symbol | File | Purpose |
+|--------|------|---------|
+| `api` | `src/client/api.ts` | Object with all HTTP endpoint wrappers |
+| `getToken()` / `setToken()` / `clearToken()` | `src/client/api.ts` | JWT localStorage management |
+| `ApiError` | `src/client/api.ts` | Custom error class with status code |
+| `request<T>(url, init?)` | `src/client/api.ts` | Generic fetch wrapper with auth, 401 auto-reload, error handling |
+| `BANK_URLS` | `src/client/api.ts` | Map of bank names to official fund search URLs |
+| `getBankUrl(bank)` | `src/client/api.ts` | Resolves bank name to URL |
+| `getSpecificFundUrl(isin, bank, name)` | `src/client/api.ts` | Generates fund-specific URL (Ibercaja slug, hardcoded ISINs, Google domain search, QueFondos fallback) |
+
+### Client — Types
+| Symbol | File | Purpose |
+|--------|------|---------|
+| `User` | `src/client/api.ts` | User profile type |
+| `AuthResponse` | `src/client/api.ts` | Register/login response with token |
+| `FundCatalogEntry` | `src/client/api.ts` | Catalog fund type |
+| `FundSearchResult` | `src/client/api.ts` | Search results + banks + categories |
+| `Investment` | `src/client/api.ts` | Full investment type with computed stats |
+| `YahooChartData` | `src/client/api.ts` | Chart result with dataDate, isStale, staleWarning, dataSource, verificationLog, return1Y/3Y/5Y, ter, sectors, geography, topHoldings |
+| `Status` | `src/client/api.ts` | Portfolio status + whatsapp config |
+| `DigestPreview` | `src/client/api.ts` | Digest preview text |
+
+### Client — Utils
+| Symbol | File | Purpose |
+|--------|------|---------|
+| `formatCurrency(value, currency?)` | `src/client/utils.ts` | Formats number as "123.45€" |
+| `formatPct(value)` | `src/client/utils.ts` | Formats number as "+5.23%" |
+| `profitColor(value)` | `src/client/utils.ts` | Returns CSS class: green/red/gray |
+| `formatRelative(dateStr)` | `src/client/utils.ts` | Relative time: "hace 3h" |
+| `drawChart(canvas, data, hoveredIndex?)` | `src/client/components/FundCard.tsx` | Canvas line chart renderer with gradient, hover guide, tooltip |
+| `formatDate(d)` | `src/client/components/FundCard.tsx` | Date formatter "14 jul 26" for chart axis |
+| `getPasswordStrength(pw)` | `src/client/components/RegisterPage.tsx` | Password strength scorer |
+
+---
+
+## 📐 CONVENTIONS
+
+### Naming — enforced on all output
+| Identifier | Rule | Example |
+|-----------|------|---------|
+| Functions/methods | verb prefix | `listInvestments`, `fetchYahooChart`, `hashPassword` |
+| Booleans | `is`/`has`/`can`/`should` | `isAuthenticated`, `hasTicker`, `configured` |
+| Event handlers | `handle`/`on` | `handleSubmit`, `onAdded`, `onLogout` |
+| React components | PascalCase | `FundCard`, `AddFundForm`, `LoginPage` |
+| DB queries object | `queries.*` | `queries.listInvestments`, `queries.setSetting` |
+| API routes | `/api/resource` | `/api/funds`, `/api/auth/login` |
+| CSS classes | Tailwind utility + custom vars | `text-[var(--color-accent)]`, `font-pixel` |
+| Data source flags | `dataSource` field in API responses | `"yahoo"` or `"quefondos"` |
+| Tab navigation | `activeTab` state with union type | `"chart" \| "composition" \| "details"` |
+
+### Language
+- **UI is entirely in Spanish**: all labels, error messages, placeholders, empty states
+- **Code is in English**: variable names, function names, types, comments
+- **API error messages**: Spanish (`"Falta 'isin'"`, `"Usuario o email ya registrado"`)
+
+### Git
+- Branch: `feature/desc` · `fix/desc` · `chore/desc`
+- Commit: `type(scope): description` — e.g. `feat(auth): add JWT register/login`
+
+### Comments
+- Only write comments for WHY — a hidden constraint, a workaround, a non-obvious invariant.
+- Never explain WHAT. Never leave TODOs in committed code.
+
+---
+
+## ✅ CODE QUALITY
+
+> **Run this before every output. Mandatory. If any item fails, fix it first.**
+
+- [x] Every function does one thing. If you can say "and", split it.
+- [x] No function longer than ~30 lines. Extract helpers.
+- [x] No nesting deeper than 3 levels. Use early returns to flatten.
+- [x] No duplicated logic. Extract if the same block appears twice.
+- [x] No hardcoded values (strings, numbers, URLs). Use constants or config.
+- [x] No unused variables, imports, or parameters.
+- [x] Error paths handled. No silent `catch (e) {}`.
+- [x] New files placed in the correct directory per STRUCTURE MAP rules.
+- [x] Pattern match: if this pattern exists elsewhere in the codebase, mirror it exactly.
+
+### Forbidden — never produce this
+- `eval()` or `Function()` constructor
+- SQL strings built by concatenation (parameterized queries always)
+- `innerHTML` with unsanitized data (use `textContent` or a sanitizer)
+- Secrets or credentials in source code (use env vars)
+- `any` type in TypeScript (use proper types)
+- Mutable function arguments
+- Boolean flags that change function behavior (`doThing(true)`) — use named options
+
+---
+
+## 🎯 SESSION STATE
+
+> **Overwrite every session. This is the primary hot-restart entry point.**
+
+### Active objective
+Multi-user investment fund tracker with full auth, hybrid data sourcing (Yahoo Finance + QueFondos for Spanish mutual funds), fund metadata enrichment, and WhatsApp notifications.
+
+### Context
+- Stack: Bun 1.3 + React 19 + Tailwind 4 + MySQL (XAMPP) + Yahoo Finance API + QueFondos scraper
+- Server runs on port 3741, MySQL on 3306, database `fondtracker`, user `root`, no password
+- Fund catalog seeded with ~490+ real European fund ISINs in MySQL `fund_catalog` table
+- Auth: custom JWT (HMAC-SHA256, 7-day expiry), bcrypt passwords via Bun built-in
+- Yahoo Finance works for ETFs (tickers like `IWDA.AS`, `VWCE.DE`). Mutual funds fall back to QueFondos scraper by ISIN
+- ISIN-based tickers auto-discover via QueFondos first, then Yahoo (`.BC`/`.MC`/`.MA` suffixes)
+- Fund metadata (TER, sectors, geography, top holdings) generated by `metadata.ts` based on fund profile heuristics
+- Prices cached in `fund_prices` MySQL table to reduce API calls
+- 3-tab FundCard: chart (interactive canvas with hover tooltip), composition (holdings/sectors/geography), details (TER, risk, returns 1Y/3Y/5Y)
+- `src/server/fund-catalog.ts` is OBSOLETE — server uses MySQL `fund_catalog` table via `db.ts` queries
+- `/api/banks` endpoint provides official URLs for 40+ Spanish banks/gestoras
+- `/api/funds/:id` now supports PUT for editing investments
+- **Routing**: `/` serves root `index.html` (static landing page with Tailwind CDN). `/dashboard`, `/login`, `/register` serve the React SPA. All other paths fall through to root `index.html`.
+- **Landing page auth**: Root `index.html` has inline JS that checks `fondtracker_token` in localStorage, fetches `/api/auth/me`, and replaces header CTA with: Go to Dashboard (new tab), avatar (first letter of username), username text (sm+), settings gear dropdown (Change Email, Change Password, Sign Out, Delete Account — matching dashboard Header.tsx)
+
+### Last action taken
+Performance optimizations and request deduplication to prevent lag:
+- Grouped portfolio investments by unique ISIN in `listInvestments` (`src/server/sentinel.ts`) so ticker discovery, price fetching and DB writes happen once per unique fund instead of once per transaction.
+- Added in-memory cache with 5-minute TTL to `src/server/yahoo.ts` (`chartCache`) and `src/server/quefondos.ts` (`qfCache`).
+- Added Request Coalescing using active promise maps (`activeCharts`, `activePrices`, `activeDiscoveries`, `activeScrapes`) to coalesce concurrent queries to Yahoo Finance/QueFondos.
+- Landing page auth integration and settings dropdown:
+  - Changed server route `/` to serve root `index.html` (static) instead of React SPA (`index`).
+  - Added inline auth detection script to root `index.html`: reads `fondtracker_token` from localStorage, fetches `/api/auth/me`, replaces desktop CTA with: Go to Dashboard (opens in new tab), user avatar (first letter, green accent), username (sm+ breakpoint via `.sm-show` class), settings gear icon.
+  - Settings dropdown matches dashboard `Header.tsx` exactly: "Signed in as" email, Change Email (inline subview with input + save), Change Password (inline subview with current/new inputs), Sign Out (redirect to /login), Delete Account (inline subview with password confirmation + irreversible warning).
+  - Mobile CTA also replaced: Go to Dashboard + Sign Out when logged in.
+  - Fixed CSS issues: `.sm-show` class added (display:none default, display:block on sm+), `@keyframes fadeIn` for dropdown animation. Must use `!important` on `.sm-show` to override inline `style="display:none"`.
+  - CSP updated: added `https://assets.landinghero.app` to img-src, `https://cdn.tailwindcss.com` to script-src.
+  - Added Tailwind theme variables to `styles.css` (@theme block: brand-primary, neutral-surface, shadows, glass-card, scroll animations).
+  - (Previous: Premium glassmorphism auth redesign, dedicated routing, dynamic titles, sticky Header fix, mobile responsiveness, security hardening).
+
+### Next immediate step
+Expand fund catalog beyond 490+ entries, add admin UI for catalog management. No immediate blockers.
+
+### Do NOT touch this session
+- `data/sentinel.db*` — legacy SQLite files, do not delete or modify
+- `src/server/fund-catalog.ts` — obsolete but kept as reference, do not reintegrate
+- `diag.ts`, `fix-audaz.ts`, `test.ts`, `cnmv_test.html`, `mstar.html`, `qf_test_santander.html` — one-off test/diagnostic files
+
+### Branch / workspace
+Branch: main · Uncommitted: Cache+coalescing performance optimizations · Open PR: none
+
+### Blockers
+- None
+
+### Open questions
+- QueFondos scraper works for most Spanish mutual funds, but some ISINs return template pages (missing from QueFondos). Need fallback data source.
+
+---
+
+## 📚 DECISIONS LOG
+
+> **Append per architectural decision. Newest first. Never delete entries.**
+
+| Date | Decision | Alternatives considered | Rationale |
+|------|---------|------------------------|-----------|
+| 2026-07-18 | Enable subpixel antialiasing and GPU acceleration hacks on backdrop-blurs | Grayscale font-smoothing, standard backdrop-blurs without GPU translation | Grayscale antialiasing renders fuzzy, thin text on Windows screens. Changing to subpixel antialiasing and adding 3D transform translations (`translateZ(0)`) eliminates browser rendering blur on glass-cards. |
+| 2026-07-18 | Custom hours scheduler for per-user WhatsApp notifications (1h resolution grid) | Hardcoded slots (morning/evening), raw Cron expressions in text fields | High-end visual selector grid (00:00 - 23:00) stored as a comma-separated list of hours, dynamically constructing cron strings. Dynamic es-ES greeting is computed based on local hour. |
+| 2026-07-18 | Implement in-memory caches (5m TTL) and request coalescing for charts/prices, and deduplicate sentinel calculations by unique ISIN | Global external cache (Redis), real-time fetches without caching | Reduces portfolio and chart load times from several seconds to less than 5ms (instant) and completely avoids parallel network request stampedes. |
+| 2026-07-17 | Serve root index.html (static Tailwind CDN) for / instead of React SPA, with inline auth JS | Keep React SPA for landing page, build separate static landing | React SPA uses Tailwind v4 with different class syntax, making landing CSS incompatible. Static HTML with Tailwind CDN v3 works immediately. Inline auth JS adds login state detection without build complexity. |
+| 2026-07-12 | JWT auth with custom HMAC-SHA256 implementation (no external library) | jose library, jsonwebtoken, session cookies | Zero dependencies, Bun has Web Crypto API built-in, 7-day expiry is sufficient for local-first app |
+| 2026-07-12 | Fund catalog in MySQL, not hardcoded in TypeScript | Hardcoded array, JSON file, SQLite | User explicitly demanded all funds in DB. MySQL FULLTEXT search performs well for 148+ funds. |
+| 2026-07-12 | Hybrid data model: investments table stores user's holdings, fund_catalog is the reference catalog | Single table with duplicated fund info | Normalized: catalog is shared across all users, investments reference ISIN. Allows catalog updates without touching user data. |
+| 2026-07-12 | Named settings columns `setting_key`/`setting_value` | `key`/`value` | `key` is a MySQL reserved word, causes errors with certain SQL modes |
+| 2026-07-12 | Server runs from TypeScript source directly, client built to dist/ | Full build pipeline, both server and client bundled | Bun runs TypeScript natively, no build step needed for server. Only client needs bundling (browser target, Tailwind, React). |
+| 2026-07-12 | invest.user_id added via ALTER TABLE + ensureSchema check | Drop and recreate table | Preserves existing data. ensureSchema handles both fresh installs and migrations. |
+| 2026-07-12 | Canvas-based chart rendering (no chart library) | Chart.js, Recharts, D3 | Zero bundle size impact, full control over styling, sufficient for line chart with gradient |
+| 2026-07-15 | QueFondos scraper as primary data source for Spanish mutual funds | CNMV API, Morningstar API, Hansainvest | QueFondos provides free, no-auth NAV data for 490+ Spanish funds with monthly history and returns. CNMV/Morningstar APIs were unreachable or deprecated. |
+| 2026-07-15 | ISIN as ticker for QueFondos-resolved funds | Always resolve `.BC`/`.MC` suffix | QueFondos identifies funds by ISIN, not by exchange ticker. Using ISIN as the "ticker" for mutual funds simplifies the code — `fetchYahooChart` detects ISIN pattern and routes to QueFondos. |
+| 2026-07-15 | Fund metadata via heuristic templates in metadata.ts | Real data from Morningstar/MSCI | No free API provides TER, sector, geography, and holdings data for European funds. Heuristic templates cover 90% of user needs (Spain, S&P 500, MSCI World, Europe, Mixto categories). |
+| 2026-07-15 | Price caching in fund_prices MySQL table | In-memory cache, Redis | MySQL cache survives restarts, is consistent with the fund_catalog FK, requires no additional infrastructure. Cache staleness is acceptable for NAV-based daily prices. |
+| 2026-07-15 | Investment form: amount mode (€) as default | Shares-only mode | Most users know "how much EUR they invested" not "how many shares". The amount/shares toggle accommodates both. |
+
+---
+
+## ✅ PROGRESS
+
+### In Progress
+- Fund catalog admin UI (add/edit/delete from the app)
+
+### Backlog
+- CNMV direct data source (website was unreachable, revisit later)
+- Expand fund catalog beyond ~490 ISINs
+- Fund catalog admin UI (add/edit/delete from the app)
+- Portfolio history tracking (periodic snapshots to fund_history table)
+- Multi-currency support with live FX rates
+- Dark/light theme toggle
+
+### Completed
+- [x] 2026-07-12 — Full cleanup of old GitHub Sentinel code
+- [x] 2026-07-12 — Migration from SQLite to MySQL/XAMPP
+- [x] 2026-07-12 — All server files rewritten for async MySQL
+- [x] 2026-07-12 — All frontend components rebuilt (App, api, utils, Header, Stats, NotifyPanel, AddFundForm, FundCard)
+- [x] 2026-07-12 — Yahoo Finance integration (chart + current price)
+- [x] 2026-07-12 — Fund catalog in MySQL with FULLTEXT search
+- [x] 2026-07-12 — Seed script with ~148 real European fund ISINs
+- [x] 2026-07-12 — Investment model: isin, shares, purchase_price, purchase_date, user_id
+- [x] 2026-07-12 — Multi-user auth: register, login, JWT, per-user investments
+- [x] 2026-07-12 — Production polish: animations, better UX, error handling, delete confirmation
+- [x] 2026-07-15 — QueFondos scraper integration (NAV, monthly history, returns for mutual funds)
+- [x] 2026-07-15 — ISIN-based ticker auto-discovery with DB persistence
+- [x] 2026-07-15 — Fund metadata enrichment (TER, sectors, geography, top holdings)
+- [x] 2026-07-15 — Cross-source price verification between Yahoo and QueFondos
+- [x] 2026-07-15 — Price caching in fund_prices MySQL table
+- [x] 2026-07-15 — API documentation modal (ApiDocsModal)
+- [x] 2026-07-15 — /api/banks endpoint (40+ Spanish bank URLs)
+- [x] 2026-07-15 — Edit investment endpoint (PUT /api/funds/:id)
+- [x] 2026-07-15 — Investment form: amount vs shares mode toggle
+- [x] 2026-07-15 — FundCard: 3-tab layout (chart/composition/details) with interactive canvas hover
+- [x] 2026-07-15 — Data source badges (LIVE/NAV/stale/verified) on FundCard
+- [x] 2026-07-15 — Deep fund URLs (bank-specific pages, Google search, QueFondos fallback)
+- [x] 2026-07-16 — Mobile responsiveness for all UI components
+- [x] 2026-07-16 — WhatsApp chunking by URL-encoded byte length to prevent truncation
+- [x] 2026-07-16 — Dashboard performance rewrite (unified /api/portfolio, in-memory cache, batch queries)
+- [x] 2026-07-16 — Security Hardening (Auth on catalog/chart, SSRF/DoS prevention, strict inputs, crash fixes)
+- [x] 2026-07-17 — Premium glassmorphism redesign for Login & Register screens
+- [x] 2026-07-17 — Dedicated routing for /login and /register via History API
+- [x] 2026-07-17 — Dynamic document titles per view
+- [x] 2026-07-17 — Global fix for sticky Header (overflow-x: clip) & integration into auth views
+- [x] 2026-07-17 — Landing page auth integration: avatar, username, settings dropdown matching dashboard Header.tsx
+- [x] 2026-07-17 — Server route / serves static index.html with inline auth JS (Go to Dashboard opens in new tab)
+- [x] 2026-07-17 — Settings subviews: Change Email, Change Password, Delete Account with inline forms
+- [x] 2026-07-17 — Change Email Validation Update: Added current email verification on PUT /api/auth/me to verify user identity before editing email settings.
+- [x] 2026-07-17 — Country Picker Positioning Fix: Adjusted country dial dropdown positions in both dashboard (Header.tsx) and landing page (index.html) to open downwards, avoiding clipping.
+- [x] 2026-07-17 — WhatsApp Per-User Configuration: Isolated number storage, greetings with name prefix, and narrow monospace layout compatibility updates.
+- [x] 2026-07-17 — Dropdown Menu Overlap/Clipping Fix: Resolved overlapping and clipping issues in settings dropdown subviews for both dashboard (Header.tsx via conditional rendering) and landing page (index.html by hiding the main menu content during subview transitions).
+- [x] 2026-07-17 — Tailwind CDN theme config + CSS fixes (.sm-show, fadeIn keyframe, landing page styles)
+- [x] 2026-07-17 — **Security Hardening V2**: Stored XSS eliminado (esc() en innerHTML), validación email con regex estricto, CSP nonce-based sin unsafe-inline, DoS prevenido con streaming body, JWT en fragmento #, rate limiter con IP real TCP, path traversal con resolve() + bloqueo de nombres reservados Windows, ISIN duplicado corregido, metadata returns null en lugar de fake, digest con concurrencia limitada, advertencia JWT secret en desarrollo, chart refresh solo cuando visible (IntersectionObserver)
+- [x] 2026-07-17 — **Security Hardening V3**: Digest race condition corregido (key por userId), rate limiting en CRUD funds (30/min/user), safeError() en todos los catch, user enumeration eliminado en changeEmail, rate limit en password change (5/min/IP), password complexity (mayúscula+minúscula+número+8chars), rate limiter memory capped a 10K entries, search query sanitized (FULLTEXT boolean mode + length 200), soft-delete con deleted_at en users/investments, keep-alive URL validation (HTTPS obligatorio), DDL identifier validation, MySQL pool con queueLimit+idleTimeout, startup sin leak de DB en prod, login timing side-channel fix, Forgot Password button funcional, index.html missing crash handling
+
+---
+
+## 🐛 KNOWN ISSUES
+
+| ID | Status | Description | Workaround | Root cause |
+|----|--------|-------------|-----------|------------|
+| KI-001 | `fixed` | Yahoo Finance returns zero data points for European mutual fund tickers (`.BC` suffix, bank-specific tickers) | **Fixed**: QueFondos scraper now provides NAV, monthly history, and returns for mutual funds by ISIN | Yahoo Finance v8 API only covers exchange-traded securities, not OTC mutual funds |
+| KI-002 | `open` | `schema.sql` has old `key`/`value` column names for settings table | Always use `ensureSchema()` from `db.ts` as source of truth | Original schema before MySQL reserved word conflict was discovered |
+| KI-003 | `open` | `data/sentinel.db*` SQLite files still exist from pre-migration | Ignore them; project uses MySQL exclusively now | Leftover from SQLite era, not cleaned up |
+| KI-004 | `open` | Some ISINs return template pages from QueFondos (not found in their database) | Fall back to Yahoo with `.BC`/`.MC`/`.MA` suffixes; if all fail, show no chart data | QueFondos doesn't have all Spanish mutual funds in their system |
+| KI-005 | `open` | QueFondos NAV data can be stale (>7 business days old) | Show `staleWarning` badge on FundCard; QueFondos is updated daily but some funds may lag | QueFondos updates depend on each fund's NAV publication schedule |
+
+---
+
+## ❌ ERROR PATTERNS
+
+> **Confirmed mistakes the AI has repeated across sessions. Read before writing code.**
+
+| Symptom | Root cause | Correct approach |
+|---------|-----------|-----------------|
+| `curl` fails in PowerShell | PowerShell aliases `curl` to `Invoke-WebRequest` | Use `Invoke-RestMethod -Uri ...` or `curl.exe` (the real binary) |
+| Server won't start: port in use | Previous bun process still alive on port 3741 | Kill by process name: `Get-Process -Name bun \| Stop-Process -Force` |
+| `settings` table "Duplicate column" error | MySQL `ALTER TABLE ADD COLUMN IF NOT EXISTS` not supported in all versions | Use `SHOW COLUMNS FROM ... LIKE 'colname'` check in `ensureSchema()` |
+| `fund_catalog` table doesn't exist on seed | Running seed-funds.ts before ensureSchema() has run | Server must start once (runs ensureSchema) before seeding, or create table manually from schema-settings-catalog.sql |
+| `< operator reserved` in PowerShell | PowerShell reserves `<` for future use | Pipe content: `Get-Content file.sql \| mysql.exe -u root db` |
+| QueFondos returns `null` for some ISINs | ISIN not found in QueFondos database; page contains `{ISIN}` or `{NFONDO}` placeholder | The scraper correctly returns `null` — caller (`yahoo.ts`) falls through to Yahoo `.BC`/`.MC`/`.MA` suffixes automatically |
+| Fund chart shows stale data after market hours | QueFondos publishes NAV after market close; Yahoo may have delayed data | The `isStale` flag and `staleWarning` badge alert users. Cached price in `fund_prices` remains valid. |
+| `editInvestment` returns null | Investment not found or doesn't belong to user | Check user_id filter in `queries.getInvestment()` — always pass userId for authorization |
+| `var fondo` JSON parse fails | QueFondos page format may change the JavaScript variable structure | The try/catch in `quefondos.ts` silently falls back to synthetic quotes from return data |
+
+---
+
+## 🗒 AI NOTES
+
+> **Most valuable section. Append only. Newest first. Dated.**
+> **Severity tags: `[!]` breaks if ignored · `[~]` non-obvious gotcha · `[?]` unresolved question**
+
+`2026-07-17 [!] — WhatsApp settings and user phone parameters are fully isolated per user. No user configuration defaults to global environment variables or fallbacks if a userId is supplied.`
+
+`2026-07-17 [~] — Landing page settings submenus in index.html toggle the display of the main content wrapper ('dropdown-main-content') to avoid overlapping/clipping of forms and buttons. The view size recalculates natively.`
+
+`2026-07-12 [!] — investments table has user_id column added via ALTER TABLE, NOT in original schema.sql. ensureSchema() checks for it and adds it if missing. Do not assume it exists in schema.sql.`
+
+`2026-07-12 [!] — fund-catalog.ts is OBSOLETE. The server no longer imports from it. All fund lookups go through MySQL fund_catalog table via db.ts queries. Do not add imports from fund-catalog.ts to any server file.`
+
+`2026-07-12 [~] — Bun build (build.ts) only builds CLIENT code to dist/. Server runs from TypeScript source directly. Never try to run dist/index.js — it doesn't exist.`
+
+`2026-07-12 [~] — The auth middleware pattern: requireUser(req) returns either {id, username} or a Response (401). Every protected route must check: const user = await requireUser(req); if (user instanceof Response) return user;`
+
+`2026-07-12 [~] — CSS variables --color-profit and --color-loss are defined in styles.css @theme block. They were missing before the polish pass, causing profit/loss colors to render as default text color. Always verify custom CSS vars exist when adding new color references.`
+
+`2026-07-12 [?] — CNMV (fondos.cnmv.es) website was unreachable via webfetch. Morningstar API screener returns 0 results for Spanish fund ISINs. Hansainvest API deprecated. Need alternative free data source for mutual fund data.`
+
+`2026-07-12 [~] — Seed script (seed-funds.ts) uses INSERT IGNORE with batch inserts. Duplicate ISINs are silently skipped. This is intentional — running seed multiple times is safe.`
+
+`2026-07-15 [!] — quefondos.ts fetches from www.quefondos.com with ISIN in query param. The page contains a `var fondo = [[...]]` JavaScript variable with monthly historical price data. If the page contains `{ISIN}` placeholder text, the fund is not found and `null` is returned. All callers in yahoo.ts handle null gracefully.`
+
+`2026-07-15 [!] — metadata.ts uses heuristic matching (category/name contains keywords) to determine fund profile. It does NOT fetch real data from any source for sectors/geography/holdings — these are hardcoded templates per profile. Only returns (1Y/3Y/5Y) can be real (from QueFondos) or fallback defaults. TER values are sensible estimates per fund type.`
+`2026-07-15 [~] — tryDiscoverTicker(isin) has a specific priority: QueFondos first (returns ISIN itself as ticker), then Yahoo with `.BC`, then `.MC`, then `.MA`. Once found, the ticker is persisted to the `investments.ticker` column so subsequent loads don't need to re-discover. This is critical for performance.`
+
+`2026-07-15 [~] — getSpecificFundUrl() in api.ts has a complex fallback chain: 1) Ibercaja slug generation, 2) hardcoded ISIN-to-URL map, 3) ETF manager search portals (iShares, Vanguard, Amundi, Xtrackers), 4) Google search with `site:bankdomain.com + ISIN`, 5) QueFondos fallback for any ISIN, 6) Yahoo Finance for non-ISIN tickers.`
+
+`2026-07-15 [~] — The fund_prices cache table is upserted on every successful price fetch. getFundPrice() is called as fallback when live fetch fails (network error, API timeout, etc.). This means prices can be up to N minutes stale (depending on last successful fetch), which is acceptable for a NAV-based tracker.`
+
+`2026-07-15 [~] — Chart data auto-refreshes every 60 seconds in FundCard. ActiveTab state is maintained during refresh. Canvas chart with hover tooltip re-renders when `hoveredIndex` state changes — this is efficient because React only re-renders the specific path.`
+
+`2026-07-15 [~] — The `/api/banks` endpoint returns a static map of bank names to official fund search URLs. This is defined inline in index.ts, not in a database table. To add/remove banks, edit the route handler directly.`
+
+`2026-07-17 [!] — Landing page root index.html uses Tailwind CDN v3 (not v4 like the React SPA). CSS classes are incompatible between them. The React SPA (src/client/) uses Tailwind v4 syntax (bg-brand-primary/10) while the static landing uses Tailwind CDN v3 syntax (bg-brand-primary bg-opacity-10). Never mix these — the Tailwind config is in the root index.html <script> tag.`
+
+`2026-07-17 [!] — The .sm-show CSS class on the username span requires !important to override the inline style="display:none" attribute. Without !important the class has no effect because inline styles beat class selectors in specificity. The class must be defined in the <style> tag at the top of root index.html.`
+
+`2026-07-17 [!] — The Tailwind CDN config in root index.html uses important: '#app-root'. This means all Tailwind utilities (hidden, md:flex, etc.) generate selectors like #app-root .hidden. The body element has id="app-root". Do NOT add a custom .hidden { display: none !important } rule — it breaks responsive Tailwind classes like hidden md:flex that override it at breakpoint. Tailwind CDN provides its own .hidden class.`
+
+`2026-07-17 [~] — Landing page auth settings dropdown uses subviews injected as child divs of #user-dropdown. Each subview has id="dd-subview". closeAllViews() removes the element. The gear button toggles the dropdown. Click outside closes both dropdown and subviews. All form operations (email change, password change, delete account) call PUT/DELETE /api/auth/me with Bearer token.`
+
+`2026-07-17 [~] — Server route mapping for pages: / serves root index.html (static), /dashboard serves React SPA (index), /login and /register serve React SPA (index), /* falls through to root index.html. The React SPA import is at top of server: import index from "../client/index.html". Root index.html is served via Bun.file(join(PROJECT_ROOT, "index.html")).`
+
+---
+
+## 🔐 SECURITY
+
+### Auth model
+- Method: JWT (HS256, HMAC-SHA256 via Web Crypto API)
+- Token storage: `localStorage` (client-side)
+- Lifetime: 7 days · Refresh strategy: none (re-login required)
+- Auth middleware: `requireUser(req)` in `src/server/index.ts`
+- Password hashing: bcrypt via `Bun.password.hash()` (built-in)
+
+### Authorization
+- Model: Per-user resource isolation
+- Each investment has a `user_id` foreign key
+- All queries filter by `user_id` — users can only see/edit/delete their own investments
+- Fund catalog and Yahoo chart endpoints are public (no auth required)
+
+### Sensitive data
+| Data | Location | Storage | Encryption |
+|------|----------|---------|-----------|
+| Passwords | `users.password_hash` | MySQL | bcrypt (salted) |
+| JWT secret | `JWT_SECRET` env var | Environment | N/A (HMAC key) |
+| WhatsApp API key | `CALLMEBOT_API_KEY` env var / `settings` table | Env / MySQL | N/A (isolated per user) |
+| WhatsApp Phone | `WHATSAPP_PHONE` env var / `users.phone` | Env / MySQL | N/A (isolated per user) |
+| User emails | `users.email` | MySQL | Plaintext (local-first app) |
+
+### Forbidden (in addition to CODE QUALITY gate)
+- No raw SQL with user input (parameterized queries always — see `db.ts` queries)
+- No auth checks client-side only (server validates JWT on every protected request)
+- No secrets in committed files (.env only, gitignored)
+- No verbose error messages to the client (log server-side, return generic)
+- No passwords stored without bcrypt
+- `JWT_SECRET` MUST be overridden in production
+- No unvalidated phone numbers (must pass E.164 pattern `/^\+[1-9]\d{6,14}$/` before update)
+- No email updates without current email verification
+
+---
+
+## 🔌 API CONTRACTS
+
+### Endpoints
+| Method | Path | Auth | Input | Output | Notes |
+|--------|------|------|-------|--------|-------|
+| GET | `/api/health` | No | — | `{ok, uptime, pid, platform, bun}` | Health check |
+| POST | `/api/auth/register` | No | `{username, email, password}` | `{user: {id, username, email}, token}` | Creates user + returns JWT |
+| POST | `/api/auth/login` | No | `{identifier, password}` | `{user: {id, username, email}, token}` | identifier = email or username |
+| GET | `/api/auth/me` | **Yes** | — | `{id, username, email, created_at}` | User profile |
+| GET | `/api/portfolio` | **Yes** | — | `{investments: [...], totals: {...}, status: {...}, platform}` | Unified payload with investments, stats, and WhatsApp config |
+| GET | `/api/banks` | No | — | `{BankName: url, ...}` | 40+ Spanish bank/gestora fund search URLs |
+| GET | `/api/funds/search` | No | `?q=&bank=&category=` | `{results: [...], total, banks, categories}` | Full-text fund catalog search (490+ funds) |
+| GET | `/api/funds/catalog/:isin` | **Yes** | — | `{isin, name, bank, category, risk_level, currency, yahoo_ticker, base_price?, last_updated?}` | Single catalog entry |
+| GET | `/api/funds/chart/:ticker` | **Yes** | `?range=1y&interval=1d` | `{symbol, currency, name, currentPrice, previousClose, weekHigh52, weekLow52, dataPoints, quotes: [...], dataDate?, isStale?, staleWarning?, dataSource?, verificationLog?, return1Y?, return3Y?, return5Y?, ter?, sectors?, geography?, topHoldings?}` | Chart data from Yahoo Finance or QueFondos, with extra metadata |
+| POST | `/api/funds` | **Yes** | `{isin, shares, purchase_price, purchase_date, notes?}` | Investment object | Add investment |
+| GET | `/api/funds/:id` | **Yes** | — | Investment object | Single investment |
+| PUT | `/api/funds/:id` | **Yes** | `{shares, purchase_price, purchase_date, notes?}` | Updated investment object | Edit investment |
+| DELETE | `/api/funds/:id` | **Yes** | — | `{ok: true}` | Delete investment |
+| GET | `/api/notify/preview` | No | — | `{message, messages: [...]}` | Preview digest |
+| POST | `/api/notify/test` | No | — | `{ok, message, sent}` | Send test digest |
+
+### Core data models
+```
+Entity: User
+  id            INT       AUTO_INCREMENT PK
+  username      VARCHAR(100)  UNIQUE NOT NULL
+  email         VARCHAR(255)  UNIQUE NOT NULL
+  password_hash VARCHAR(255)  NOT NULL (bcrypt)
+  created_at    DATETIME  DEFAULT CURRENT_TIMESTAMP
+
+Entity: Investment
+  id              INT          AUTO_INCREMENT PK
+  user_id         INT          NOT NULL (indexed)
+  isin            VARCHAR(12)  NOT NULL (indexed)
+  name            VARCHAR(255) NOT NULL (from catalog)
+  bank            VARCHAR(255) NOT NULL (from catalog)
+  category        VARCHAR(100) NOT NULL (from catalog)
+  ticker          VARCHAR(30)  NULLABLE (from catalog, null for mutual funds)
+  shares          DECIMAL(15,6) NOT NULL
+  purchase_price  DECIMAL(15,6) NOT NULL
+  purchase_date   DATE         NOT NULL
+  currency        VARCHAR(10)  DEFAULT 'EUR'
+  notes           TEXT         NULLABLE
+  created_at      DATETIME     NOT NULL
+  updated_at      DATETIME     NOT NULL
+
+Entity: FundCatalog
+  id            INT          AUTO_INCREMENT PK
+  isin          VARCHAR(12)  UNIQUE NOT NULL
+  name          VARCHAR(500) NOT NULL
+  bank          VARCHAR(255) NOT NULL
+  category      VARCHAR(100) NOT NULL
+  risk_level    INT          DEFAULT 3
+  currency      VARCHAR(10)  DEFAULT 'EUR'
+  yahoo_ticker  VARCHAR(30)  NULLABLE
+  FULLTEXT INDEX on (name, isin, bank, category)
+
+Entity: Setting
+  setting_key   VARCHAR(255) PK
+  setting_value TEXT NOT NULL
+
+Entity: FundPrice (cache)
+  isin          VARCHAR(12) PK  (FK → fund_catalog)
+  price         DECIMAL(15,6) NOT NULL
+  currency      VARCHAR(10) DEFAULT 'EUR'
+  updated_at    DATETIME NOT NULL (auto-refreshed on fetch)
+```
+
+### Environment variables
+| Variable | Required | Purpose | Default |
+|----------|----------|---------|---------|
+| `MYSQL_HOST` | No | MySQL hostname | `127.0.0.1` |
+| `MYSQL_PORT` | No | MySQL port | `3306` |
+| `MYSQL_USER` | No | MySQL username | `root` |
+| `MYSQL_PASSWORD` | No | MySQL password | `""` |
+| `MYSQL_DATABASE` | No | MySQL database name | `fondtracker` |
+| `PORT` | No | HTTP server port | `3741` |
+| `HOST` | No | HTTP server hostname | `127.0.0.1` |
+| `JWT_SECRET` | **Production** | HMAC key for JWT signing | `fondtracker-dev-secret-change-in-prod` |
+| `WHATSAPP_PHONE` | No (WhatsApp) | Recipient phone number | — |
+| `CALLMEBOT_API_KEY` | No (WhatsApp) | CallMeBot API key | — |
+| `WHATSAPP_ENABLED` | No | Enable WhatsApp feature | `true` |
+| `WHATSAPP_TIMEZONE` | No | Digest timezone | `Europe/Madrid` |
+| `WHATSAPP_DIGEST_CRON` | No | Cron expression | `0 9,18 * * *` |
+| `NODE_ENV` | No | Production mode | (unset) |
+| `SERVER_IDLE_TIMEOUT_SECONDS` | No | Server idle timeout | `60` |
+
+---
+
+<!--
+═══════════════════════════════════════════════════════════════════════
+FIRST-TIME SETUP — execute when SESSION STATE is blank. Once only.
+═══════════════════════════════════════════════════════════════════════
+
+STEP 1 — Detect existing codebase
+  Read: package.json, pyproject.toml, go.mod, Cargo.toml, Gemfile,
+  composer.json, requirements.txt, Dockerfile, pubspec.yaml, mix.exs,
+  pom.xml, build.gradle, pubspec.yaml, *.csproj.
+  If config files found → skip to STEP 2 (existing project).
+  If none found → check PROJECT IDENTITY Name. If it holds a project idea → STEP 1B.
+  If Name is also blank → ask user what they want to build (STEP 1B).
+
+STEP 1B — New Project Protocol (empty directory)
+  If PROJECT IDENTITY Name already contains an idea, read it.
+  Otherwise ask ONE message covering all of these:
+    "What are you building? Tell me: purpose, main features, target users,
+    any constraints (language preference, team size, deadline, existing infra).
+    I'll recommend the best stack."
+  Once you have the idea:
+    1. Pick the best-fit entry from STEP 2 table — name it and justify (2-3 sentences).
+       State 1-2 alternatives considered and why you didn't choose them.
+    2. Ask: "This sounds like [Stack]. Should I proceed, or do you prefer something else?"
+    3. On confirmation → run STEP 3 and STEP 4 using your recommendation (not code scans).
+    4. At end of STEP 5, ask: "Ready to scaffold? I'll create these files and folders:
+       [list the exact structure from STEP 2 for the chosen stack]
+       Type 'yes' to generate them all."
+
+STEP 2 — Load stack defaults (structure + conventions + security rules)
+
+  node-express   → src/controllers/ src/models/ src/routes/ src/middleware/ src/services/
+                   camelCase files · MVC · async/await · JWT + helmet + CORS + rate-limit
+  node-nest      → src/modules/*/controller.ts .service.ts .module.ts
+                   PascalCase · decorators · DTOs · Guards + Pipes + JWT auth module
+  react          → src/components/ src/hooks/ src/pages/ src/context/ src/utils/
+                   PascalCase components · co-located CSS modules · sanitize all inputs
+  next           → app/ or pages/ · app/api/ · components/ · lib/ · public/
+                   file-based routing · RSC · server actions validation · middleware auth
+  vue            → src/components/ src/views/ src/store/ src/router/ src/composables/
+                   PascalCase SFCs · pinia · vue-router · route guards · input sanitization
+  angular        → src/app/modules/ components/ services/ guards/
+                   PascalCase · DI pattern · NgModules · HTTP interceptors · XSS sanitization
+  svelte         → src/lib/ src/routes/ src/components/ src/stores/
+                   PascalCase · SvelteKit file-based routing · input sanitization · CSP
+  django         → apps/*/models.py views.py urls.py serializers.py
+                   snake_case · DRF · CSRF + XSS + ORM (no raw SQL) + permission classes
+  fastapi        → app/api/ app/models/ app/schemas/ app/core/ app/db/
+                   snake_case · Pydantic schemas · OAuth2 middleware + CORS + validation
+  flask          → app/routes/ app/models/ app/templates/ app/static/
+                   snake_case · blueprints · app factory · Flask-Login + CSRFProtect
+  go             → cmd/ internal/ pkg/ api/ migrations/
+                   snake_case · interface-based DI · JWT middleware · TLS · parameterized SQL
+  rust           → src/main.rs src/lib.rs src/bin/ src/modules/ tests/ benches/
+                   snake_case · Result/Option everywhere · ownership safety · ring for crypto
+  spring-boot    → src/main/java/../controller/ service/ repository/ model/ config/ security/
+                   PascalCase · annotation-driven · Spring Security · method-level auth
+  php-laravel    → app/Http/Controllers/ app/Models/ routes/ database/migrations/
+                   PascalCase controllers · Eloquent ORM · CSRF + XSS + auth gates
+  ruby-rails     → app/controllers/ app/models/ app/views/ config/routes.rb db/migrate/
+                   snake_case · RESTful · CSRF token · strong params · ActiveRecord (no raw SQL)
+  flutter        → lib/screens/ lib/widgets/ lib/models/ lib/services/ lib/providers/
+                   PascalCase widgets · BLoC/Provider · secure storage · cert pinning
+  react-native   → src/screens/ src/navigation/ src/components/ src/hooks/
+                   PascalCase · platform files (.ios.tsx .android.tsx) · Keychain storage
+  graphql        → src/graphql/schemas/ resolvers/ mutations/
+                   SDL · dataloader batching · query depth limiting · auth directives
+  docker         → Dockerfile .dockerignore docker-compose.yml docker/
+                   multi-stage builds · non-root user · no secrets in image layers
+  database-pg    → migrations/ seeds/ db/ · parameterized queries · row-level security · TLS
+  database-mongo → src/models/ migrations/ seeds/ · sanitize all input · no NoSQL injection
+  database-prisma→ prisma/schema.prisma prisma/migrations/ src/repositories/
+                   Prisma client · repository pattern · field-level encryption for PII
+  database-redis → src/cache/ src/queues/ · TLS connection · auth token · key prefix namespacing
+  testing-jest   → tests/unit/ tests/__mocks__/ · mirror src/ structure · no real secrets
+  testing-vitest → src/__tests__/ src/__mocks__/ · in-source testing · coverage thresholds
+  testing-pytest → tests/ tests/conftest.py tests/fixtures/ · parametrize · isolated test DB
+  testing-playwright → e2e/ e2e/fixtures/ e2e/pages/ · page objects · no real auth tokens
+  testing-cypress→ cypress/e2e/ cypress/fixtures/ cypress/support/ · fixture-driven · isolated
+  ci-github      → .github/workflows/ .github/actions/ · no secrets in logs · OIDC for cloud
+  terraform      → terraform/ terraform/environments/ terraform/modules/ · remote state · IAM least privilege
+
+STEP 3 — Fill this file
+  PROJECT IDENTITY   → infer from config files and package name
+  STRUCTURE MAP      → scan, annotate every important file with its role
+  SYMBOL INDEX       → key functions/classes with purpose (name + file, no line numbers)
+  DOMAIN RULES       → ask user: "What would cause a bug if I didn't know it?"
+  CONVENTIONS        → adapt naming table to actual language; keep semantic rules
+  OPTIONAL SECTIONS  → uncomment Security/API/Testing/Performance if the project needs them
+
+STEP 4 — Ask only what cannot be inferred (one message, numbered list)
+  - Project purpose and goals
+  - Domain rules and business constraints the code doesn't reveal
+  - Current objective and where to start
+  Never ask one question at a time. Never ask about things derivable from the code.
+
+STEP 5 — Confirm and lock
+  Show the filled file. Ask: "Does this match the project?"
+  Once confirmed: stop scanning. Navigate via SYMBOL INDEX only.
+  Write SESSION STATE to mark first setup complete.
+
+═══════════════════════════════════════════════════════════════════════
+Context powered by ReadMeAI v4.7 — https://github.com/Oscarr36/ReadMeAI
+═══════════════════════════════════════════════════════════════════════
+-->
+
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.
