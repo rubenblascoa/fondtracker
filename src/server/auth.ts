@@ -87,7 +87,7 @@ export async function verifyToken(token: string): Promise<JwtPayload | null> {
     const valid = await crypto.subtle.verify(
       "HMAC",
       key,
-      base64urlDecode(parts[2]),
+      base64urlDecode(parts[2]) as BufferSource,
       new TextEncoder().encode(`${parts[0]}.${parts[1]}`)
     );
     if (!valid) return null;

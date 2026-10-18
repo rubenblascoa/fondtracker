@@ -6,7 +6,6 @@ import { Header } from "./components/Header";
 import { LoginPage } from "./components/LoginPage";
 import { NotifyPanel } from "./components/NotifyPanel";
 import { RegisterPage } from "./components/RegisterPage";
-import { LandingPage } from "./components/LandingPage";
 import { Stats } from "./components/Stats";
 import { LegalPage } from "./components/LegalPage";
 import { Footer } from "./components/Footer";
@@ -293,8 +292,10 @@ export function App() {
     );
   }
 
+  // "/" lo sirve el servidor como página estática (index.html de la raíz); la app nunca debería montarse ahí
   if (isRootPath) {
-    return <LandingPage user={user} onLogout={handleLogout} />;
+    window.location.replace(user ? "/dashboard" : "/login");
+    return null;
   }
 
   if (!user) {

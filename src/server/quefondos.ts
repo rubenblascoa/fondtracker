@@ -3,19 +3,19 @@ import { queries } from "./db";
 import { getFundExtraMetadata } from "./metadata";
 
 // Helper to parse Spanish localized numbers like "283,805151" to 283.805151
-function parseSpanishFloat(val: string): number {
+export function parseSpanishFloat(val: string): number {
   return parseFloat(val.replace(/\./g, "").replace(",", "."));
 }
 
 // Parse DD/MM/YYYY to a Date object
-function parseSpanishDate(val: string): Date | null {
+export function parseSpanishDate(val: string): Date | null {
   const m = val.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (!m) return null;
   return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
 }
 
 // Count business days between two dates
-function businessDaysDiff(d1: Date, d2: Date): number {
+export function businessDaysDiff(d1: Date, d2: Date): number {
   let count = 0;
   const cur = new Date(d1);
   while (cur < d2) {
@@ -24,6 +24,67 @@ function businessDaysDiff(d1: Date, d2: Date): number {
     cur.setDate(cur.getDate() + 1);
   }
   return count;
+}
+
+export type QueFondosPage = {
+  currentPrice: number | null;
+  /** DD/MM/YYYY tal cual lo publica QueFondos */
+  dataDate: string | null;
+  return1Y: number;
+  return3Y: number;
+  return5Y: number;
+  /** Serie mensual real de la ficha (var fondo = [[MM/DD/YYYY, precio], ...]) */
+  historicalQuotes: YahooQuote[];
+};
+
+/** Extrae NAV, fecha, rentabilidades y serie histórica de una ficha de QueFondos. Sin red: testeable. */
+export function extractQueFondosHtml(html: string): QueFondosPage {
+  const empty: QueFondosPage = { currentPrice: null, dataDate: null, return1Y: 0, return3Y: 0, return5Y: 0, historicalQuotes: [] };
+  // Página plantilla (ISIN no encontrado)
+  if (html.includes("{ISIN}") || html.includes("{NFONDO}")) return empty;
+
+  const navMatch = html.match(/Valor liquidativo:\s*<\/span>\s*<span[^>]*>\s*([\d,\.]+)\s*[A-Z]{3}/i);
+  if (!navMatch) return empty;
+  const currentPrice = parseSpanishFloat(navMatch[1]);
+  if (!isFinite(currentPrice) || currentPrice <= 0) return empty;
+
+  let dataDate: string | null = null;
+  const dateMatch = html.match(/<span class="fecha">(\d{2}\/\d{2}\/\d{4})<\/span>/);
+  if (dateMatch) dataDate = dateMatch[1];
+  else {
+    const altMatch = html.match(/Fecha:\s*<\/span>\s*<span[^>]*>(\d{2}\/\d{2}\/\d{4})<\/span>/i);
+    if (altMatch) dataDate = altMatch[1];
+  }
+
+  const pct = (re: RegExp) => {
+    const m = html.match(re);
+    return m ? parseSpanishFloat(m[1]) : 0;
+  };
+  const return1Y = pct(/1 a(?:&ntilde;|ñ)o(?:.|[\r\n])*?<span class="(?:mas|menos)">(-?[\d,\.]+)%<\/span>/i);
+  const return3Y = pct(/3 a(?:&ntilde;|ñ)os<\/td>\s*<td[^>]*><span class="(?:mas|menos)">(-?[\d,\.]+)%<\/span><\/td>/i);
+  const return5Y = pct(/5 a(?:&ntilde;|ñ)os<\/td>\s*<td[^>]*><span class="(?:mas|menos)">(-?[\d,\.]+)%<\/span><\/td>/i);
+
+  const historicalQuotes: YahooQuote[] = [];
+  const fondoMatch = html.match(/var fondo\s*=\s*(\[\[[\s\S]*?\]\]);/);
+  if (fondoMatch) {
+    try {
+      const raw = JSON.parse(fondoMatch[1]);
+      if (Array.isArray(raw)) {
+        for (const item of raw) {
+          if (!Array.isArray(item) || item.length !== 2) continue;
+          const parts = String(item[0]).split("/"); // MM/DD/YYYY
+          const price = Number(item[1]);
+          if (parts.length !== 3 || isNaN(price)) continue;
+          const date = new Date(Number(parts[2]), Number(parts[0]) - 1, Number(parts[1]));
+          historicalQuotes.push({ timestamp: Math.floor(date.getTime() / 1000), open: price, high: price, low: price, close: price, volume: 0 });
+        }
+      }
+    } catch {
+      // Serie ilegible: se sigue con el NAV actual
+    }
+  }
+  historicalQuotes.sort((a, b) => a.timestamp - b.timestamp);
+  return { currentPrice, dataDate, return1Y, return3Y, return5Y, historicalQuotes };
 }
 
 // In-memory cache for QueFondos scraping results (5 minutes TTL)
@@ -61,101 +122,33 @@ export async function fetchQueFondosData(isin: string): Promise<YahooChartResult
 
       const html = await res.text();
 
-      // Reject template pages (ISIN not found in QueFondos)
-      if (html.includes("{ISIN}") || html.includes("{NFONDO}")) return null;
+      const page = extractQueFondosHtml(html);
+      if (page.currentPrice == null) return null;
+      const currentPrice = page.currentPrice;
+      const dataDate = page.dataDate;
+      const { return1Y, return3Y, return5Y } = page;
 
-    // 1. Extract Current NAV (Valor Liquidativo)
-    const navMatch = html.match(/Valor liquidativo:\s*<\/span>\s*<span[^>]*>\s*([\d,\.]+)\s*[A-Z]{3}/i);
-    if (!navMatch) return null;
-
-    const currentPrice = parseSpanishFloat(navMatch[1]);
-    if (!isFinite(currentPrice) || currentPrice <= 0) return null;
-
-    // 2. Extract NAV date from <span class="fecha">DD/MM/YYYY</span>
-    //    or <span class="floatright">DD/MM/YYYY</span> near "Fecha:"
-    let dataDate: string | null = null;
-    const dateMatch = html.match(/<span class="fecha">(\d{2}\/\d{2}\/\d{4})<\/span>/);
-    if (dateMatch) {
-      dataDate = dateMatch[1];
-    } else {
-      const altMatch = html.match(/Fecha:\s*<\/span>\s*<span[^>]*>(\d{2}\/\d{2}\/\d{4})<\/span>/i);
-      if (altMatch) dataDate = altMatch[1];
-    }
-
-    // 3. Check staleness — NAV older than 7 business days is suspicious
-    let isStale = false;
-    let staleWarning: string | null = null;
-    if (dataDate) {
-      const navDate = parseSpanishDate(dataDate);
-      if (navDate) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const diff = businessDaysDiff(navDate, today);
-        if (diff > 7) {
-          isStale = true;
-          staleWarning = `Último dato: ${dataDate}`;
+      // NAV de más de 7 días hábiles: sospechoso
+      let isStale = false;
+      let staleWarning: string | null = null;
+      if (dataDate) {
+        const navDate = parseSpanishDate(dataDate);
+        if (navDate) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          if (businessDaysDiff(navDate, today) > 7) {
+            isStale = true;
+            staleWarning = `Último dato: ${dataDate}`;
+          }
         }
       }
-    }
-
-    // 4. Extract 1 Year Return
-    let return1Y = 0;
-    const rent1YMatch = html.match(/1 a(?:&ntilde;|ñ)o(?:.|[\r\n])*?<span class="(?:mas|menos)">(-?[\d,\.]+)%<\/span>/i);
-    if (rent1YMatch) {
-      return1Y = parseSpanishFloat(rent1YMatch[1]);
-    }
-
-    // 5. Extract 3 Year Return
-    let return3Y = 0;
-    const rent3YMatch = html.match(/3 a(?:&ntilde;|ñ)os<\/td>\s*<td[^>]*><span class="(?:mas|menos)">(-?[\d,\.]+)%<\/span><\/td>/i);
-    if (rent3YMatch) {
-      return3Y = parseSpanishFloat(rent3YMatch[1]);
-    }
-
-    // 6. Extract 5 Year Return
-    let return5Y = 0;
-    const rent5YMatch = html.match(/5 a(?:&ntilde;|ñ)os<\/td>\s*<td[^>]*><span class="(?:mas|menos)">(-?[\d,\.]+)%<\/span><\/td>/i);
-    if (rent5YMatch) {
-      return5Y = parseSpanishFloat(rent5YMatch[1]);
-    }
 
     // Lookup metadata
     const fundMeta = await queries.getFundCatalogByIsin(isin);
     const name = fundMeta?.name ?? isin;
     const currency = fundMeta?.currency ?? "EUR";
 
-    // 7. Extract Real Monthly Historical Timeseries from the page (var fondo = [...])
-    let quotes: YahooQuote[] = [];
-    const fondoMatch = html.match(/var fondo\s*=\s*(\[\[[\s\S]*?\]\]);/);
-    if (fondoMatch) {
-      try {
-        // Use JSON-like parser since it is a double array of strings/numbers
-        const rawFondoData = JSON.parse(fondoMatch[1]);
-        if (Array.isArray(rawFondoData) && rawFondoData.length > 0) {
-          for (const item of rawFondoData) {
-            if (Array.isArray(item) && item.length === 2) {
-              const dateStr = String(item[0]);
-              const price = Number(item[1]);
-              const parts = dateStr.split("/");
-              if (parts.length === 3 && !isNaN(price)) {
-                // MM/DD/YYYY
-                const date = new Date(Number(parts[2]), Number(parts[0]) - 1, Number(parts[1]));
-                quotes.push({
-                  timestamp: Math.floor(date.getTime() / 1000),
-                  open: price,
-                  high: price,
-                  low: price,
-                  close: price,
-                  volume: 0,
-                });
-              }
-            }
-          }
-        }
-      } catch (err) {
-        console.error(`Error parsing var fondo for ${isin}:`, err);
-      }
-    }
+    let quotes: YahooQuote[] = [...page.historicalQuotes];
 
     // Fallback: If no real historical series was parsed, synthesize one
     if (quotes.length === 0) {

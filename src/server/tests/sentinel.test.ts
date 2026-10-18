@@ -16,6 +16,8 @@ describe("computeInvestmentStats", () => {
     purchase_date: "2023-01-01",
     currency: "EUR",
     notes: "",
+    created_at: "2023-01-01 00:00:00",
+    updated_at: "2023-01-01 00:00:00",
   };
 
   it("calcula profit/loss correctamente", () => {

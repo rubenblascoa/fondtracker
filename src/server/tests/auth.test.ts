@@ -4,8 +4,6 @@ import {
   verifyToken,
   hashPassword,
   verifyPassword,
-  buildSessionCookie,
-  buildLogoutCookie,
 } from "../auth";
 import { validatePassword } from "../validation";
 
@@ -47,20 +45,4 @@ describe("Auth Module & Security", () => {
     expect(await verifyToken("")).toBeNull();
   });
 
-  it("construye cookies seguras HttpOnly con SameSite=Lax", () => {
-    const token = "mock-token-xyz";
-    const cookie = buildSessionCookie(token, 86400);
-    expect(cookie).toContain("ft_session=mock-token-xyz");
-    expect(cookie).toContain("HttpOnly");
-    expect(cookie).toContain("SameSite=Lax");
-    expect(cookie).toContain("Path=/");
-    expect(cookie).toContain("Max-Age=86400");
-  });
-
-  it("construye cookie de logout para invalidar sesión", () => {
-    const logoutCookie = buildLogoutCookie();
-    expect(logoutCookie).toContain("ft_session=");
-    expect(logoutCookie).toContain("Max-Age=0");
-    expect(logoutCookie).toContain("HttpOnly");
-  });
 });

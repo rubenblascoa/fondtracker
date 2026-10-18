@@ -198,7 +198,7 @@ export async function fetchYahooChart(
       dataDate,
       isStale,
       staleWarning,
-      dataSource: "yahoo",
+      dataSource: "yahoo" as const,
       ...extra,
     };
   } catch {

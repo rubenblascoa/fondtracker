@@ -72,7 +72,7 @@ export function Header({ status, user, onLogout, onOpenApiDocs, landingNav, show
     setError("");
     setLoading(true);
     try {
-      await api.updateEmail(currentEmail, email);
+      await api.updateAccount({ currentEmail, email });
       if (user) {
         user.email = email;
       }
@@ -80,7 +80,7 @@ export function Header({ status, user, onLogout, onOpenApiDocs, landingNav, show
       setMenuOpen(false);
       window.location.reload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error updating email");
+      setError(err instanceof Error ? err.message : "No se pudo cambiar el email");
     } finally {
       setLoading(false);
     }
@@ -88,13 +88,13 @@ export function Header({ status, user, onLogout, onOpenApiDocs, landingNav, show
 
   async function handleChangePassword() {
     if (newPassword.length < 8) {
-      setError("New password must be at least 8 characters");
+      setError("La nueva contraseña debe tener al menos 8 caracteres");
       return;
     }
     setError("");
     setLoading(true);
     try {
-      await api.updatePassword(currentPassword, newPassword);
+      await api.updateAccount({ currentPassword, newPassword });
       setView(null);
       setMenuOpen(false);
       window.location.reload();

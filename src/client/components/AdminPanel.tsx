@@ -572,7 +572,7 @@ export function CatalogTab({ onToast }: { onToast?: (msg: string, type: "success
         bank: formBank,
         category: formCategory,
         risk_level: Number(formRisk),
-        yahoo_ticker: formTicker || null
+        yahoo_ticker: formTicker || undefined
       });
       onToast?.(`Fondo ${editingFund.isin} actualizado`, "success");
       setEditingFund(null);
@@ -1387,7 +1387,7 @@ export function AdminSectionContent({ user, initialSubSection }: { user: User; i
     }
   }, [subSection]);
 
-  const SUB_NAV: { key: AdminSubSection; label: string; icon: JSX.Element }[] = [
+  const SUB_NAV: { key: AdminSubSection; label: string; icon: React.ReactElement }[] = [
     { key: "overview", label: "Dashboard Admin", icon: <LayoutDashboard size={14} /> },
     { key: "users", label: "Usuarios", icon: <Users size={14} /> },
     { key: "catalog", label: "Catálogo de Fondos", icon: <Database size={14} /> },

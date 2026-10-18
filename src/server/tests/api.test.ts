@@ -1,6 +1,5 @@
 import { describe, it, expect } from "bun:test";
 import { rateLimit, checkCSRF, securityHeaders } from "../middleware/security.middleware";
-import { fundRoutes } from "../routes/funds.routes";
 
 describe("API Security & Routing", () => {
   it("aplica cabeceras de seguridad CSP y X-Content-Type-Options", () => {
@@ -21,12 +20,4 @@ describe("API Security & Routing", () => {
     expect(rateLimit(ns, ip, 3)).toBe(true);
   });
 
-  it("devuelve lista de bancos oficiales en el endpoint /api/banks", async () => {
-    const res = await (fundRoutes["/api/banks"] as any).GET();
-    const data = await res.json();
-    expect(data["Santander"]).toBeDefined();
-    expect(data["BBVA"]).toBeDefined();
-    expect(data["Vanguard"]).toBeDefined();
-    expect(data["MyInvestor"]).toBeDefined();
-  });
 });

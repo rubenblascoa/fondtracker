@@ -291,13 +291,13 @@ function toTransaction(r: any): TransactionRow {
 export const queries = {
   async listInvestments(userId?: number): Promise<InvestmentRow[]> {
     if (userId != null) {
-      const [rows] = await pool.query<InvestmentRow[]>(
+      const [rows] = await pool.query<any[]>(
         "SELECT * FROM investments WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC",
         [userId]
       );
       return rows;
     }
-    const [rows] = await pool.query<InvestmentRow[]>(
+    const [rows] = await pool.query<any[]>(
       "SELECT * FROM investments WHERE deleted_at IS NULL ORDER BY created_at DESC"
     );
     return rows;
@@ -305,13 +305,13 @@ export const queries = {
 
   async getInvestment(id: number, userId?: number): Promise<InvestmentRow | null> {
     if (userId != null) {
-      const [rows] = await pool.query<InvestmentRow[]>(
+      const [rows] = await pool.query<any[]>(
         "SELECT * FROM investments WHERE id = ? AND user_id = ? AND deleted_at IS NULL",
         [id, userId]
       );
       return rows[0] ?? null;
     }
-    const [rows] = await pool.query<InvestmentRow[]>(
+    const [rows] = await pool.query<any[]>(
       "SELECT * FROM investments WHERE id = ? AND deleted_at IS NULL",
       [id]
     );
@@ -409,13 +409,13 @@ export const queries = {
 
   async getInvestmentsByIsin(isin: string, userId?: number): Promise<InvestmentRow[]> {
     if (userId != null) {
-      const [rows] = await pool.query<InvestmentRow[]>(
+      const [rows] = await pool.query<any[]>(
         "SELECT * FROM investments WHERE isin = ? AND user_id = ?",
         [isin, userId]
       );
       return rows;
     }
-    const [rows] = await pool.query<InvestmentRow[]>(
+    const [rows] = await pool.query<any[]>(
       "SELECT * FROM investments WHERE isin = ?",
       [isin]
     );
@@ -423,7 +423,7 @@ export const queries = {
   },
 
   async getSetting(key: string): Promise<string | null> {
-    const [rows] = await pool.query<{ setting_value: string }[]>(
+    const [rows] = await pool.query<any[]>(
       "SELECT setting_value FROM settings WHERE setting_key = ?",
       [key]
     );
@@ -478,7 +478,7 @@ export const queries = {
     if ((rows as any[]).length === 0 && query && query.trim()) {
       let fallbackSql = `SELECT * FROM fund_catalog WHERE (name LIKE ? OR isin LIKE ? OR bank LIKE ? OR category LIKE ?)`;
       const likeParam = `%${query.trim()}%`;
-      const fallbackParams = [likeParam, likeParam, likeParam, likeParam];
+      const fallbackParams: (string | number)[] = [likeParam, likeParam, likeParam, likeParam];
       if (bank) {
         fallbackSql += ` AND bank = ?`;
         fallbackParams.push(bank);
@@ -520,14 +520,14 @@ export const queries = {
   },
 
   async getFundCatalogBanks(): Promise<string[]> {
-    const [rows] = await pool.query<{ bank: string }[]>(
+    const [rows] = await pool.query<any[]>(
       "SELECT DISTINCT bank FROM fund_catalog ORDER BY bank ASC"
     );
     return rows.map((r) => r.bank);
   },
 
   async getFundCatalogCategories(): Promise<string[]> {
-    const [rows] = await pool.query<{ category: string }[]>(
+    const [rows] = await pool.query<any[]>(
       "SELECT DISTINCT category FROM fund_catalog ORDER BY category ASC"
     );
     return rows.map((r) => r.category);
@@ -573,7 +573,7 @@ export const queries = {
   },
 
   async getAllFundIsins(): Promise<string[]> {
-    const [rows] = await pool.query<{ isin: string }[]>(
+    const [rows] = await pool.query<any[]>(
       "SELECT isin FROM fund_catalog"
     );
     return rows.map((r) => r.isin);
@@ -629,7 +629,7 @@ export const queries = {
 
   /** Returns the ID of every registered user. Used by the digest scheduler. */
   async getAllUserIds(): Promise<number[]> {
-    const [rows] = await pool.query<{ id: number }[]>(
+    const [rows] = await pool.query<any[]>(
       "SELECT id FROM users WHERE deleted_at IS NULL ORDER BY id ASC"
     );
     return rows.map((r) => r.id);

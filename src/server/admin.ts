@@ -378,8 +378,8 @@ export async function adminRefreshFundPrice(isin: string) {
 
   // 1. Try QueFondos first
   const qf = await fetchQueFondosData(cleanIsin).catch(() => null);
-  if (qf?.price && qf.price > 0) {
-    newPrice = qf.price;
+  if (qf?.currentPrice && qf.currentPrice > 0) {
+    newPrice = qf.currentPrice;
     source = "QueFondos";
     await queries.setFundPrice(cleanIsin, newPrice, "EUR");
   } else {
@@ -492,7 +492,7 @@ export async function getAdminNotificationPreview(userId?: number) {
     targetUserId = users[0]?.id || 1;
   }
   try {
-    const message = await previewDigest({ slot: "manual", timezone: "Europe/Madrid" }, targetUserId);
+    const message = await previewDigest({ slot: "manual", timezone: "Europe/Madrid" }, targetUserId ?? 1);
     return { userId: targetUserId, message };
   } catch (err) {
     return { 

@@ -193,6 +193,10 @@ function json(data: unknown, init?: ResponseInit) {
   return Response.json(data, { ...init, headers });
 }
 
+function notFound(message = "Recurso no encontrado") {
+  return json({ error: message }, { status: 404 });
+}
+
 function badRequest(message: string) {
   return json({ error: message }, { status: 400 });
 }
@@ -1166,9 +1170,9 @@ const server = serve({
           const phone = detail.whatsapp.phone;
           if (!phone) return badRequest("El usuario no tiene teléfono registrado");
           
-          const { sendWhatsAppDirect } = await import("./whatsapp");
+          const { sendWhatsApp } = await import("./whatsapp");
           const msg = `🔔 *FondTracker Admin Test*\n\nHola *${detail.user.username}*, este es un mensaje de prueba emitido desde el Panel de Administración.\n\n✅ Tu canal de notificaciones está operativo.`;
-          const res = await sendWhatsAppDirect(phone, msg);
+          const res = await sendWhatsApp(id, msg);
           addActivityLog("DIGEST_TRIGGER", `Enviado WhatsApp de prueba al usuario ${detail.user.username} (${phone})`);
           return json({ ok: true, sent_to: phone, response: res });
         } catch (e: any) {
