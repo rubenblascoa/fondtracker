@@ -112,7 +112,7 @@ export function DashboardNav(props: Props) {
   const sidebar = (inDrawer: boolean) => (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between px-5 py-5">
-        <Logo href="/dashboard" />
+        <Logo href="/" />
         {inDrawer && (
           <button onClick={() => setMobileDrawerOpen(false)} className="rounded-xl p-2 text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]" aria-label="Cerrar menú">
             <X size={18} />
@@ -141,7 +141,7 @@ export function DashboardNav(props: Props) {
 
       {/* Móvil: barra superior */}
       <header className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-ink-0)]/85 px-4 py-3 backdrop-blur-xl lg:hidden">
-        <Logo href="/dashboard" size="sm" />
+        <Logo href="/" size="sm" />
         <button onClick={() => setMobileDrawerOpen(true)} className="rounded-xl border border-[var(--color-border)] p-2 text-[var(--color-fg-2)]" aria-label="Abrir menú">
           <Menu size={18} />
         </button>
@@ -202,7 +202,7 @@ function TopBar(props: Props & { badgeFor: (id: DashboardSection) => ReactNode }
 
   return (
     <header className="relative z-30 hidden shrink-0 items-center justify-between gap-6 px-8 py-4 lg:flex">
-      <Logo href="/dashboard" />
+      <Logo href="/" />
       <nav aria-label="Secciones" className="absolute left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-ink-1)]/70 p-1 backdrop-blur-xl">
         {pill.map((id) => {
           const active = section === id;
