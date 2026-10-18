@@ -11,6 +11,15 @@ function formatEsNumber(value: number, decimals = 2): string {
   return `${sign}${grouped}${dec ? "," + dec : ""}`;
 }
 
+/** Oculta el teléfono en pantalla: "+34622890965" → "+34 ••• ••• 965". */
+export function maskPhone(phone: string | null | undefined): string {
+  const p = (phone ?? "").replace(/[\s-]/g, "");
+  if (!p) return "";
+  if (p.length < 7) return "•••";
+  const prefix = p.startsWith("+") ? `${p.slice(0, 3)} ` : "";
+  return `${prefix}••• ••• ${p.slice(-3)}`;
+}
+
 export function formatEur(value: number): string {
   if (!Number.isFinite(value)) return "—";
   return `${formatEsNumber(value)} €`;

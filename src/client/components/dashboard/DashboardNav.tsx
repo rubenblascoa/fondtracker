@@ -1,188 +1,185 @@
-import { type User, type Status } from "../../api";
-import { useTheme } from "../../theme";
+import type { ReactNode } from "react";
+import { type Status, type User } from "../../api";
 import {
   LayoutDashboard,
   Wallet,
   PlusCircle,
   BarChart3,
-  Smartphone,
+  MessageCircle,
   FileText,
   Shield,
   BookOpen,
   Settings,
   LogOut,
-  RefreshCw,
-  Sun,
-  Moon,
   Menu,
   X,
-  Sparkles,
+  Plus,
 } from "lucide-react";
+import { Logo, Label } from "../ui";
 
 export type DashboardSection = "overview" | "portfolio" | "add" | "analytics" | "notifications" | "reports" | "admin" | "docs";
 
+/** Nombre de cada sección: es a la vez la etiqueta del menú y el título de la pantalla. */
+export const SECTION_META: Record<DashboardSection, { label: string; subtitle: string; icon: typeof Wallet; adminOnly?: boolean }> = {
+  overview: { label: "Resumen", subtitle: "Cuánto tienes, cuánto has ganado y dónde está tu dinero", icon: LayoutDashboard },
+  portfolio: { label: "Mi cartera", subtitle: "Todos tus fondos, uno a uno", icon: Wallet },
+  add: { label: "Añadir fondo", subtitle: "Busca por nombre o ISIN y apunta lo que tienes", icon: PlusCircle },
+  analytics: { label: "Análisis", subtitle: "Reparto por banco, tipo de fondo, sectores y países", icon: BarChart3 },
+  notifications: { label: "WhatsApp", subtitle: "Recibe el resumen de tu cartera en el móvil", icon: MessageCircle },
+  reports: { label: "Informes", subtitle: "PDF, Excel, copia de seguridad y simulador de IRPF", icon: FileText },
+  admin: { label: "Admin", subtitle: "Usuarios, catálogo, envíos y servidor", icon: Shield, adminOnly: true },
+  docs: { label: "API", subtitle: "Endpoints, arquitectura y base de datos", icon: BookOpen, adminOnly: true },
+};
+
+const MAIN: DashboardSection[] = ["overview", "portfolio", "add", "analytics", "notifications", "reports"];
+const ADMIN: DashboardSection[] = ["admin", "docs"];
+
 type Props = {
   user: User;
+  status: Status | null;
+  fundCount: number;
   section: DashboardSection;
   onSelectSection: (section: DashboardSection) => void;
-  onRefresh: () => void;
-  isRefreshing: boolean;
   onOpenSettings: () => void;
   onLogout: () => void;
   mobileDrawerOpen: boolean;
   setMobileDrawerOpen: (open: boolean) => void;
 };
 
-export function DashboardNav({
-  user,
-  section,
-  onSelectSection,
-  onRefresh,
-  isRefreshing,
-  onOpenSettings,
-  onLogout,
-  mobileDrawerOpen,
-  setMobileDrawerOpen,
-}: Props) {
-  const { isDark, toggleTheme } = useTheme();
+function NavButton({ id, active, badge, onClick }: { id: DashboardSection; active: boolean; badge?: ReactNode; onClick: () => void }) {
+  const { label, icon: Icon } = SECTION_META[id];
+  return (
+    <button
+      onClick={onClick}
+      aria-current={active ? "page" : undefined}
+      className={`flex w-full items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-medium transition-all ${
+        active
+          ? "bg-[var(--color-tag-bg)] text-[var(--color-fg-1)]"
+          : "text-[var(--color-fg-3)] hover:bg-[var(--color-surface)] hover:text-[var(--color-fg-1)]"
+      }`}
+    >
+      <Icon size={17} className={active ? "text-[var(--color-accent)]" : ""} />
+      <span className="flex-1 text-left">{label}</span>
+      {badge}
+    </button>
+  );
+}
 
-  const navItems: Array<{ id: DashboardSection; label: string; icon: any; adminOnly?: boolean }> = [
-    { id: "overview", label: "Visión General", icon: LayoutDashboard },
-    { id: "portfolio", label: "Mi Cartera", icon: Wallet },
-    { id: "add", label: "Añadir Fondo", icon: PlusCircle },
-    { id: "analytics", label: "Análisis & Asignación", icon: BarChart3 },
-    { id: "notifications", label: "WhatsApp & Alertas", icon: Smartphone },
-    { id: "reports", label: "Informes & PDF", icon: FileText },
-    { id: "docs", label: "Documentación API", icon: BookOpen },
-    { id: "admin", label: "Panel Admin", icon: Shield, adminOnly: true },
-  ];
+function UserFooter({ user, onOpenSettings, onLogout }: Pick<Props, "user" | "onOpenSettings" | "onLogout">) {
+  return (
+    <div className="flex items-center gap-3 border-t border-[var(--color-border)] p-4">
+      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[var(--color-tag-bg)] font-mono text-sm font-semibold text-[var(--color-tag-fg)]">
+        {user.username.slice(0, 1).toUpperCase()}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-[var(--color-fg-1)]">{user.username}</p>
+        <p className="truncate text-xs text-[var(--color-fg-4)]">{user.email}</p>
+      </div>
+      <button onClick={onOpenSettings} title="Ajustes" className="rounded-xl p-2 text-[var(--color-fg-4)] hover:bg-[var(--color-surface)] hover:text-[var(--color-fg-1)]">
+        <Settings size={16} />
+      </button>
+      <button onClick={onLogout} title="Cerrar sesión" className="rounded-xl p-2 text-[var(--color-fg-4)] hover:bg-[var(--color-loss)]/10 hover:text-[var(--color-loss)]">
+        <LogOut size={16} />
+      </button>
+    </div>
+  );
+}
 
-  const visibleNavItems = navItems.filter((item) => !item.adminOnly || user.is_admin);
+export function DashboardNav(props: Props) {
+  const { user, status, fundCount, section, onSelectSection, mobileDrawerOpen, setMobileDrawerOpen } = props;
+  const badgeFor = (id: DashboardSection) => {
+    if (id === "portfolio" && fundCount > 0)
+      return <span className="rounded-full bg-[var(--color-surface)] px-2 py-0.5 font-mono text-[10px] text-[var(--color-fg-3)]">{fundCount}</span>;
+    if (id === "notifications" && status?.whatsapp?.configured)
+      return <span className="h-2 w-2 rounded-full bg-[var(--color-profit)]" title="Activo" />;
+    return undefined;
+  };
+  const list = (ids: DashboardSection[], close = false) =>
+    ids.map((id) => (
+      <NavButton
+        key={id}
+        id={id}
+        active={section === id}
+        badge={badgeFor(id)}
+        onClick={() => {
+          onSelectSection(id);
+          if (close) setMobileDrawerOpen(false);
+        }}
+      />
+    ));
+
+  const sidebar = (inDrawer: boolean) => (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between px-5 py-5">
+        <Logo href="/dashboard" />
+        {inDrawer && (
+          <button onClick={() => setMobileDrawerOpen(false)} className="rounded-xl p-2 text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]" aria-label="Cerrar menú">
+            <X size={18} />
+          </button>
+        )}
+      </div>
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3">
+        {list(MAIN, inDrawer)}
+        {user.is_admin && (
+          <>
+            <div className="px-3.5 pb-1 pt-5">
+              <Label>Administración</Label>
+            </div>
+            {list(ADMIN, inDrawer)}
+          </>
+        )}
+      </nav>
+      <UserFooter {...props} />
+    </div>
+  );
 
   return (
     <>
-      {/* Top Header */}
-      <header className="sticky top-0 z-30 bg-[var(--color-ink-0)]/80 backdrop-blur-md border-b border-[var(--color-ink-3)] px-4 sm:px-8 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setMobileDrawerOpen(true)}
-            className="md:hidden p-2 rounded-xl text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] hover:bg-[var(--color-ink-2)]"
-          >
-            <Menu size={20} />
-          </button>
+      {/* Escritorio: barra lateral */}
+      <aside className="hidden w-64 shrink-0 border-r border-[var(--color-border)] bg-[var(--color-ink-0)]/60 backdrop-blur-xl md:block">{sidebar(false)}</aside>
 
-          <a href="/dashboard" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[var(--color-accent-2)] to-[var(--color-accent)] flex items-center justify-center text-black font-black text-sm shadow-md group-hover:scale-105 transition-transform">
-              FT
-            </div>
-            <span className="font-bold text-base tracking-tight text-[var(--color-fg-1)]">
-              Fond<span className="text-[var(--color-accent)]">Tracker</span>
-            </span>
-          </a>
-        </div>
-
-        {/* Action Controls */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Refresh button */}
-          <button
-            onClick={onRefresh}
-            disabled={isRefreshing}
-            className="p-2 rounded-xl text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] hover:bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] transition-colors"
-            title="Refrescar cotizaciones"
-          >
-            <RefreshCw size={16} className={isRefreshing ? "animate-spin text-[var(--color-accent)]" : ""} />
-          </button>
-
-          {/* Theme Toggle */}
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-xl text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] hover:bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] transition-colors"
-            title="Cambiar tema"
-          >
-            {isDark ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-
-          {/* User / Settings Pill */}
-          <button
-            onClick={onOpenSettings}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] hover:border-[var(--color-accent)]/40 transition-all text-xs text-[var(--color-fg-2)] group"
-          >
-            <div className="w-6 h-6 rounded-lg bg-[var(--color-accent)]/15 text-[var(--color-accent)] font-bold flex items-center justify-center text-xs">
-              {user.username.slice(0, 1).toUpperCase()}
-            </div>
-            <span className="font-medium hidden sm:inline">{user.username}</span>
-            <Settings size={14} className="text-[var(--color-fg-4)] group-hover:text-[var(--color-accent)] transition-colors" />
-          </button>
-
-          {/* Logout */}
-          <button
-            onClick={onLogout}
-            className="p-2 rounded-xl text-[var(--color-fg-4)] hover:text-red-400 hover:bg-red-500/10 transition-colors"
-            title="Cerrar sesión"
-          >
-            <LogOut size={16} />
-          </button>
-        </div>
+      {/* Móvil: barra superior */}
+      <header className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-ink-0)]/85 px-4 py-3 backdrop-blur-xl md:hidden">
+        <Logo href="/dashboard" size="sm" />
+        <button onClick={() => setMobileDrawerOpen(true)} className="rounded-xl border border-[var(--color-border)] p-2 text-[var(--color-fg-2)]" aria-label="Abrir menú">
+          <Menu size={18} />
+        </button>
       </header>
 
-      {/* Mobile Drawer */}
+      {/* Móvil: menú lateral */}
       {mobileDrawerOpen && (
-        <div className="fixed inset-0 z-50 md:hidden bg-black/75 backdrop-blur-sm animate-fade-in flex">
-          <div className="w-72 bg-[var(--color-ink-1)] border-r border-[var(--color-ink-3)] h-full p-6 flex flex-col justify-between">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-[var(--color-ink-3)] pb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-[var(--color-accent)] text-black font-black flex items-center justify-center text-xs">
-                    FT
-                  </div>
-                  <span className="font-bold text-sm text-[var(--color-fg-1)]">FondTracker</span>
-                </div>
-                <button
-                  onClick={() => setMobileDrawerOpen(false)}
-                  className="p-1.5 text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)]"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <nav className="space-y-1">
-                {visibleNavItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = section === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        onSelectSection(item.id);
-                        setMobileDrawerOpen(false);
-                      }}
-                      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all ${
-                        isActive
-                          ? "bg-[var(--color-accent)]/15 text-[var(--color-accent)] border border-[var(--color-accent)]/30 font-bold"
-                          : "text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] hover:bg-[var(--color-ink-2)]"
-                      }`}
-                    >
-                      <Icon size={16} />
-                      <span>{item.label}</span>
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
-
-            <div className="pt-4 border-t border-[var(--color-ink-3)]">
-              <button
-                onClick={onLogout}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/10 rounded-xl"
-              >
-                <LogOut size={16} />
-                <span>Cerrar Sesión</span>
-              </button>
-            </div>
-          </div>
+        <div className="fixed inset-0 z-50 flex bg-black/60 backdrop-blur-sm md:hidden">
+          <div className="h-full w-72 border-r border-[var(--color-border)] bg-[var(--color-ink-1)] slide-left">{sidebar(true)}</div>
           <div className="flex-1" onClick={() => setMobileDrawerOpen(false)} />
         </div>
       )}
+
+      {/* Móvil: barra inferior */}
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-around border-t border-[var(--color-border)] bg-[var(--color-ink-0)]/90 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 backdrop-blur-xl md:hidden">
+        {(["overview", "portfolio"] as DashboardSection[]).map((id) => {
+          const { label, icon: Icon } = SECTION_META[id];
+          return (
+            <button key={id} onClick={() => onSelectSection(id)} className={`flex flex-col items-center gap-1 px-3 py-1 text-[10px] ${section === id ? "text-[var(--color-fg-1)]" : "text-[var(--color-fg-4)]"}`}>
+              <Icon size={18} className={section === id ? "text-[var(--color-accent)]" : ""} />
+              {label}
+            </button>
+          );
+        })}
+        <button onClick={() => onSelectSection("add")} className="-mt-6 flex flex-col items-center" aria-label="Añadir fondo">
+          <span className="grid h-12 w-12 place-items-center rounded-full border-4 border-[var(--color-ink-0)] text-[#0b0b0a]" style={{ background: "var(--gradient-accent)" }}>
+            <Plus size={22} strokeWidth={2.6} />
+          </span>
+        </button>
+        {(["analytics", "reports"] as DashboardSection[]).map((id) => {
+          const { label, icon: Icon } = SECTION_META[id];
+          return (
+            <button key={id} onClick={() => onSelectSection(id)} className={`flex flex-col items-center gap-1 px-3 py-1 text-[10px] ${section === id ? "text-[var(--color-fg-1)]" : "text-[var(--color-fg-4)]"}`}>
+              <Icon size={18} className={section === id ? "text-[var(--color-accent)]" : ""} />
+              {label}
+            </button>
+          );
+        })}
+      </nav>
     </>
   );
 }

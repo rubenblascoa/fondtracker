@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { formatEur, formatPct } from "./utils";
+import { formatEur, formatPct, maskPhone } from "./utils";
 
 // Intl usa espacio duro (U+00A0) antes del símbolo; normalizamos para comparar.
 const n = (s: string) => s.replace(/ | /g, " ");
@@ -47,5 +47,20 @@ describe("formatPct", () => {
 
   it("devuelve guion para NaN", () => {
     expect(formatPct(NaN)).toBe("—");
+  });
+});
+
+describe("maskPhone", () => {
+  it("oculta todo salvo prefijo y últimas 3 cifras", () => {
+    expect(maskPhone("+34622890965")).toBe("+34 ••• ••• 965");
+  });
+
+  it("devuelve cadena vacía si no hay teléfono", () => {
+    expect(maskPhone(null)).toBe("");
+    expect(maskPhone("")).toBe("");
+  });
+
+  it("no revela números cortos", () => {
+    expect(maskPhone("1234")).toBe("•••");
   });
 });
