@@ -1,29 +1,24 @@
 import React from "react";
+import { Logo } from "./ui";
 
 export function Footer() {
   return (
     <footer className="relative z-10 mt-20 pt-12 pb-12 border-t border-[var(--color-ink-3)] flex flex-col sm:flex-row justify-between items-center gap-6 max-w-6xl mx-auto px-4 sm:px-6 w-full">
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-12 w-full text-center sm:text-left">
         <div className="flex-1">
-          <div className="flex items-center justify-center sm:justify-start gap-3 mb-4">
-            <div className="w-6 h-6 bg-[var(--color-accent)]/10 rounded flex items-center justify-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M7 17L17 7"></path>
-                <path d="M7 7h10v10"></path>
-              </svg>
-            </div>
-            <span className="font-heading font-bold text-lg text-[var(--color-fg-1)]">FondTracker</span>
+          <div className="flex items-center justify-center sm:justify-start mb-4">
+            <Logo size="sm" />
           </div>
           <p className="text-sm text-[var(--color-fg-4)] leading-relaxed max-w-sm mb-6 mx-auto sm:mx-0">
-            Track your investments centrally. Automated, secure, and designed for maximum financial clarity.
+            Tus fondos y ETFs de todos los bancos, en una sola vista. Gratis y de código abierto.
           </p>
           <div className="flex items-center justify-center sm:justify-start gap-6 font-mono">
-            <a href="/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--color-fg-4)] hover:text-[var(--color-fg-2)] cursor-pointer transition-colors">Privacy Policy</a>
-            <a href="/legal/terms-of-service" target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--color-fg-4)] hover:text-[var(--color-fg-2)] cursor-pointer transition-colors">Terms of Service</a>
+            <a href="/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--color-fg-4)] hover:text-[var(--color-fg-2)] cursor-pointer transition-colors">Privacidad</a>
+            <a href="/legal/terms-of-service" target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--color-fg-4)] hover:text-[var(--color-fg-2)] cursor-pointer transition-colors">Términos</a>
           </div>
         </div>
         <div className="flex-none">
-          <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-fg-4)] mb-4">Contact</h4>
+          <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-fg-4)] mb-4">Contacto</h4>
           <div className="flex flex-col gap-3">
             <p className="text-sm font-semibold text-[var(--color-fg-2)]">Rubén Blasco Armengod</p>
             <ul className="space-y-3 mt-1">

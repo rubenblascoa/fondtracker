@@ -95,6 +95,26 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
   );
 }
 
+export function Logo({ size = "md", href = "/" }: { size?: "sm" | "md"; href?: string | null }) {
+  const mark = size === "sm" ? "h-6 w-6 rounded-lg" : "h-[30px] w-[30px] rounded-[10px]";
+  const inner = (
+    <>
+      <span className={cx(mark, "grid place-items-center text-[#0b0b0a]")} style={{ background: "var(--gradient-accent)" }} aria-hidden="true">
+        <svg width={size === "sm" ? 13 : 16} height={size === "sm" ? 13 : 16} fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+          <path d="M3 17l6-6 4 4 8-8" />
+          <path d="M14 7h7v7" />
+        </svg>
+      </span>
+      <span className={cx("font-heading font-bold tracking-tight text-[var(--color-fg-1)]", size === "sm" ? "text-base" : "text-lg")}>FondTracker</span>
+    </>
+  );
+  return href ? (
+    <a href={href} className="flex items-center gap-2.5" title="FondTracker — inicio">{inner}</a>
+  ) : (
+    <span className="flex items-center gap-2.5">{inner}</span>
+  );
+}
+
 export function EmptyState({ icon: Icon, title, text, action }: { icon: LucideIcon; title: string; text: string; action?: ReactNode }) {
   return (
     <Card className="flex flex-col items-center px-6 py-12 text-center">

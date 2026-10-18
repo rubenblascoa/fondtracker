@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { api, setToken } from "../api";
+import { Logo } from "./ui";
 
 type Props = {
   onAuth?: () => void;
@@ -63,24 +64,18 @@ export function LoginPage({ onAuth, onSuccess, onSwitchToRegister }: Props) {
 
           <div className="relative z-10">
             {/* Logo */}
-            <div className="flex items-center gap-3 mb-12">
-              <div className="w-8 h-8 bg-[var(--color-accent)]/20 rounded-lg flex items-center justify-center border border-[var(--color-accent)]/30">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M7 17L17 7"></path>
-                  <path d="M7 7h10v10"></path>
-                </svg>
-              </div>
-              <span className="font-heading font-bold text-lg text-[var(--color-fg-1)] tracking-wide">FondTracker</span>
+            <div className="mb-12">
+              <Logo />
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-bold text-[var(--color-fg-1)] mb-2 tracking-tight">
-              Bienvenido de nuevo
+            <h1 className="text-3xl sm:text-[40px] leading-[1.05] font-bold text-[var(--color-fg-1)] mb-3 tracking-tight">
+              Hola de nuevo. <span className="ft-gradient-text">Tu cartera te espera.</span>
             </h1>
             <p className="text-[var(--color-fg-4)] text-sm mb-12 flex items-center gap-2 font-medium">
               <svg className="w-4 h-4 text-[var(--color-accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
-              Acceso seguro a tu panel de inversiones
+              Acceso seguro a tu panel
             </p>
 
             <div className="space-y-8">
@@ -92,9 +87,9 @@ export function LoginPage({ onAuth, onSuccess, onSwitchToRegister }: Props) {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-[var(--color-fg-1)] font-semibold mb-1 text-[15px]">Monitoriza activos sin límite</h3>
+                  <h3 className="text-[var(--color-fg-1)] font-semibold mb-1 text-[15px]">Todos tus fondos juntos</h3>
                   <p className="text-[var(--color-fg-4)] text-[13px] leading-relaxed">
-                    Añade y sigue tantos fondos de inversión y ETFs como necesites sin restricciones. Configura tu cartera a tu medida.
+                    Fondos y ETFs de todos tus bancos en una sola cartera, sin límite.
                   </p>
                 </div>
               </div>
@@ -107,9 +102,9 @@ export function LoginPage({ onAuth, onSuccess, onSwitchToRegister }: Props) {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-[var(--color-fg-1)] font-semibold mb-1 text-[15px]">Precisión en tiempo real</h3>
+                  <h3 className="text-[var(--color-fg-1)] font-semibold mb-1 text-[15px]">Valor del día</h3>
                   <p className="text-[var(--color-fg-4)] text-[13px] leading-relaxed">
-                    Precios y liquidativos sincronizados a diario para garantizar que la valoración de tu cartera esté siempre actualizada.
+                    Cada fondo se valora con el último valor liquidativo publicado, y ves de qué fecha es.
                   </p>
                 </div>
               </div>
@@ -122,9 +117,9 @@ export function LoginPage({ onAuth, onSuccess, onSwitchToRegister }: Props) {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-[var(--color-fg-1)] font-semibold mb-1 text-[15px]">Privacidad por diseño</h3>
+                  <h3 className="text-[var(--color-fg-1)] font-semibold mb-1 text-[15px]">Tus datos, tuyos</h3>
                   <p className="text-[var(--color-fg-4)] text-[13px] leading-relaxed">
-                    Tus datos financieros son solo tuyos. No vendemos datos a terceros y nunca nos conectamos a tus claves bancarias.
+                    No nos conectamos a tu banco ni vendemos tus datos. Puedes borrar tu cuenta cuando quieras.
                   </p>
                 </div>
               </div>
@@ -135,15 +130,10 @@ export function LoginPage({ onAuth, onSuccess, onSwitchToRegister }: Props) {
         {/* RIGHT COLUMN: Form */}
         <div className="w-full lg:w-[50%] p-5 sm:p-12 bg-[var(--color-ink-1)] border-t lg:border-t-0 lg:border-l border-[var(--color-ink-3)] flex flex-col justify-center">
           
-          <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="w-8 h-8 bg-[var(--color-accent)]/20 rounded-lg flex items-center justify-center border border-[var(--color-accent)]/30">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M7 17L17 7"></path>
-                <path d="M7 7h10v10"></path>
-              </svg>
-            </div>
-            <span className="font-heading font-bold text-lg text-[var(--color-fg-1)] tracking-wide">FondTracker</span>
+          <div className="hidden mb-8">
+            <Logo />
           </div>
+          <h2 className="hidden lg:block text-2xl font-semibold text-[var(--color-fg-1)] mb-6">Entrar</h2>
 
           {/* Social Auth Providers in Large Format */}
           <div className="grid grid-cols-2 gap-3 mb-6">
@@ -188,7 +178,7 @@ export function LoginPage({ onAuth, onSuccess, onSwitchToRegister }: Props) {
                   type="text"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] text-[var(--color-fg-1)] text-sm pl-11 pr-3 py-3.5 rounded-xl outline-none transition-all placeholder:text-[var(--color-fg-5)]"
+                  className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] text-[var(--color-fg-1)] text-sm pl-11 pr-3 py-3.5 rounded-2xl outline-none transition-all placeholder:text-[var(--color-fg-5)]"
                   placeholder="nombre@empresa.com"
                   autoFocus
                 />
@@ -216,7 +206,7 @@ export function LoginPage({ onAuth, onSuccess, onSwitchToRegister }: Props) {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] text-[var(--color-fg-1)] text-sm pl-11 pr-10 py-3.5 rounded-xl outline-none transition-all placeholder:text-[var(--color-fg-5)]"
+                  className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] text-[var(--color-fg-1)] text-sm pl-11 pr-10 py-3.5 rounded-2xl outline-none transition-all placeholder:text-[var(--color-fg-5)]"
                   placeholder="••••••••"
                 />
                 <button
@@ -251,7 +241,7 @@ export function LoginPage({ onAuth, onSuccess, onSwitchToRegister }: Props) {
               disabled={loading || !identifier || !password}
               className="w-full bg-[var(--color-accent)] text-[#0a0a0a] font-semibold text-sm py-4 rounded-xl hover:brightness-110 active:brightness-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all mt-4 shadow-[0_0_15px_rgba(192,132,252,0.2)]"
             >
-              {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
+              {loading ? "Iniciando sesión..." : "Entrar"}
             </button>
           </form>
 

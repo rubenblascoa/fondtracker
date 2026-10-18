@@ -29,7 +29,7 @@ const settle = (p, ms = 2500) => p.waitForTimeout(ms);
 
 async function publicPages(width, suffix) {
   const page = await (await browser.newContext({ viewport: { width, height: 900 } })).newPage();
-  for (const [path, name] of [["/", "01-landing"], ["/login", "02-login"], ["/register", "03-registro"], ["/legal", "04-legal"]]) {
+  for (const [path, name] of [["/", "01-landing"], ["/login", "02-login"], ["/register", "03-registro"], ["/legal/privacy-policy", "04-legal"]]) {
     await page.goto(base + path, { waitUntil: "networkidle", timeout: 90_000 });
     for (let y = 0; y < 8000; y += 500) { await page.mouse.wheel(0, 500); await page.waitForTimeout(120); }
     await settle(page, 1200);

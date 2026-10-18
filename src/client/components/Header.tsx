@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import type { Status, User } from "../api";
 import { api, clearToken } from "../api";
 import { COUNTRIES } from "./RegisterPage";
+import { Logo } from "./ui";
 
 type Props = {
   status?: Status | null;
@@ -149,28 +150,11 @@ export function Header({ status, user, onLogout, onOpenApiDocs, landingNav, show
     <header className="sticky top-0 z-20 bg-[var(--color-ink-0)]/85 backdrop-blur-xl border-b border-[var(--color-ink-3)]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-5 flex items-center gap-3 sm:gap-6">
         <div className="flex items-center gap-4">
-          <div className="flex items-center justify-center w-8 h-8 rounded bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 shadow-[0_0_15px_rgba(192,132,252,0.15)]">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--color-accent)"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M7 17L17 7" />
-              <path d="M7 7h10v10" />
-            </svg>
-          </div>
           <div>
-            <a href="/" className="font-heading font-bold text-xl text-[var(--color-fg-1)] tracking-tight hover:text-[var(--color-accent)] transition-colors">
-              FONDTRACKER
-            </a>
+            <Logo />
             {user && (
               <p className="text-[10px] uppercase tracking-widest text-[var(--color-fg-4)] font-mono">
-                {status?.fund_count ?? 0} {(status?.fund_count ?? 0) === 1 ? "fund" : "funds"}
+                {status?.fund_count ?? 0} {(status?.fund_count ?? 0) === 1 ? "fondo" : "fondos"}
               </p>
             )}
           </div>
@@ -222,7 +206,7 @@ export function Header({ status, user, onLogout, onOpenApiDocs, landingNav, show
                 <div className="absolute right-0 top-full mt-3 w-56 border border-[var(--color-ink-3)] bg-[var(--color-ink-1)]/95 backdrop-blur-2xl rounded-2xl shadow-2xl z-50 p-2 fade-in" style={{maxWidth: 'calc(100vw - 1rem)'}}>
                   
                   <div className="px-3 py-3 border-b border-[var(--color-ink-3)] mb-2">
-                    <p className="text-[10px] text-[var(--color-fg-4)] font-mono uppercase tracking-wider mb-1">Signed in as</p>
+                    <p className="text-[10px] text-[var(--color-fg-4)] font-mono uppercase tracking-wider mb-1">Sesión iniciada como</p>
                     <p className="text-[13px] font-medium text-[var(--color-fg-1)] truncate">{user.email || user.username}</p>
                   </div>
 
@@ -434,9 +418,9 @@ export function Header({ status, user, onLogout, onOpenApiDocs, landingNav, show
         ) : landingNav ? (
           <>
             <div className="ml-auto hidden md:flex items-center gap-4">
-              <a href="/login" className="text-sm font-semibold text-[var(--color-fg-3)] hover:text-[var(--color-fg-1)] transition-colors">Log in</a>
+              <a href="/login" className="text-sm font-semibold text-[var(--color-fg-3)] hover:text-[var(--color-fg-1)] transition-colors">Entrar</a>
               <a href="/register" className="px-5 py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-sm rounded-lg shadow-[0_0_15px_rgba(192,132,252,0.2)] hover:shadow-[0_0_25px_rgba(192,132,252,0.4)] transition-all">
-                Get Started
+                Crear cuenta
               </a>
             </div>
 
@@ -469,9 +453,9 @@ export function Header({ status, user, onLogout, onOpenApiDocs, landingNav, show
           </>
         ) : (
           <div className="ml-auto flex items-center gap-3">
-            <a href="/login" className="text-xs sm:text-sm font-semibold text-[var(--color-fg-3)] hover:text-[var(--color-fg-1)] transition-colors">Log in</a>
+            <a href="/login" className="text-xs sm:text-sm font-semibold text-[var(--color-fg-3)] hover:text-[var(--color-fg-1)] transition-colors">Entrar</a>
             <a href="/register" className="px-3.5 sm:px-5 py-1.5 sm:py-2.5 bg-[var(--color-accent)] text-[var(--color-accent-fg)] font-semibold text-xs sm:text-sm rounded-lg shadow-[0_0_15px_rgba(192,132,252,0.2)] hover:shadow-[0_0_25px_rgba(192,132,252,0.4)] transition-all">
-              Get Started
+              Crear cuenta
             </a>
           </div>
         )}

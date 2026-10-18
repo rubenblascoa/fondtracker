@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { api, setToken } from "../api";
+import { Logo } from "./ui";
 
 export const COUNTRIES = [
   { code: "AF", name: "Afghanistan", dial: "+93", flag: "🇦🇫" },
@@ -308,24 +309,18 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
 
           <div className="relative z-10">
             {/* Logo */}
-            <div className="flex items-center gap-3 mb-12">
-              <div className="w-8 h-8 bg-[var(--color-accent)]/20 rounded-lg flex items-center justify-center border border-[var(--color-accent)]/30">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M7 17L17 7"></path>
-                  <path d="M7 7h10v10"></path>
-                </svg>
-              </div>
-              <span className="font-heading font-bold text-lg text-[var(--color-fg-1)] tracking-wide">FondTracker</span>
+            <div className="mb-12">
+              <Logo />
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-bold text-[var(--color-fg-1)] mb-2 tracking-tight">
-              Eleva tu cartera
+            <h1 className="text-3xl sm:text-[40px] leading-[1.05] font-bold text-[var(--color-fg-1)] mb-3 tracking-tight">
+              Todo tu dinero, <span className="ft-gradient-text">en una sola vista.</span>
             </h1>
             <p className="text-[var(--color-fg-4)] text-sm mb-12 flex items-center gap-2 font-medium">
               <svg className="w-4 h-4 text-[var(--color-accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
-              100% Gratuito · Sin tarjeta de crédito
+              Gratis · Sin tarjeta · Código abierto
             </p>
 
             <div className="space-y-8">
@@ -337,9 +332,9 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-[var(--color-fg-1)] font-semibold mb-1 text-[15px]">Monitoriza activos sin límite</h3>
+                  <h3 className="text-[var(--color-fg-1)] font-semibold mb-1 text-[15px]">Todos tus fondos juntos</h3>
                   <p className="text-[var(--color-fg-4)] text-[13px] leading-relaxed">
-                    Añade y sigue tantos fondos de inversión y ETFs como necesites sin restricciones. Configura tu cartera a tu medida.
+                    Fondos y ETFs de todos tus bancos en una sola cartera, sin límite.
                   </p>
                 </div>
               </div>
@@ -352,9 +347,9 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-[var(--color-fg-1)] font-semibold mb-1 text-[15px]">Precisión en tiempo real</h3>
+                  <h3 className="text-[var(--color-fg-1)] font-semibold mb-1 text-[15px]">Valor del día</h3>
                   <p className="text-[var(--color-fg-4)] text-[13px] leading-relaxed">
-                    Precios y liquidativos sincronizados a diario para garantizar que la valoración de tu cartera esté siempre actualizada.
+                    Cada fondo se valora con el último valor liquidativo publicado, y ves de qué fecha es.
                   </p>
                 </div>
               </div>
@@ -367,9 +362,9 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-[var(--color-fg-1)] font-semibold mb-1 text-[15px]">Privacidad por diseño</h3>
+                  <h3 className="text-[var(--color-fg-1)] font-semibold mb-1 text-[15px]">Tus datos, tuyos</h3>
                   <p className="text-[var(--color-fg-4)] text-[13px] leading-relaxed">
-                    Tus datos financieros son solo tuyos. No vendemos datos a terceros y nunca nos conectamos a tus claves bancarias.
+                    No nos conectamos a tu banco ni vendemos tus datos. Puedes borrar tu cuenta cuando quieras.
                   </p>
                 </div>
               </div>
@@ -380,15 +375,10 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
         {/* RIGHT COLUMN: Form */}
         <div className="w-full lg:w-[50%] p-5 sm:p-12 bg-[var(--color-ink-1)] border-t lg:border-t-0 lg:border-l border-[var(--color-ink-3)] flex flex-col justify-center">
           
-          <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="w-8 h-8 bg-[var(--color-accent)]/20 rounded-lg flex items-center justify-center border border-[var(--color-accent)]/30">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M7 17L17 7"></path>
-                <path d="M7 7h10v10"></path>
-              </svg>
-            </div>
-            <span className="font-heading font-bold text-lg text-[var(--color-fg-1)] tracking-wide">FondTracker</span>
+          <div className="hidden mb-8">
+            <Logo />
           </div>
+          <h2 className="hidden lg:block text-2xl font-semibold text-[var(--color-fg-1)] mb-6">Crear cuenta</h2>
 
           {/* Social Auth Providers in Large Format */}
           <div className="grid grid-cols-2 gap-3 mb-6">
@@ -422,7 +412,7 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
           <form onSubmit={handleSubmit} className="space-y-4">
             
             <div className="space-y-1.5">
-              <label className="block text-[13px] text-[var(--color-fg-1)] font-medium">Nombre de Usuario</label>
+              <label className="block text-[13px] text-[var(--color-fg-1)] font-medium">Nombre de usuario</label>
               <div className="relative">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-fg-4)]">
                   <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
@@ -433,7 +423,7 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] text-[var(--color-fg-1)] text-sm pl-11 pr-3 py-3.5 rounded-xl outline-none transition-all placeholder:text-[var(--color-fg-5)]"
+                  className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] text-[var(--color-fg-1)] text-sm pl-11 pr-3 py-3.5 rounded-2xl outline-none transition-all placeholder:text-[var(--color-fg-5)]"
                   placeholder="usuario123"
                   autoFocus
                 />
@@ -441,7 +431,7 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[13px] text-[var(--color-fg-1)] font-medium">Correo Electrónico</label>
+              <label className="block text-[13px] text-[var(--color-fg-1)] font-medium">Correo electrónico</label>
               <div className="relative">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-fg-4)]">
                   <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
@@ -452,7 +442,7 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] text-[var(--color-fg-1)] text-sm pl-11 pr-3 py-3.5 rounded-xl outline-none transition-all placeholder:text-[var(--color-fg-5)]"
+                  className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] text-[var(--color-fg-1)] text-sm pl-11 pr-3 py-3.5 rounded-2xl outline-none transition-all placeholder:text-[var(--color-fg-5)]"
                   placeholder="tu@email.com"
                 />
               </div>
@@ -470,7 +460,7 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] text-[var(--color-fg-1)] text-sm pl-11 pr-3 py-3.5 rounded-xl outline-none transition-all placeholder:text-[var(--color-fg-5)]"
+                  className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] text-[var(--color-fg-1)] text-sm pl-11 pr-3 py-3.5 rounded-2xl outline-none transition-all placeholder:text-[var(--color-fg-5)]"
                   placeholder="••••••••"
                 />
               </div>
@@ -484,7 +474,7 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
                   <button
                     type="button"
                     onClick={() => { setShowCountryPicker(!showCountryPicker); setCountrySearch(""); }}
-                    className="flex items-center gap-1.5 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] hover:border-[var(--color-accent)] text-[var(--color-fg-1)] text-sm px-2.5 py-3.5 rounded-xl outline-none transition-all min-w-[90px]"
+                    className="flex items-center gap-1.5 bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] hover:border-[var(--color-accent)] text-[var(--color-fg-1)] text-sm px-2.5 py-3.5 rounded-2xl outline-none transition-all min-w-[90px]"
                   >
                     <span className="text-base leading-none">{selectedCountry.flag}</span>
                     <span className="font-mono text-xs">{selectedCountry.dial}</span>
@@ -552,7 +542,7 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
                     type="tel"
                     value={localNumber}
                     onChange={(e) => setLocalNumber(e.target.value.replace(/\D/g, ""))}
-                    className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] text-[var(--color-fg-1)] text-sm pl-11 pr-3 py-3.5 rounded-xl outline-none transition-all placeholder:text-[var(--color-fg-5)]"
+                    className="w-full bg-[var(--color-ink-2)] border border-[var(--color-ink-3)] focus:border-[var(--color-accent)] text-[var(--color-fg-1)] text-sm pl-11 pr-3 py-3.5 rounded-2xl outline-none transition-all placeholder:text-[var(--color-fg-5)]"
                     placeholder="612345678"
                   />
                 </div>
@@ -571,7 +561,7 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
               disabled={loading || !username || !email || !password}
               className="w-full bg-[var(--color-accent)] text-[#0a0a0a] font-semibold text-sm py-4 rounded-xl hover:brightness-110 active:brightness-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all mt-4 shadow-[0_0_15px_rgba(192,132,252,0.2)]"
             >
-              {loading ? "Creando cuenta..." : "Crear Cuenta"}
+              {loading ? "Creando cuenta..." : "Crear cuenta"}
             </button>
           </form>
 
@@ -585,7 +575,7 @@ export function RegisterPage({ onAuth, onSwitchToLogin }: Props) {
                 onClick={onSwitchToLogin}
                 className="text-[13px] text-[var(--color-fg-1)] font-semibold hover:text-[var(--color-accent)] transition-colors"
               >
-                Inicia Sesión &rarr;
+                Entrar &rarr;
               </button>
           </div>
 
