@@ -156,6 +156,17 @@ export async function ensureSchema() {
 
 
 
+  // Foto diaria del valor de cada cartera (historial real del patrimonio)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS portfolio_snapshots (
+      user_id INT NOT NULL,
+      snap_date DATE NOT NULL,
+      invested DECIMAL(15,2) NOT NULL,
+      value DECIMAL(15,2) NOT NULL,
+      PRIMARY KEY (user_id, snap_date)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+  `);
+
   const [cols] = await pool.query<any[]>(
     "SHOW COLUMNS FROM investments LIKE 'ticker'"
   );
@@ -497,6 +508,22 @@ export const queries = {
       "SELECT isin FROM fund_catalog"
     );
     return rows.map((r) => r.isin);
+  },
+
+  async upsertSnapshot(userId: number, date: string, invested: number, value: number): Promise<void> {
+    await pool.query(
+      `INSERT INTO portfolio_snapshots (user_id, snap_date, invested, value) VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE invested = VALUES(invested), value = VALUES(value)`,
+      [userId, date, invested, value]
+    );
+  },
+
+  async listSnapshots(userId: number, fromDate: string): Promise<{ snap_date: string; invested: number; value: number }[]> {
+    const [rows] = await pool.query<any[]>(
+      "SELECT snap_date, invested, value FROM portfolio_snapshots WHERE user_id = ? AND snap_date >= ? ORDER BY snap_date ASC",
+      [userId, fromDate]
+    );
+    return rows.map((r) => ({ snap_date: String(r.snap_date).slice(0, 10), invested: Number(r.invested), value: Number(r.value) }));
   },
 
   /** Returns the ID of every registered user. Used by the digest scheduler. */

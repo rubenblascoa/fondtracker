@@ -2,6 +2,7 @@ import { serve } from "bun";
 import { join, normalize, resolve, sep } from "node:path";
 import index from "../client/index.html";
 import { closeDatabase, ensureSchema } from "./db";
+import { getPortfolioHistory, takeDailySnapshots, HISTORY_RANGES, type HistoryRange } from "./history.service";
 import {
   addInvestment,
   computePortfolioTotals,
@@ -702,6 +703,23 @@ const server = serve({
             },
           },
         });
+      },
+    },
+
+    "/api/portfolio/history": {
+      async GET(req) {
+        const user = await requireUser(req);
+        if (user instanceof Response) return user;
+        const ip = getClientIp(req);
+        if (rateLimit("portfolio-history", ip, 20)) return tooManyRequests();
+        const range = (new URL(req.url).searchParams.get("range") ?? "1y") as HistoryRange;
+        if (!HISTORY_RANGES.includes(range)) return badRequest("Rango inválido (1m, 3m, 6m, 1y, max)");
+        try {
+          return json(await getPortfolioHistory(user.id, range));
+        } catch (err) {
+          console.error("[history] error:", err);
+          return json({ error: "No se pudo calcular el historial" }, { status: 500 });
+        }
       },
     },
 
@@ -1455,6 +1473,10 @@ const server = serve({
 });
 
 await startDigestScheduler();
+
+// Foto diaria del patrimonio de cada usuario (historial real). Se comprueba cada hora.
+setTimeout(() => void takeDailySnapshots().catch(() => {}), 60_000).unref();
+setInterval(() => void takeDailySnapshots().catch(() => {}), 60 * 60_000).unref();
 
 // ── Render deployment warnings ─────────────────────────────────────────────
 if (!process.env.NODE_ENV) {
