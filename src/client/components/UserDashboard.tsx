@@ -125,7 +125,8 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
         setMobileDrawerOpen={setMobileDrawerOpen}
       />
 
-      <main ref={mainRef} className="flex-1 overflow-y-auto pb-28 pt-16 lg:pb-10 lg:pt-0">
+      {/* Hueco de scroll reservado a ambos lados: el contenido queda centrado igual que la barra superior */}
+      <main ref={mainRef} className="flex-1 overflow-y-auto pb-28 pt-16 [scrollbar-gutter:stable_both-edges] lg:pb-10 lg:pt-0">
         <div className="mx-auto max-w-[1280px] space-y-6 px-4 py-6 sm:px-8 sm:py-8">
           <PageHeader
             title={headerTitle}

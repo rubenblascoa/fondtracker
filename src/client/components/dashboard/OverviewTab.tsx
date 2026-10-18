@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Area, AreaChart, Bar, BarChart, Cell, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { ArrowRight, Download, MessageCircle, PlusCircle, TrendingDown, TrendingUp, Wallet, Clock } from "lucide-react";
+import { ArrowRight, Clock, Download, MessageCircle, PlusCircle, Wallet } from "lucide-react";
 import { api, type Investment, type PortfolioHistoryPoint, type PortfolioHistoryRange, type Status, type TransactionType } from "../../api";
-import { allocationBy, performers } from "../../allocation";
+import { allocationBy } from "../../allocation";
 import { fundView } from "../../fundView";
 import { lastChange, monthlyResults, recentMovements, type Movement } from "../../overview";
 import { formatCompactEur, formatEur, formatPct, maskPhone } from "../../utils";
@@ -22,6 +22,10 @@ const dayLabel = (iso: string) => {
   return `${d} ${MONTHS[m - 1]} ${String(y).slice(2)}`;
 };
 const shortDay = (iso: string) => iso.slice(0, 10).split("-").reverse().join("/");
+const dayMonth = (iso: string) => {
+  const [, m, d] = iso.split("-").map(Number);
+  return `${d} ${MONTHS[m - 1]}`;
+};
 const signed = (n: number) => `${n > 0 ? "+" : ""}${formatEur(n)}`;
 const TX_LABEL: Record<TransactionType, string> = {
   BUY: "Compra",
@@ -68,8 +72,8 @@ function Tile({ label, icon, children, foot }: { label: string; icon?: React.Rea
   return (
     <Card className="flex min-w-0 flex-col justify-between gap-3">
       <div className="flex items-center justify-between gap-2">
-        <Label>{label}</Label>
-        {icon && <span className="grid h-7 w-7 place-items-center rounded-full border border-[var(--color-border)] text-[var(--color-fg-3)]">{icon}</span>}
+        <Label className="truncate">{label}</Label>
+        {icon && <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-[var(--color-border)] text-[var(--color-fg-3)]">{icon}</span>}
       </div>
       <div className="min-w-0">{children}</div>
       {foot && <div className="text-[11px] text-[var(--color-fg-4)]">{foot}</div>}
@@ -125,10 +129,10 @@ export function OverviewTab({ funds, status, phone, onNavigate, onExportPdf, isE
 
   const views = useMemo(() => funds.map((f) => ({ fund: f, view: fundView(f) })), [funds]);
   const byBank = useMemo(() => allocationBy(funds, "bank"), [funds]);
-  const { best, worst } = useMemo(() => performers(funds), [funds]);
   const top = useMemo(() => [...views].sort((a, b) => b.view.value - a.view.value).slice(0, 5), [views]);
   const months = useMemo(() => monthlyResults(yearPoints ?? [], 8), [yearPoints]);
   const change = useMemo(() => lastChange(yearPoints ?? []), [yearPoints]);
+  const monthsTotal = useMemo(() => Math.round(months.reduce((t, m) => t + m.result, 0) * 100) / 100, [months]);
 
   if (funds.length === 0) {
     return (
@@ -154,10 +158,10 @@ export function OverviewTab({ funds, status, phone, onNavigate, onExportPdf, isE
 
   return (
     <div className="space-y-4 fade-in">
-      {/* Fila 1: patrimonio · cifras · resultado por mes */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-12">
+      {/* Fila 1: patrimonio · resultado por mes */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         {/* Patrimonio: tarjeta destacada con borde de tinta y un resplandor suave */}
-        <div className="ft-card relative overflow-hidden p-5 xl:col-span-4">
+        <div className="ft-card relative overflow-hidden p-5 lg:col-span-5 xl:col-span-4">
           <span
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 rounded-[inherit] p-px"
@@ -225,67 +229,22 @@ export function OverviewTab({ funds, status, phone, onNavigate, onExportPdf, isE
           </div>
         </div>
 
-        {/* Cifras */}
-        <div className="grid grid-cols-2 gap-4 xl:col-span-4">
-          <Tile
-            label="Último cambio"
-            icon={<Clock size={13} />}
-            foot={change ? `${shortDay(change.since)} → ${shortDay(change.date)}` : "Sin datos suficientes"}
-          >
-            {change ? (
-              <>
-                <p className={`font-heading text-2xl font-semibold ${change.change >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"}`}>{signed(change.change)}</p>
-                <p className="mt-0.5 text-xs text-[var(--color-fg-4)]">{formatPct(change.pct)}</p>
-              </>
-            ) : (
-              <p className="font-heading text-2xl font-semibold text-[var(--color-fg-4)]">—</p>
-            )}
-          </Tile>
-          <Tile
-            label="WhatsApp"
-            icon={<MessageCircle size={13} />}
-            foot={
-              <button onClick={() => onNavigate("notifications")} className="font-medium text-[var(--color-accent)] hover:underline">
-                {status?.whatsapp?.configured ? "Gestionar avisos" : "Activar resumen"}
-              </button>
-            }
-          >
-            <Tag tone={status?.whatsapp?.configured ? "profit" : "neutral"}>{status?.whatsapp?.configured ? "Activo" : "Inactivo"}</Tag>
-            <p className="mt-2 truncate font-heading text-base font-semibold text-[var(--color-fg-1)]">
-              {status?.whatsapp?.configured ? maskPhone(phone) || "Configurado" : "Sin configurar"}
-            </p>
-          </Tile>
-          {/* Con un solo fondo no hay mejor ni peor: se enseña ese fondo y lo invertido */}
-          {[
-            { title: worst ? "Mejor fondo" : "Tu fondo", p: best, Icon: TrendingUp },
-            ...(worst ? [{ title: "Peor fondo", p: worst, Icon: TrendingDown }] : []),
-          ].map(({ title, p, Icon }) => (
-            <Tile key={title} label={title} icon={<Icon size={13} />} foot={p ? p.fund.bank : "Aún sin precio"}>
-              {p ? (
-                <>
-                  <p className="truncate text-[13px] font-medium text-[var(--color-fg-1)]" title={p.fund.name}>
-                    {p.fund.name}
-                  </p>
-                  <p className={`mt-1 font-heading text-xl font-semibold ${p.pl >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"}`}>
-                    {formatPct(p.pct)}
-                  </p>
-                </>
-              ) : (
-                <p className="font-heading text-2xl font-semibold text-[var(--color-fg-4)]">—</p>
-              )}
-            </Tile>
-          ))}
-          {!worst && (
-            <Tile label="Invertido" icon={<Wallet size={13} />} foot="Lo que has puesto de tu bolsillo">
-              <p className="font-heading text-2xl font-semibold text-[var(--color-fg-1)]">{formatEur(invested)}</p>
-            </Tile>
-          )}
-        </div>
-
         {/* Resultado por mes */}
-        <Card className="flex flex-col lg:col-span-2 xl:col-span-4">
-          <h2 className="text-lg font-semibold text-[var(--color-fg-1)]">Resultado por mes</h2>
-          <p className="text-xs text-[var(--color-fg-4)]">Lo que ganó o perdió tu cartera cada mes, sin contar aportaciones</p>
+        <Card className="flex flex-col lg:col-span-7 xl:col-span-8">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--color-fg-1)]">Resultado por mes</h2>
+              <p className="text-xs text-[var(--color-fg-4)]">Ganancia o pérdida de cada mes, sin contar aportaciones</p>
+            </div>
+            {months.length > 0 && (
+              <div className="sm:text-right">
+                <p className={`font-heading text-xl font-semibold ${monthsTotal >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"}`}>{signed(monthsTotal)}</p>
+                <p className="text-[11px] text-[var(--color-fg-4)]">
+                  en {months.length} {months.length === 1 ? "mes" : "meses"}
+                </p>
+              </div>
+            )}
+          </div>
           <div className="mt-3 min-h-[190px] flex-1">
             {yearPoints == null ? (
               <div className="shimmer h-full rounded-2xl" />
@@ -308,7 +267,7 @@ export function OverviewTab({ funds, status, phone, onNavigate, onExportPdf, isE
                   <YAxis tickFormatter={formatCompactEur} tick={{ fontSize: 10, fill: "var(--color-fg-4)" }} axisLine={false} tickLine={false} width={48} />
                   <ReferenceLine y={0} stroke="var(--color-border)" />
                   <Tooltip content={<MonthTooltip />} cursor={{ fill: "var(--color-surface)" }} />
-                  <Bar dataKey="result" radius={[6, 6, 6, 6]} maxBarSize={26}>
+                  <Bar dataKey="result" radius={[6, 6, 6, 6]} maxBarSize={40}>
                     {months.map((m) => (
                       <Cell key={m.month} fill={m.result >= 0 ? "url(#ftBarUp)" : "url(#ftBarDown)"} />
                     ))}
@@ -408,14 +367,47 @@ export function OverviewTab({ funds, status, phone, onNavigate, onExportPdf, isE
           </div>
         </Card>
 
-        <Card className="flex flex-col xl:col-span-4" padded={false}>
+        <div className="flex flex-col gap-4 xl:col-span-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Tile label="Último día" icon={<Clock size={13} />} foot={change ? `${dayMonth(change.date)} frente al ${dayMonth(change.since)}` : "Sin datos suficientes"}>
+              {change ? (
+                <>
+                  <p className={`whitespace-nowrap font-heading text-xl font-semibold sm:text-2xl ${change.change >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"}`}>
+                    {signed(change.change)}
+                  </p>
+                  <p className="text-xs text-[var(--color-fg-4)]">{formatPct(change.pct)}</p>
+                </>
+              ) : (
+                <p className="font-heading text-2xl font-semibold text-[var(--color-fg-4)]">—</p>
+              )}
+            </Tile>
+            <Tile
+              label="WhatsApp"
+              icon={<MessageCircle size={13} />}
+              foot={
+                <button onClick={() => onNavigate("notifications")} className="font-medium text-[var(--color-accent)] hover:underline">
+                  {status?.whatsapp?.configured ? "Gestionar avisos" : "Activar resumen"}
+                </button>
+              }
+            >
+              <p className="flex items-center gap-2 font-heading text-lg font-semibold text-[var(--color-fg-1)]">
+                <span className={`h-2 w-2 rounded-full ${status?.whatsapp?.configured ? "bg-[var(--color-profit)]" : "bg-[var(--color-fg-5)]"}`} />
+                {status?.whatsapp?.configured ? "Activo" : "Inactivo"}
+              </p>
+              <p className="mt-0.5 truncate font-mono text-[11px] text-[var(--color-fg-4)]">
+                {status?.whatsapp?.configured ? maskPhone(phone) || "Configurado" : "Sin configurar"}
+              </p>
+            </Tile>
+          </div>
+
+        <Card className="flex flex-1 flex-col" padded={false}>
           <div className="flex items-center justify-between p-5 pb-3">
             <h2 className="text-lg font-semibold text-[var(--color-fg-1)]">Posiciones</h2>
-            <button onClick={() => onNavigate("portfolio")} className="flex items-center gap-1 text-xs font-medium text-[var(--color-accent)] hover:underline">
+            <button onClick={() => onNavigate("portfolio")} className="flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-medium text-[var(--color-accent)] hover:underline">
               Ver cartera <ArrowRight size={13} />
             </button>
           </div>
-          <ul className="flex-1 divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
+          <ul className="divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
             {top.map(({ fund, view }) => (
               <li key={fund.id} className="flex items-center justify-between gap-3 px-5 py-3">
                 <div className="min-w-0">
@@ -439,6 +431,7 @@ export function OverviewTab({ funds, status, phone, onNavigate, onExportPdf, isE
             ))}
           </ul>
         </Card>
+        </div>
       </div>
 
       {/* Fila 3: movimientos recientes */}
@@ -448,7 +441,7 @@ export function OverviewTab({ funds, status, phone, onNavigate, onExportPdf, isE
             <h2 className="text-lg font-semibold text-[var(--color-fg-1)]">Movimientos recientes</h2>
             <p className="text-xs text-[var(--color-fg-4)]">Compras, ventas y traspasos de todos tus fondos</p>
           </div>
-          <button onClick={() => onNavigate("portfolio")} className="flex items-center gap-1 text-xs font-medium text-[var(--color-accent)] hover:underline">
+          <button onClick={() => onNavigate("portfolio")} className="flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-medium text-[var(--color-accent)] hover:underline">
             Ver todos <ArrowRight size={13} />
           </button>
         </div>
@@ -459,7 +452,25 @@ export function OverviewTab({ funds, status, phone, onNavigate, onExportPdf, isE
         ) : movements.length === 0 ? (
           <p className="px-5 pb-5 text-sm text-[var(--color-fg-4)]">Todavía no hay movimientos.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <ul className="divide-y divide-[var(--color-border)] border-t border-[var(--color-border)] sm:hidden">
+            {movements.map((m) => (
+              <li key={`${m.fundId}-${m.id}`} className="flex items-center justify-between gap-3 px-5 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-[var(--color-fg-1)]">{m.fundName}</p>
+                  <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-[var(--color-fg-4)]">
+                    <span className={`h-1.5 w-1.5 rounded-full ${m.type === "SELL" || m.type === "TRANSFER_OUT" ? "bg-[var(--color-loss)]" : "bg-[var(--color-profit)]"}`} />
+                    {TX_LABEL[m.type]} · {shortDay(m.date)}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="font-mono text-xs text-[var(--color-fg-1)]">{formatEur(Number(m.amount))}</p>
+                  <p className="font-mono text-[10px] text-[var(--color-fg-4)]">{Number(m.shares).toLocaleString("es-ES", { maximumFractionDigits: 6 })} part.</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-x-auto sm:block">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-y border-[var(--color-border)] text-left">
@@ -499,6 +510,7 @@ export function OverviewTab({ funds, status, phone, onNavigate, onExportPdf, isE
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Card>
     </div>

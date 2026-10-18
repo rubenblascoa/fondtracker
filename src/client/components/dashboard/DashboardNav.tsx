@@ -201,9 +201,11 @@ function TopBar(props: Props & { badgeFor: (id: DashboardSection) => ReactNode }
   const menuItem = "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-[var(--color-fg-2)] hover:bg-[var(--color-surface)] hover:text-[var(--color-fg-1)]";
 
   return (
-    <header className="relative z-30 hidden shrink-0 items-center justify-between gap-6 px-8 py-4 lg:flex">
+    <header className="relative z-30 hidden shrink-0 lg:block">
+      {/* Mismo ancho y margen que el contenido, para que todo quede alineado */}
+      <div className="relative mx-auto flex max-w-[1280px] items-center justify-between gap-6 px-8 py-4">
       <Logo href="/" />
-      <nav aria-label="Secciones" className="absolute left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-ink-1)]/70 p-1 backdrop-blur-xl">
+      <nav aria-label="Secciones" className="flex items-center gap-1 rounded-full xl:absolute xl:left-1/2 xl:-translate-x-1/2 border border-[var(--color-border)] bg-[var(--color-ink-1)]/70 p-1 backdrop-blur-xl">
         {pill.map((id) => {
           const active = section === id;
           return (
@@ -211,7 +213,7 @@ function TopBar(props: Props & { badgeFor: (id: DashboardSection) => ReactNode }
               key={id}
               onClick={() => onSelectSection(id)}
               aria-current={active ? "page" : undefined}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-medium transition-colors ${
+              className={`flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors xl:px-4 ${
                 active ? "bg-[var(--color-fg-1)] text-[var(--color-ink-0)]" : "text-[var(--color-fg-3)] hover:text-[var(--color-fg-1)]"
               }`}
             >
@@ -224,7 +226,7 @@ function TopBar(props: Props & { badgeFor: (id: DashboardSection) => ReactNode }
       <div className="flex items-center gap-2">
         <button
           onClick={() => onSelectSection("add")}
-          className="flex items-center gap-1.5 rounded-full bg-[var(--color-btn-bg)] px-4 py-2 text-[13px] font-semibold text-[var(--color-btn-fg)] transition-opacity hover:opacity-85"
+          className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--color-btn-bg)] px-4 py-2 text-[13px] font-semibold text-[var(--color-btn-fg)] transition-opacity hover:opacity-85"
         >
           <Plus size={15} strokeWidth={2.4} /> Añadir fondo
         </button>
@@ -235,14 +237,15 @@ function TopBar(props: Props & { badgeFor: (id: DashboardSection) => ReactNode }
             className="flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-ink-1)]/70 py-1 pl-1 pr-3 text-[var(--color-fg-2)] hover:text-[var(--color-fg-1)]"
           >
             <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--color-tag-bg)] font-mono text-sm font-semibold text-[var(--color-tag-fg)]">
-              {user.username.slice(0, 1).toUpperCase()}
+              {(user.display_name || user.username).slice(0, 1).toUpperCase()}
             </span>
-            <span className="max-w-[9rem] truncate text-[13px] font-medium">{user.username}</span>
+            <span className="hidden max-w-[9rem] truncate text-[13px] font-medium xl:inline">{user.display_name || user.username}</span>
             <ChevronDown size={14} />
           </button>
           {menuOpen && (
             <div className="absolute right-0 top-full mt-2 w-60 rounded-2xl border border-[var(--color-border)] bg-[var(--color-ink-1)] p-2 shadow-2xl">
-              <p className="truncate px-3 pb-2 pt-1 text-xs text-[var(--color-fg-4)]">{user.email}</p>
+              <p className="truncate px-3 pt-1 text-sm font-medium text-[var(--color-fg-1)]">{user.display_name || user.username}</p>
+              <p className="truncate px-3 pb-2 text-xs text-[var(--color-fg-4)]">{user.email}</p>
               <button className={menuItem} onClick={() => { setMenuOpen(false); onOpenSettings(); }}>
                 <Settings size={15} /> Ajustes
               </button>
@@ -262,6 +265,7 @@ function TopBar(props: Props & { badgeFor: (id: DashboardSection) => ReactNode }
             </div>
           )}
         </div>
+      </div>
       </div>
     </header>
   );
