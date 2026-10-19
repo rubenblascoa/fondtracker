@@ -1,6 +1,7 @@
 import { serve } from "bun";
 import { join, normalize, resolve, sep } from "node:path";
 import index from "../client/index.html";
+import { buildPanel, PANEL_ASSETS_PREFIX } from "./panelBuild";
 import { closeDatabase, ensureSchema } from "./db";
 import { transactionRoutes } from "./routes/transactions.routes";
 import { getPortfolioHistory, takeDailySnapshots, HISTORY_RANGES, type HistoryRange } from "./history.service";
@@ -465,6 +466,48 @@ try {
   process.exit(1);
 }
 
+// En producción el panel se compila al arrancar y se sirve desde dist/: JS troceado (las librerías de
+// PDF solo se descargan al exportar) y archivos con hash cacheados un año. El bundler en caliente de Bun
+// lo serviría todo en un único JS de ~1,8 MB sin caché. Si la compilación falla, se usa el de siempre.
+let panelHtml: string | null = null;
+if (IS_PROD) {
+  try {
+    const started = performance.now();
+    await buildPanel(PROJECT_ROOT, DIST_DIR);
+    panelHtml = await Bun.file(join(DIST_DIR, "index.html")).text();
+    console.log(`[tracker] Panel compilado en ${Math.round(performance.now() - started)} ms`);
+  } catch (err) {
+    console.error("[tracker] No se pudo compilar el panel; se sirve con el bundler de Bun.", err);
+  }
+}
+
+function servePanelHtml(): Response {
+  return new Response(panelHtml, {
+    headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache", ...securityHeaders() },
+  });
+}
+
+const PANEL_MIME: Record<string, string> = {
+  js: "application/javascript; charset=utf-8",
+  css: "text/css; charset=utf-8",
+  svg: "image/svg+xml",
+  webmanifest: "application/manifest+json",
+};
+
+/** Archivos compilados del panel (/assets/<nombre>-<hash>.<ext>): no cambian nunca, caché de un año. */
+async function servePanelAsset(req: Request): Promise<Response> {
+  const name = new URL(req.url).pathname.slice(PANEL_ASSETS_PREFIX.length);
+  const type = PANEL_MIME[name.split(".").pop() ?? ""];
+  if (!/^[\w.-]+$/.test(name) || !type) return notFoundPage();
+  const file = Bun.file(join(DIST_DIR, name));
+  if (!(await file.exists())) return notFoundPage();
+  return new Response(file, {
+    headers: { "Content-Type": type, "Cache-Control": "public, max-age=31536000, immutable", ...securityHeaders() },
+  });
+}
+
+const panel = panelHtml ? servePanelHtml : index;
+
 const server = serve({
   port: PORT,
   hostname: HOST,
@@ -527,17 +570,18 @@ ${urls}
     "/apple-touch-icon.png": (req) => serveStatic(req),
     "/vendor/lenis.mjs": (req) => serveStatic(req),
     "/fonts/*": (req) => serveStatic(req),
+    "/assets/*": (req) => (panelHtml ? servePanelAsset(req) : notFoundPage()),
     "/": (req) => serveIndexHtml(req),
-    "/dashboard": index,
-    "/dashboard/*": index,
-    "/login": index,
-    "/login/*": index,
-    "/register": index,
-    "/register/*": index,
-    "/legal": index,
-    "/legal/*": index,
-    "/admin": index,
-    "/admin/*": index,
+    "/dashboard": panel,
+    "/dashboard/*": panel,
+    "/login": panel,
+    "/login/*": panel,
+    "/register": panel,
+    "/register/*": panel,
+    "/legal": panel,
+    "/legal/*": panel,
+    "/admin": panel,
+    "/admin/*": panel,
 
     "/api/health": {
       async GET(req) {

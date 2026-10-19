@@ -1,18 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { applySeo } from "./seo";
 import { api, clearToken, getToken, setToken, onAuthChange, type Investment, type Status, type User } from "./api";
-import { AddFundForm } from "./components/AddFundForm";
-import { FundCard } from "./components/FundCard";
 import { Header } from "./components/Header";
 import { LoginPage } from "./components/LoginPage";
-import { NotifyPanel } from "./components/NotifyPanel";
 import { RegisterPage } from "./components/RegisterPage";
-import { Stats } from "./components/Stats";
-import { LegalPage } from "./components/LegalPage";
-import { Footer } from "./components/Footer";
-import { AdminPanel } from "./components/AdminPanel";
-import { UserDashboard } from "./components/UserDashboard";
 import { applyTheme, getStoredTheme } from "./theme";
+
+// El panel (con las gráficas) y las páginas legales se descargan solo cuando hacen falta:
+// quien entra a /login no se baja recharts ni el panel de admin.
+const UserDashboard = lazy(() => import("./components/UserDashboard").then((m) => ({ default: m.UserDashboard })));
+const LegalPage = lazy(() => import("./components/LegalPage").then((m) => ({ default: m.LegalPage })));
 
 function AnimatedBackground() {
   return (
@@ -251,33 +248,77 @@ export function App() {
     setAuthView("login");
   }
 
-  if (checking) {
-    return (
-      <div className="min-h-screen bg-[var(--color-ink-0)] flex items-center justify-center">
-        <div className="w-5 h-5 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
+  if (checking) return <PageSpinner />;
 
-  if (isLegalPath) {
-    return <LegalPage view={legalView} user={user} onLogout={handleLogout} />;
-  }
+  return <Suspense fallback={<PageSpinner />}>{renderPage()}</Suspense>;
+
+  function renderPage() {
+    if (isLegalPath) {
+      return <LegalPage view={legalView} user={user} onLogout={handleLogout} />;
+    }
 
 
-  if (isAdminPath) {
-    if (!user) {
-      window.location.replace("/login");
+    if (isAdminPath) {
+      if (!user) {
+        window.location.replace("/login");
+        return null;
+      }
+      if (!user.is_admin) {
+        return (
+          <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#080810", flexDirection: "column", gap: "16px" }}>
+            <div style={{ fontSize: "32px" }}>🚫</div>
+            <div style={{ color: "#ff6464", fontFamily: "monospace", fontSize: "14px" }}>Acceso denegado — no eres administrador</div>
+            <a href="/dashboard" style={{ color: "#c084fc", fontSize: "13px" }}>← Volver al dashboard</a>
+          </div>
+        );
+      }
+      return (
+        <UserDashboard
+          user={user}
+          status={status}
+          funds={funds}
+          onRefresh={refresh}
+          onLogout={handleLogout}
+          initialSection="admin"
+        />
+      );
+    }
+
+    // "/" lo sirve el servidor como página estática (index.html de la raíz); la app nunca debería montarse ahí
+    if (isRootPath) {
+      window.location.replace(user ? "/dashboard" : "/login");
       return null;
     }
-    if (!user.is_admin) {
+
+    if (!user) {
+      if (authView === "register") {
+        return (
+          <div className="flex flex-col min-h-screen bg-[var(--color-ink-0)] relative">
+            <AnimatedBackground />
+            <Header />
+            <RegisterPage
+              onAuth={() => {
+                window.location.replace("/dashboard");
+              }}
+              onSwitchToLogin={handleSwitchToLogin}
+            />
+          </div>
+        );
+      }
       return (
-        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#080810", flexDirection: "column", gap: "16px" }}>
-          <div style={{ fontSize: "32px" }}>🚫</div>
-          <div style={{ color: "#ff6464", fontFamily: "monospace", fontSize: "14px" }}>Acceso denegado — no eres administrador</div>
-          <a href="/dashboard" style={{ color: "#c084fc", fontSize: "13px" }}>← Volver al dashboard</a>
+        <div className="flex flex-col min-h-screen bg-[var(--color-ink-0)] relative">
+          <AnimatedBackground />
+          <Header />
+          <LoginPage
+            onAuth={() => {
+              window.location.replace("/dashboard");
+            }}
+            onSwitchToRegister={handleSwitchToRegister}
+          />
         </div>
       );
     }
+
     return (
       <UserDashboard
         user={user}
@@ -285,53 +326,15 @@ export function App() {
         funds={funds}
         onRefresh={refresh}
         onLogout={handleLogout}
-        initialSection="admin"
       />
     );
   }
+}
 
-  // "/" lo sirve el servidor como página estática (index.html de la raíz); la app nunca debería montarse ahí
-  if (isRootPath) {
-    window.location.replace(user ? "/dashboard" : "/login");
-    return null;
-  }
-
-  if (!user) {
-    if (authView === "register") {
-      return (
-        <div className="flex flex-col min-h-screen bg-[var(--color-ink-0)] relative">
-          <AnimatedBackground />
-          <Header />
-          <RegisterPage
-            onAuth={() => {
-              window.location.replace("/dashboard");
-            }}
-            onSwitchToLogin={handleSwitchToLogin}
-          />
-        </div>
-      );
-    }
-    return (
-      <div className="flex flex-col min-h-screen bg-[var(--color-ink-0)] relative">
-        <AnimatedBackground />
-        <Header />
-        <LoginPage
-          onAuth={() => {
-            window.location.replace("/dashboard");
-          }}
-          onSwitchToRegister={handleSwitchToRegister}
-        />
-      </div>
-    );
-  }
-
+function PageSpinner() {
   return (
-    <UserDashboard
-      user={user}
-      status={status}
-      funds={funds}
-      onRefresh={refresh}
-      onLogout={handleLogout}
-    />
+    <div className="min-h-screen bg-[var(--color-ink-0)] flex items-center justify-center">
+      <div className="w-5 h-5 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin" />
+    </div>
   );
 }

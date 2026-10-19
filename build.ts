@@ -1,26 +1,9 @@
-import tailwind from "bun-plugin-tailwind";
-import publicAssets from "./scripts/public-assets-plugin";
-import { rm } from "node:fs/promises";
 import path from "node:path";
+import { buildPanel } from "./src/server/panelBuild";
 
-const outdir = path.join(process.cwd(), "dist");
-await rm(outdir, { recursive: true, force: true });
+const outputs = await buildPanel(process.cwd(), path.join(process.cwd(), "dist"), { sourcemap: true });
 
-const entrypoints = [...new Bun.Glob("src/client/**/*.html").scanSync()];
-
-const result = await Bun.build({
-  entrypoints,
-  outdir,
-  plugins: [tailwind, publicAssets],
-  minify: true,
-  target: "browser",
-  sourcemap: "linked",
-  define: {
-    "process.env.NODE_ENV": JSON.stringify("production"),
-  },
-});
-
-for (const output of result.outputs) {
+for (const output of outputs) {
   console.log(
     ` ${path.relative(process.cwd(), output.path)}  ${(output.size / 1024).toFixed(1)} KB`
   );

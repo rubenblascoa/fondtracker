@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import { AdminReportTemplate } from "./AdminReportTemplate";
 import { sanitizeFundName } from "../utils";
-import { jsPDF } from 'jspdf';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 export type AdminSubSection = "overview" | "users" | "catalog" | "notifications" | "system";
@@ -1394,6 +1393,8 @@ export function AdminSectionContent({ user, initialSubSection }: { user: User; i
         height: 1123,
       });
 
+      // jsPDF solo se descarga al exportar (pesa ~1 MB con sus dependencias)
+      const { jsPDF } = await import('jspdf');
       const pdf = new jsPDF('portrait', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();

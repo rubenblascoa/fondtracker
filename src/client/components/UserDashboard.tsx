@@ -1,16 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { api, type Investment, type Status, type User, type YahooChartData } from "../api";
 import { RefreshCw } from "lucide-react";
-import { jsPDF } from "jspdf";
 import { AddFundForm } from "./AddFundForm";
 import { NotifyPanel } from "./NotifyPanel";
 import { UserReportTemplate } from "./UserReportTemplate";
-import { AdminSectionContent } from "./AdminPanel";
 import { AnalyticsSection } from "./AnalyticsSection";
 import { PortfolioSection } from "./PortfolioSection";
 import { ReportsHub } from "./ReportsHub";
 import { DocsTab } from "./DocsTab";
 import { DashboardNav, SECTION_META, type DashboardSection } from "./dashboard/DashboardNav";
+
+// La sección de administración solo la ven los admins: su código se descarga al abrirla
+const AdminSectionContent = lazy(() => import("./AdminPanel").then((m) => ({ default: m.AdminSectionContent })));
 import { OverviewTab } from "./dashboard/OverviewTab";
 import { SettingsModal } from "./dashboard/SettingsModal";
 import { PageHeader } from "./ui";
@@ -82,7 +83,8 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
       await new Promise((r) => setTimeout(r, 700));
       if (!reportRef.current) throw new Error("No se pudo preparar el informe");
 
-      const { toJpeg } = await import("html-to-image");
+      // Librerías de PDF bajo demanda: solo se descargan al exportar
+      const [{ toJpeg }, { jsPDF }] = await Promise.all([import("html-to-image"), import("jspdf")]);
       const pages = reportRef.current.querySelectorAll<HTMLElement>(".report-page");
       const pdf = new jsPDF("portrait", "mm", "a4");
       const w = pdf.internal.pageSize.getWidth();
@@ -171,7 +173,11 @@ export function UserDashboard({ user, status, funds, onRefresh, onLogout, initia
               onExportJson={() => downloadPortfolioJson(user, status, funds)}
             />
           )}
-          {canSee && section === "admin" && <AdminSectionContent user={user} />}
+          {canSee && section === "admin" && (
+            <Suspense fallback={null}>
+              <AdminSectionContent user={user} />
+            </Suspense>
+          )}
           {canSee && section === "docs" && <DocsTab />}
         </div>
       </main>
