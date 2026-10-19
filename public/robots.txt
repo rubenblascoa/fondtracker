@@ -9,7 +9,6 @@ Allow: /legal/
 Allow: /favicon.svg
 Allow: /favicon.ico
 Allow: /manifest.webmanifest
-Allow: /og-image.svg
 Allow: /og-image.png
 
 # Protect private endpoints and authenticated panels

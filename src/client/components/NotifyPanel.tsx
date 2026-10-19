@@ -453,7 +453,7 @@ export function NotifyPanel({ status, onChange }: Props) {
               </div>
 
               {/* Chat Body Bubble */}
-              <div className="p-4 bg-[url('https://static.whatsapp.net/rsrc.php/v3/y6/r/wa669ae5z2w.png')] bg-repeat bg-opacity-5 min-h-[280px] flex flex-col justify-end">
+              <div className="p-4 min-h-[280px] flex flex-col justify-end bg-[#0b141a] bg-[radial-gradient(rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:14px_14px]">
                 <div className="bg-[#005c4b] text-[#e9edef] p-3 rounded-2xl rounded-tr-none shadow-md max-w-[95%] text-xs font-mono leading-relaxed whitespace-pre-wrap relative border border-[#025144]">
                   {preview || "Cargando formato de mensaje..."}
 

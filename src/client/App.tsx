@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { applySeo } from "./seo";
 import { api, clearToken, getToken, setToken, onAuthChange, type Investment, type Status, type User } from "./api";
 import { AddFundForm } from "./components/AddFundForm";
 import { FundCard } from "./components/FundCard";
@@ -67,17 +68,23 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    let title = "FondTracker";
-    if (isLoginPath) {
-      title = authView === "register" ? "FondTracker | Register" : "FondTracker | Login";
-    } else if (isLegalPath) {
-      title = "FondTracker | Legal";
-    } else if (isAdminPath) {
-      title = "FondTracker | Admin";
+    // Las páginas legales ponen sus propios metadatos (LegalPage)
+    if (isLegalPath) return;
+    if (isLoginPath && authView === "register") {
+      applySeo({
+        title: "Crear cuenta gratis · FondTracker",
+        description: "Crea tu cuenta gratis y sigue en un solo sitio los fondos de inversión y ETFs que tienes en todos tus bancos.",
+        path: "/register",
+      });
+    } else if (isLoginPath) {
+      applySeo({
+        title: "Entrar · FondTracker",
+        description: "Entra en FondTracker para ver cuánto valen hoy tus fondos de inversión y ETFs y cuánto has ganado.",
+        path: "/login",
+      });
     } else {
-      title = "FondTracker | Dashboard";
+      applySeo({ title: isAdminPath ? "Admin · FondTracker" : "Mi panel · FondTracker", index: false });
     }
-    document.title = title;
   }, [isLoginPath, isLegalPath, isAdminPath, authView]);
 
   useEffect(() => {

@@ -123,10 +123,10 @@ function securityHeaders(extra?: Record<string, string>): Record<string, string>
   const nonce = cachedNonce;
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' https://cdn.tailwindcss.com https://static.cloudflareinsights.com`,
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: https://assets.landinghero.app",
+    `script-src 'self' 'nonce-${nonce}' https://static.cloudflareinsights.com`,
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self'",
+    "img-src 'self' data:",
     "connect-src 'self' https://cloudflareinsights.com",
     "frame-ancestors 'none'",
   ].join("; ");
@@ -184,6 +184,51 @@ function oauthFinish(token: string): Response {
     status: 302,
     headers: { Location: `/dashboard#token=${token}`, "Set-Cookie": "ft_oauth=; Path=/api/auth; Max-Age=0; HttpOnly; SameSite=Lax" },
   });
+}
+
+/** Páginas públicas para el sitemap; lastmod = última vez que cambió su contenido. */
+const SITEMAP_PAGES = [
+  { path: "/", lastmod: "2026-10-19", changefreq: "weekly", priority: "1.0" },
+  { path: "/register", lastmod: "2026-10-19", changefreq: "monthly", priority: "0.8" },
+  { path: "/login", lastmod: "2026-10-19", changefreq: "monthly", priority: "0.6" },
+  { path: "/legal/privacy-policy", lastmod: "2026-10-19", changefreq: "yearly", priority: "0.4" },
+  { path: "/legal/terms-of-service", lastmod: "2026-10-19", changefreq: "yearly", priority: "0.4" },
+  { path: "/legal/security", lastmod: "2026-10-19", changefreq: "yearly", priority: "0.3" },
+];
+
+/**
+ * Página 404 de verdad (antes cualquier dirección inventada devolvía la landing con un 200, que para
+ * los buscadores es contenido duplicado y un «soft 404»).
+ */
+function notFoundPage(): Response {
+  const html = `<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Página no encontrada · FondTracker</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3">
+  <link rel="stylesheet" href="/fonts/fonts.css?v=1">
+  <style nonce="${cachedNonce}">
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #04050c; color: #eef0f6; font-family: "Onest", system-ui, sans-serif; text-align: center; }
+    main { padding: 24px; }
+    p.code { margin: 0; font-size: 96px; font-weight: 500; letter-spacing: -0.05em; background: linear-gradient(90deg, #3ee0ff, #6f7bff 45%, #d15bff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    h1 { margin: 8px 0 12px; font-size: 26px; font-weight: 500; }
+    p { margin: 0 0 28px; color: #b9becf; }
+    a { display: inline-block; padding: 12px 22px; border-radius: 999px; background: #fff; color: #2f2f33; font-weight: 500; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="code">404</p>
+    <h1>Esta página no existe</h1>
+    <p>Puede que el enlace esté mal escrito o que la página se haya movido.</p>
+    <a href="/">Volver a FondTracker</a>
+  </main>
+</body>
+</html>`;
+  return new Response(html, { status: 404, headers: { "Content-Type": "text/html; charset=utf-8", ...securityHeaders() } });
 }
 
 function getClientIp(req: Request): string {
@@ -343,6 +388,7 @@ function serveStatic(req: Request) {
     css: "text/css; charset=utf-8",
     js: "application/javascript; charset=utf-8",
     mjs: "application/javascript; charset=utf-8",
+    woff2: "font/woff2",
   };
   const contentType = ext ? mimeMap[ext] : undefined;
 
@@ -450,49 +496,22 @@ const server = serve({
     "/favicon.svg": (req) => serveStatic(req),
     "/favicon.ico": (req) => serveStatic(req),
     "/robots.txt": (req) => serveStatic(req),
-    "/sitemap.xml": (req) => {
-      const baseUrl = process.env.RENDER_EXTERNAL_URL || process.env.ALLOWED_ORIGIN || "https://fondtracker.onrender.com";
+    "/sitemap.xml": () => {
+      const baseUrl = (process.env.RENDER_EXTERNAL_URL || process.env.ALLOWED_ORIGIN || "https://fondtracker.onrender.com").replace(/\/+$/, "");
+      const urls = SITEMAP_PAGES.map(({ path, lastmod, changefreq, priority }) => {
+        const loc = `${baseUrl}${path}`;
+        return `  <url>
+    <loc>${loc}</loc>
+    <xhtml:link rel="alternate" hreflang="es" href="${loc}"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="${loc}"/>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>${changefreq}</changefreq>
+    <priority>${priority}</priority>
+  </url>`;
+      }).join("\n");
       const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
-        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
-  <url>
-    <loc>${baseUrl}/</loc>
-    <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>${baseUrl}/register</loc>
-    <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>${baseUrl}/login</loc>
-    <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>${baseUrl}/legal/privacy-policy</loc>
-    <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.4</priority>
-  </url>
-  <url>
-    <loc>${baseUrl}/legal/terms-of-service</loc>
-    <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.4</priority>
-  </url>
-  <url>
-    <loc>${baseUrl}/legal/security</loc>
-    <lastmod>${new Date().toISOString().split("T")[0]}</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
-  </url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+${urls}
 </urlset>`;
       return new Response(sitemapXml, {
         headers: {
@@ -507,6 +526,7 @@ const server = serve({
     "/og-image.png": (req) => serveStatic(req),
     "/apple-touch-icon.png": (req) => serveStatic(req),
     "/vendor/lenis.mjs": (req) => serveStatic(req),
+    "/fonts/*": (req) => serveStatic(req),
     "/": (req) => serveIndexHtml(req),
     "/dashboard": index,
     "/dashboard/*": index,
@@ -1515,7 +1535,7 @@ const server = serve({
       if (url.pathname.startsWith("/api/")) {
         return json({ error: `Ruta de API no encontrada: ${req.method} ${url.pathname}` }, { status: 404 });
       }
-      return serveIndexHtml(req);
+      return notFoundPage();
     },
   },
 

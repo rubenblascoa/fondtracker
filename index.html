@@ -27,6 +27,7 @@
   <meta property="og:title" content="FondTracker · Todo tu dinero, en una sola vista">
   <meta property="og:description" content="Fondos de inversión y ETFs de todos tus bancos, valorados con el precio oficial. Resumen por WhatsApp, informes y simulador de IRPF.">
   <meta property="og:image" content="https://fondtracker.onrender.com/og-image.png">
+  <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="FondTracker — seguimiento de fondos de inversión y ETFs">
@@ -42,9 +43,9 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3">
   <link rel="manifest" href="/manifest.webmanifest">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <!-- Tipografías servidas desde la propia web (scripts/download_fonts.ts) -->
+  <link rel="preload" href="/fonts/onest/onest-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/fonts/fonts.css?v=1">
 
   <script type="application/ld+json" nonce="{nonce}">
   {
@@ -62,16 +63,22 @@
         "@id": "https://fondtracker.onrender.com/#website",
         "url": "https://fondtracker.onrender.com/",
         "name": "FondTracker",
-        "inLanguage": "es-ES",
-        "creator": { "@id": "https://rubenblascoa.github.io/#person" }
+        "inLanguage": "es",
+        "creator": { "@id": "https://rubenblascoa.github.io/#person" },
+        "publisher": { "@id": "https://rubenblascoa.github.io/#person" }
       },
       {
         "@type": "SoftwareApplication",
         "@id": "https://fondtracker.onrender.com/#software",
         "name": "FondTracker",
         "applicationCategory": "FinanceApplication",
-        "operatingSystem": "All",
-        "offers": { "@type": "Offer", "price": "0.00", "priceCurrency": "EUR" },
+        "operatingSystem": "Web",
+        "url": "https://fondtracker.onrender.com/",
+        "image": "https://fondtracker.onrender.com/og-image.png",
+        "inLanguage": "es",
+        "isAccessibleForFree": true,
+        "license": "https://opensource.org/licenses/MIT",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
         "author": { "@id": "https://rubenblascoa.github.io/#person" },
         "description": "Seguimiento de fondos de inversión y ETFs: valor actual con el precio oficial, ganancia, resumen diario por WhatsApp, informes y simulador de IRPF."
       },
@@ -81,18 +88,18 @@
         "mainEntity": [
           {
             "@type": "Question",
-            "name": "¿Cómo sigo mis fondos de inversión con FondTracker?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Buscas el fondo por nombre o ISIN, apuntas las participaciones y el importe que te indica tu banco, y FondTracker lo valora cada día con el valor liquidativo publicado." }
-          },
-          {
-            "@type": "Question",
             "name": "¿De dónde salen los precios?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Los fondos españoles se valoran con el valor liquidativo publicado en QueFondos y los ETFs con la cotización de Yahoo Finance. Cada fondo enseña la fecha del precio que se está usando." }
+            "acceptedAnswer": { "@type": "Answer", "text": "Los fondos españoles se valoran con el valor liquidativo publicado en QueFondos y los ETFs con la cotización de Yahoo Finance. Cada fondo enseña la fecha del precio que se usa, para que puedas compararlo con tu banco." }
           },
           {
             "@type": "Question",
             "name": "¿Necesito dar acceso a mi banco?",
             "acceptedAnswer": { "@type": "Answer", "text": "No. FondTracker no se conecta a tu banco ni puede mover dinero: solo guarda lo que tú apuntas." }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Por qué mi banco me dice otra ganancia?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Normalmente porque el banco valora con un precio de otro día. Compara la fecha del precio que ves en cada fondo con la de tu banco." }
           },
           {
             "@type": "Question",
@@ -102,7 +109,7 @@
           {
             "@type": "Question",
             "name": "¿Cuánto cuesta?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Nada. FondTracker es gratuito y de código abierto (licencia MIT)." }
+            "acceptedAnswer": { "@type": "Answer", "text": "Nada. FondTracker es gratuito y de código abierto (licencia MIT). El código está en GitHub." }
           }
         ]
       }

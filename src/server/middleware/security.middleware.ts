@@ -53,10 +53,10 @@ export function securityHeaders(extra?: Record<string, string>): Record<string, 
   const nonce = cachedNonce;
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' https://cdn.tailwindcss.com https://static.cloudflareinsights.com`,
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: https://assets.landinghero.app",
+    `script-src 'self' 'nonce-${nonce}' https://static.cloudflareinsights.com`,
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self'",
+    "img-src 'self' data:",
     "connect-src 'self' https://cloudflareinsights.com",
     "frame-ancestors 'none'",
   ].join("; ");

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { User } from "../api";
 import { onAuthChange } from "../api";
+import { applySeo } from "../seo";
 import { ChevronDown, Database, EyeOff, KeyRound, LogOut, Mail, ShieldCheck, UserCheck } from "lucide-react";
 
 // Sección legal de FondTracker: privacidad, términos y seguridad. Los textos describen lo que hace
@@ -139,7 +140,6 @@ const PRIVACY: Section[] = [
             ["CallMeBot", "Tu teléfono, tu clave y el texto de cada resumen (con el valor de tu cartera), solo si activas el WhatsApp", "Servicio de terceros"],
             ["Google / GitHub", "Los datos del inicio de sesión, solo si entras con ellos", "EE. UU."],
             ["Cloudflare Web Analytics", "Estadísticas de visitas agregadas, sin cookies", "EE. UU."],
-            ["Google Fonts", "Tu dirección IP al cargar las tipografías de la web", "EE. UU."],
             ["QueFondos, Financial Times y Yahoo Finance", "Solo el ISIN o el ticker del fondo para consultar su precio; ningún dato tuyo", "—"],
           ]}
         />
@@ -374,7 +374,7 @@ const HIGHLIGHTS = [
   { icon: UserCheck, title: "Tus derechos RGPD", text: "Acceso, rectificación, borrado…" },
 ];
 
-/** Barra superior igual que la de la landing: logo, secciones en píldora y acceso o cuenta. */
+/** Barra superior con el estilo de la landing: logo a un lado y acceso o cuenta al otro. */
 function TopBar({ user, onLogout }: { user?: User | null; onLogout?: () => void }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -406,23 +406,6 @@ function TopBar({ user, onLogout }: { user?: User | null; onLogout?: () => void 
         <a href="/" className="flex items-center gap-2 text-[17px] font-medium tracking-tight text-white sm:gap-2.5 sm:text-[21px]">
           <WaveLogo className="h-5 w-5 sm:h-6 sm:w-6" /> FondTracker
         </a>
-        <nav aria-label="Secciones de la web" className="absolute left-1/2 hidden h-12 -translate-x-1/2 items-center gap-8 rounded-full border border-white/15 bg-white/[0.07] px-7 backdrop-blur-md md:flex">
-          {[
-            ["Funciones", "/#funciones"],
-            ["Cómo funciona", "/#como-funciona"],
-            ["Preguntas", "/#faq"],
-            ["GitHub", GITHUB],
-          ].map(([label, href]) => (
-            <a
-              key={label}
-              href={href}
-              {...(href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-              className="whitespace-nowrap text-[15px] text-[#b9becf] transition-colors hover:text-white"
-            >
-              {label}
-            </a>
-          ))}
-        </nav>
         <div className="flex items-center gap-2 sm:gap-5">
           {user ? (
             <>
@@ -510,6 +493,11 @@ export function LegalPage({ view, user, onLogout }: LegalPageProps) {
   const sections = CONTENT[active];
 
   useEffect(() => setActive(view), [view]);
+
+  // Título, descripción y canónica de cada documento (también al cambiar de pestaña)
+  useEffect(() => {
+    applySeo({ title: `${INTRO[active].title} · FondTracker`, description: INTRO[active].lead, path: PATHS[active] });
+  }, [active]);
 
   useEffect(() => {
     if (user) return;
