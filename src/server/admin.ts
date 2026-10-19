@@ -4,7 +4,7 @@ import { queries } from "./db";
 // ─── In-Memory Activity Audit Log ──────────────────────────────────────────────
 export type ActivityLog = {
   id: string;
-  type: "USER_BAN" | "USER_RESTORE" | "USER_ADMIN" | "CATALOG_ADD" | "CATALOG_UPDATE" | "CATALOG_DELETE" | "PRICE_REFRESH" | "SYSTEM_REFRESH" | "DIGEST_TRIGGER" | "CACHE_CLEAR";
+  type: "USER_BAN" | "USER_RESTORE" | "USER_DELETE" | "USER_ADMIN" | "CATALOG_ADD" | "CATALOG_UPDATE" | "CATALOG_DELETE" | "PRICE_REFRESH" | "SYSTEM_REFRESH" | "DIGEST_TRIGGER" | "CACHE_CLEAR";
   message: string;
   timestamp: string;
 };
@@ -223,6 +223,34 @@ export async function adminSoftDeleteUser(userId: number) {
   await pool.query("UPDATE users SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL", [userId]);
   await pool.query("UPDATE investments SET deleted_at = NOW() WHERE user_id = ? AND deleted_at IS NULL", [userId]);
   addActivityLog("USER_BAN", `Usuario ID ${userId} suspendido / desactivado`);
+}
+
+/**
+ * Borra al usuario de la base de datos para siempre, con todo lo suyo: fondos, historial de precios,
+ * movimientos, fotos diarias del patrimonio y ajustes personales (WhatsApp, estado del resumen…).
+ * Todo en una transacción: o se borra entero o no se borra nada. No se puede deshacer.
+ */
+export async function adminHardDeleteUser(userId: number) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [rows] = await conn.query<any[]>("SELECT username FROM users WHERE id = ? FOR UPDATE", [userId]);
+    if (!rows[0]) throw new Error("Usuario no encontrado");
+    await conn.query("DELETE FROM fund_history WHERE fund_id IN (SELECT id FROM investments WHERE user_id = ?)", [userId]);
+    await conn.query("DELETE FROM fund_transactions WHERE user_id = ?", [userId]);
+    await conn.query("DELETE FROM portfolio_snapshots WHERE user_id = ?", [userId]);
+    await conn.query("DELETE FROM investments WHERE user_id = ?", [userId]);
+    // Los ajustes de cada usuario se guardan como «clave:<id>»
+    await conn.query("DELETE FROM settings WHERE setting_key LIKE ?", [`%:${userId}`]);
+    await conn.query("DELETE FROM users WHERE id = ?", [userId]);
+    await conn.commit();
+    addActivityLog("USER_DELETE", `Usuario ${rows[0].username} (ID ${userId}) eliminado para siempre con todos sus datos`);
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
 }
 
 export async function adminRestoreUser(userId: number) {

@@ -107,6 +107,31 @@ export function UsersTab({ onToast }: { onToast?: (msg: string, type: "success" 
     setLoadingDetail(false);
   };
 
+  // Borrado definitivo: hay que escribir el nombre de usuario para confirmar (no se puede deshacer)
+  const handlePurge = async (u: { id: number; username: string }) => {
+    const typed = prompt(
+      `Vas a borrar a «${u.username}» para siempre, con todos sus fondos, movimientos e historial. No se puede deshacer.
+
+Escribe su nombre de usuario para confirmar:`
+    );
+    if (typed === null) return;
+    if (typed.trim() !== u.username) {
+      onToast?.("El nombre no coincide: no se ha borrado nada", "error");
+      return;
+    }
+    try {
+      await api.admin.purgeUser(u.id);
+      if (selectedUserId === u.id) {
+        setSelectedUserId(null);
+        setUserDetail(null);
+      }
+      load();
+      onToast?.(`${u.username} eliminado para siempre`, "error");
+    } catch (e: any) {
+      onToast?.(e.message || "No se pudo eliminar el usuario", "error");
+    }
+  };
+
   const handleTestWhatsApp = async (id: number) => {
     setTestingWhatsApp(true);
     try {
@@ -229,6 +254,14 @@ export function UsersTab({ onToast }: { onToast?: (msg: string, type: "success" 
                         </button>
                       )}
                       <button
+                        onClick={() => handlePurge(u)}
+                        className="p-1.5 text-[var(--color-danger)] bg-[var(--color-danger)]/10 rounded-lg transition-colors"
+                        title="Eliminar para siempre"
+                        aria-label={`Eliminar a ${u.username} para siempre`}
+                      >
+                        <Trash2 size={13}/>
+                      </button>
+                      <button
                         onClick={() => loadUserDetail(u.id)}
                         className="p-1.5 text-[var(--color-fg-4)] hover:text-[var(--color-fg-1)] bg-[var(--color-ink-2)] rounded-lg transition-colors"
                         title="Ver detalle del usuario"
@@ -328,6 +361,14 @@ export function UsersTab({ onToast }: { onToast?: (msg: string, type: "success" 
                             <UserX size={13}/>
                           </button>
                         )}
+                        <button
+                          onClick={() => handlePurge(u)}
+                          title="Eliminar para siempre"
+                          aria-label={`Eliminar a ${u.username} para siempre`}
+                          className="p-1.5 text-[var(--color-fg-4)] hover:text-[var(--color-danger)] bg-[var(--color-ink-2)] rounded-lg transition-colors"
+                        >
+                          <Trash2 size={13}/>
+                        </button>
                         <button
                           onClick={() => loadUserDetail(u.id)}
                           title="Inspeccionar cartera y detalles"
@@ -1341,6 +1382,7 @@ export function SystemTab({ onToast }: { onToast?: (msg: string, type: "success"
 const LOG_LABEL: Record<string, string> = {
   USER_BAN: "Usuario desactivado",
   USER_RESTORE: "Usuario restaurado",
+  USER_DELETE: "Usuario eliminado",
   USER_ADMIN: "Permisos",
   CATALOG_ADD: "Catálogo",
   CATALOG_UPDATE: "Catálogo",

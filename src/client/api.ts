@@ -401,6 +401,9 @@ export const api = {
       request<{ ok: true; sent_to: string }>(`/api/admin/users/${id}/test-whatsapp`, { method: "POST" }),
     deleteUser: (id: number) =>
       request<{ ok: true }>(`/api/admin/users/${id}/delete`, { method: "POST" }),
+    /** Borra al usuario y todos sus datos para siempre (no se puede deshacer) */
+    purgeUser: (id: number) =>
+      request<{ ok: true }>(`/api/admin/users/${id}/purge`, { method: "POST" }),
     restoreUser: (id: number) =>
       request<{ ok: true }>(`/api/admin/users/${id}/restore`, { method: "POST" }),
     promoteUser: (id: number, is_admin: boolean) =>

@@ -44,6 +44,7 @@ import {
   getAdminUserDetail,
   adminSoftDeleteUser,
   adminRestoreUser,
+  adminHardDeleteUser,
   adminSetAdmin,
   getAdminCatalogStats,
   adminSearchCatalog,
@@ -1294,6 +1295,22 @@ ${urls}
         if (id === admin.id) return json({ error: "No puedes eliminarte a ti mismo" }, { status: 400 });
         try {
           await adminSoftDeleteUser(id);
+          return json({ ok: true });
+        } catch (e: any) {
+          return json({ error: e?.message || "Error al eliminar usuario" }, { status: 500 });
+        }
+      },
+    },
+
+    "/api/admin/users/:id/purge": {
+      async POST(req) {
+        const admin = await requireAdmin(req);
+        if (admin instanceof Response) return admin;
+        const id = Number(req.params.id);
+        if (!Number.isFinite(id) || id <= 0) return badRequest("ID inválido");
+        if (id === admin.id) return json({ error: "No puedes eliminarte a ti mismo" }, { status: 400 });
+        try {
+          await adminHardDeleteUser(id);
           return json({ ok: true });
         } catch (e: any) {
           return json({ error: e?.message || "Error al eliminar usuario" }, { status: 500 });
