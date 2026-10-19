@@ -1,4 +1,5 @@
 import tailwind from "bun-plugin-tailwind";
+import publicAssets from "./scripts/public-assets-plugin";
 import { rm } from "node:fs/promises";
 import path from "node:path";
 
@@ -10,7 +11,7 @@ const entrypoints = [...new Bun.Glob("src/client/**/*.html").scanSync()];
 const result = await Bun.build({
   entrypoints,
   outdir,
-  plugins: [tailwind],
+  plugins: [tailwind, publicAssets],
   minify: true,
   target: "browser",
   sourcemap: "linked",

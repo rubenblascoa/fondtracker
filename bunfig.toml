@@ -5,6 +5,6 @@
 peer = false
 
 [serve.static]
-plugins = ["bun-plugin-tailwind"]
+plugins = ["bun-plugin-tailwind", "./scripts/public-assets-plugin.ts"]
 env = "BUN_PUBLIC_*"
 publicDir = "public"

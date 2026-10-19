@@ -1,7 +1,7 @@
 // Descarga las tipografías de Google Fonts y las deja en el proyecto, para que la web no dependa de
 // servidores externos (privacidad: Google ya no ve la IP de cada visitante; y funciona aunque caiga).
-//   src/client/fonts/<familia>/*.woff2 + src/client/fonts/fonts.css  → panel (lo empaqueta Bun)
-//   public/fonts/<familia>/*.woff2 + public/fonts/fonts.css          → landing estática (servida en /fonts)
+//   public/fonts/<familia>/*.woff2 + public/fonts/fonts.css → servidas en /fonts para la landing y el panel
+//   (el panel las enlaza sin empaquetar gracias a scripts/public-assets-plugin.ts)
 // Uso: bun scripts/download_fonts.ts
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -30,10 +30,7 @@ async function facesFor({ family, axis, dir }: (typeof FAMILIES)[number]): Promi
     if (!src) throw new Error(`Sin woff2 para ${family} ${subset}`);
     faces.push({ family, subset, css: block, file: `${dir}-${subset}.woff2`, dir });
     const bytes = new Uint8Array(await (await fetch(src)).arrayBuffer());
-    mkdirSync(join("src/client/fonts", dir), { recursive: true });
-    writeFileSync(join("src/client/fonts", dir, `${dir}-${subset}.woff2`), bytes);
     console.log(`  ${family} ${subset}: ${(bytes.length / 1024).toFixed(1)} KB`);
-    // Copia para la landing estática (servida en /fonts)
     mkdirSync(join("public/fonts", dir), { recursive: true });
     writeFileSync(join("public/fonts", dir, `${dir}-${subset}.woff2`), bytes);
   }
@@ -45,6 +42,7 @@ const header = "/* Generado por scripts/download_fonts.ts — tipografías servi
 const toCss = (prefix: (f: Face) => string) =>
   header + faces.map((f) => `/* ${f.family} · ${f.subset} */\n` + f.css.replace(/url\(https:[^)]+\.woff2\)/, `url(${prefix(f)}${f.file})`)).join("\n") + "\n";
 
-writeFileSync("src/client/fonts/fonts.css", toCss((f) => `./${f.dir}/`));
+// Mismo CSS para el panel (Bun lo empaqueta, pero deja /fonts/… fuera: scripts/public-assets-plugin.ts)
+writeFileSync("src/client/fonts/fonts.css", toCss((f) => `/fonts/${f.dir}/`));
 writeFileSync("public/fonts/fonts.css", toCss((f) => `/fonts/${f.dir}/`));
 console.log(`${faces.length} archivos de tipografía guardados.`);
